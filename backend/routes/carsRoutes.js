@@ -5,15 +5,25 @@ import {
   addCar
 } from "../controllers/carsController.js";
 
+import {
+  protect,
+  adminOnly
+} from "../middleware/authMiddleware.js";
+
 const router = express.Router();
 
-// GET all cars
-router.get("/", fetchCars);
 
-// GET single car
+// PUBLIC ROUTES
+router.get("/", fetchCars);
 router.get("/:id", fetchCarById);
 
-// CREATE car
-router.post("/", addCar);
+
+
+router.post(
+  "/",
+  protect,
+  adminOnly,
+  addCar
+);
 
 export default router;

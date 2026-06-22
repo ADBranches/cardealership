@@ -1,6 +1,7 @@
 import db from "../config/db.js";
 
 // GET ALL CARS
+
 export const getAllCars = async () => {
   const carsQuery = `
     SELECT 
@@ -9,15 +10,25 @@ export const getAllCars = async () => {
         json_agg(
           json_build_object(
             'id', ci.id,
-            'image_url', ci.image_url
+            'url', ci.image_url,
+            'type', ci.image_type
           )
         ) FILTER (WHERE ci.id IS NOT NULL),
         '[]'
-      ) AS images
+      ) AS images,
+
+      (
+        SELECT ci.image_url
+        FROM car_images ci
+        WHERE ci.car_id = c.id AND ci.image_type = 'primary'
+        LIMIT 1
+      ) AS primary_image
+
     FROM cars c
     LEFT JOIN car_images ci ON ci.car_id = c.id
     GROUP BY c.id
-    ORDER BY c.created_at DESC;
+    ORDER BY c.created_at DESC
+    LIMIT 20;
   `;
 
   const result = await db.query(carsQuery);

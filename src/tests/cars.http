@@ -1,43 +1,42 @@
-### Get latest cars
-GET http://localhost:5500/api/cars
-
-###
-
-### Filter by make
-GET http://localhost:5500/api/cars?make=Toyota
-
-###
-
-### Filter by model
-GET http://localhost:5500/api/cars?model=Harrier
-
-###
-
-### Filter by year
-GET http://localhost:5500/api/cars?year=2022
-
-###
-
-### Filter by price range
-GET http://localhost:5500/api/cars?minPrice=20000000&maxPrice=50000000
-
-###
-
-### Get single vehicle
-GET http://localhost:5500/api/cars/1
-
-###
-
-### Create vehicle
-POST http://localhost:5500/api/cars
+### REGISTER USER
+POST http://localhost:5500/api/auth/register
 Content-Type: application/json
-Authorization: 
 
 {
-  "vin":"123ABC",
-  "make":"Toyota",
-  "model":"Harrier",
-  "year":2022,
-  "price":45000000,
-  "mileage":5000
+  "name": "Admin User",
+  "email": "admin@cars.com",
+  "password": "admin",
+  "role": "admin"
+}
+
+### LOGIN USER
+POST http://localhost:5500/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@cars.com",
+  "password": "admin"
+}
+
+### GET ALL CARS
+GET http://localhost:5500/api/cars
+
+### FILTER BY MAKE
+GET http://localhost:5500/api/cars?make=Toyota
+
+### GET CAR BY ID
+GET http://localhost:5500/api/cars/1
+
+### CREATE CAR (PROTECTED)
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OCwiZW1haWwiOiJhZG1pbkBjYXJzLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4MjEzNjU5OSwiZXhwIjoxNzgyNzQxMzk5fQ.9dgZuNJslJ2mjgUejYPmRD9qLIV61noZ_cDn0tspV8E
+
+{
+  "vin": "123ABC",
+  "make": "Toyota",
+  "model": "Harrier",
+  "year": 2022,
+  "price": 45000000,
+  "mileage": 5000
 }
