@@ -1,4 +1,5 @@
 import express from "express";
+import upload from "../middleware/uploadMiddleware.js";
 import {
   fetchCars,
   fetchCarById,
@@ -26,4 +27,11 @@ router.post(
   addCar
 );
 
+
+router.post("/test-upload", upload.single("image"), (req, res) => {
+  res.json({
+    message: "File received successfully",
+    file: req.file,
+  });
+});
 export default router;
