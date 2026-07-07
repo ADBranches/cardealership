@@ -1,0 +1,43 @@
+### Get latest cars
+GET http://localhost:5500/api/cars
+
+###
+
+### Filter by make
+GET http://localhost:5500/api/cars?make=Toyota
+
+###
+
+### Filter by model
+GET http://localhost:5500/api/cars?model=Harrier
+
+###
+
+### Filter by year
+GET http://localhost:5500/api/cars?year=2022
+
+###
+
+### Filter by price range
+GET http://localhost:5500/api/cars?minPrice=20000000&maxPrice=50000000
+
+###
+
+### Get single vehicle
+GET http://localhost:5500/api/cars/1
+
+###
+
+### Create vehicle
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: 
+
+{
+  "vin":"123ABC",
+  "make":"Toyota",
+  "model":"Harrier",
+  "year":2022,
+  "price":45000000,
+  "mileage":5000
+}
