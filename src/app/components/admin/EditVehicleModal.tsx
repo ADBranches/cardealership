@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import type { VehicleStatus } from "../../lib/adminInventory";
+import { VEHICLE_STATUSES } from "../../lib/adminInventory";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +20,7 @@ type EditVehicle = {
   year: number;
   price: number;
   condition: string;
+  status?: VehicleStatus;
 };
 
 type EditVehicleModalProps = {
@@ -27,6 +30,18 @@ type EditVehicleModalProps = {
   onSave: (updatedVehicle: EditVehicle) => void;
 };
 
+function getInitialStatus(vehicle: EditVehicle): VehicleStatus {
+  if (vehicle.status) {
+    return vehicle.status;
+  }
+
+  if (vehicle.condition === "Sold") {
+    return "Sold";
+  }
+
+  return "Available";
+}
+
 export function EditVehicleModal({
   vehicle,
   open,
@@ -35,6 +50,7 @@ export function EditVehicleModal({
 }: EditVehicleModalProps) {
   const [price, setPrice] = useState("");
   const [condition, setCondition] = useState("New");
+  const [status, setStatus] = useState<VehicleStatus>("Available");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -42,6 +58,7 @@ export function EditVehicleModal({
 
     setPrice(vehicle.price.toString());
     setCondition(vehicle.condition);
+    setStatus(getInitialStatus(vehicle));
     setError("");
   }, [vehicle]);
 
@@ -60,12 +77,18 @@ export function EditVehicleModal({
       return;
     }
 
+    if (!status) {
+      setError("Please select a valid vehicle status.");
+      return;
+    }
+
     // TODO: Replace this UI-only update with protected PUT /api/cars/:id
     // once the backend inventory update endpoint and admin JWT middleware are confirmed.
     onSave({
       ...vehicle,
       price: parsedPrice,
       condition,
+      status,
     });
 
     onOpenChange(false);
@@ -123,6 +146,22 @@ export function EditVehicleModal({
                 <option value="New">New</option>
                 <option value="Used">Used</option>
                 <option value="Sold">Sold</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">Status</Label>
+              <select
+                id="edit-status"
+                value={status}
+                onChange={(event) => setStatus(event.target.value as VehicleStatus)}
+                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+              >
+                {VEHICLE_STATUSES.map((vehicleStatus) => (
+                  <option key={vehicleStatus} value={vehicleStatus}>
+                    {vehicleStatus}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
