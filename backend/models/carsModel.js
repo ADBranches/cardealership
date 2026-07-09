@@ -115,3 +115,19 @@ export const createCar = async (data) => {
 
   return carId;
 };
+
+export const saveCarImage = async (carId, imageUrl, imageType = "general") => {
+  const query = `
+    INSERT INTO car_images (car_id, image_url, image_type)
+    VALUES ($1, $2, $3)
+    RETURNING id, car_id, image_url, image_type;
+  `;
+
+  const result = await db.query(query, [
+    carId,
+    imageUrl,
+    imageType
+  ]);
+
+  return result.rows[0];
+};

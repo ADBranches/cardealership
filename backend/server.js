@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import cloudinary from "./config/cloudinary.js";
+
 
 import carsRoutes from "./routes/carsRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -11,7 +13,7 @@ import authRoutes from "./routes/authRoutes.js";
 // // Swagger setup (we will connect later)
 // import setupSwagger from "./docs/swagger.js";
 
-dotenv.config();
+dotenv.config({ path: ".env.development" });
 
 // -------------------- APP INIT --------------------
 const app = express();
@@ -60,4 +62,6 @@ const PORT = process.env.PORT || 5500;
 
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log("CLOUDINARY TEST: succesful");
+
 });
