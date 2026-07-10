@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import carsRoutes from "./routes/carsRoutes.js";
+import testDriveRoutes from "./routes/testDriveRoutes.js";
 
 
 // // Swagger setup (we will connect later)
@@ -51,6 +52,7 @@ app.get("/", (req, res) => {
 // -------------------- ROUTES --------------------
 
 app.use("/api/cars", carsRoutes);
+app.use("/api/test-drives", testDriveRoutes);
 
 // -------------------- SERVER START --------------------
 const PORT = process.env.PORT || 5500;
