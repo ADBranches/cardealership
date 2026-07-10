@@ -1,26 +1,20 @@
 import {
-  EMAIL_PROVIDER,
   getEmailConfig,
+  getEmailProvider,
+  getRedactedEmailConfig,
   getRequiredEmailEnvironmentKeys,
+  isEmailProviderConfigured,
 } from "../config/email.js";
 
-/**
- * Transaction confirmation notification payload.
- *
- * Expected shape:
- *
- * {
- *   to: "customer@example.com",
- *   customerName: "Customer Name",
- *   vehicleName: "Toyota Land Cruiser",
- *   vehicleId: "123",
- *   appointmentDate: "2026-07-15",
- *   appointmentTime: "10:00",
- *   reference: "TD-12345",
- *   dealershipName: "Panda Motors",
- *   dealershipPhone: "+256 770 826 951"
- * }
- */
+function isValidEmail(value) {
+  if (!value || typeof value !== "string") {
+    return false;
+  }
+
+  const atIndex = value.indexOf("@");
+  const dotIndex = value.lastIndexOf(".");
+  return atIndex > 0 && dotIndex > atIndex + 1 && dotIndex < value.length - 1;
+}
 
 export function validateAppointmentNotificationPayload(payload) {
   const errors = [];
@@ -29,16 +23,18 @@ export function validateAppointmentNotificationPayload(payload) {
     return ["Notification payload is required."];
   }
 
-  if (!payload.to || typeof payload.to !== "string") {
-    errors.push("Recipient email is required.");
+  if (!isValidEmail(payload.to)) {
+    errors.push("A valid recipient email is required.");
   }
 
   if (!payload.customerName || typeof payload.customerName !== "string") {
     errors.push("Customer name is required.");
   }
 
-  if (!payload.vehicleName && !payload.vehicleId) {
-    errors.push("Vehicle name or vehicle ID is required.");
+  if (!payload.vehicleName) {
+    if (!payload.vehicleId) {
+      errors.push("Vehicle name or vehicle ID is required.");
+    }
   }
 
   if (!payload.appointmentDate || typeof payload.appointmentDate !== "string") {
@@ -53,69 +49,78 @@ export function validateAppointmentNotificationPayload(payload) {
 }
 
 export function buildAppointmentConfirmationMessage(payload) {
-  const vehicleLabel = payload.vehicleName || `Vehicle ID ${payload.vehicleId}`;
+  const vehicleLabel = payload.vehicleName || "Vehicle ID " + payload.vehicleId;
   const dealershipName = payload.dealershipName || "the dealership team";
   const dealershipPhone = payload.dealershipPhone || "the dealership contact line";
   const referenceLine = payload.reference
-    ? `Confirmation reference: ${payload.reference}`
+    ? "Confirmation reference: " + payload.reference
     : "Confirmation reference: pending assignment";
 
+  const messageText = [
+    "Hello " + payload.customerName + ",",
+    "",
+    "Your appointment for " + vehicleLabel + " has been confirmed.",
+    "Date: " + payload.appointmentDate,
+    "Time: " + payload.appointmentTime,
+    referenceLine,
+    "",
+    "For questions or changes, contact " + dealershipName + " on " + dealershipPhone + ".",
+    "",
+    "Thank you."
+  ].join(String.fromCharCode(10));
+
   return {
-    subject: `Test drive appointment confirmed for ${vehicleLabel}`,
-    text: [
-      `Hello ${payload.customerName},`,
-      "",
-      `Your appointment for ${vehicleLabel} has been confirmed.`,
-      `Date: ${payload.appointmentDate}`,
-      `Time: ${payload.appointmentTime}`,
-      referenceLine,
-      "",
-      `${dealershipName} will contact you if any additional details are needed.`,
-      `Contact: ${dealershipPhone}`,
-      "",
-      "Thank you for choosing us.",
-    ].join("\n"),
+    to: payload.to,
+    subject: "Test drive appointment confirmed for " + vehicleLabel,
+    text: messageText,
+    html: messageText
   };
 }
 
-/**
- * Phase 1 contract function.
- *
- * This function validates the payload and prepares the message, but it does
- * not send outbound email until the team confirms the provider configuration.
- */
-export async function sendAppointmentConfirmationEmail(payload) {
-  const validationErrors = validateAppointmentNotificationPayload(payload);
+export function getNotificationServiceStatus() {
+  return {
+    provider: getEmailProvider(),
+    configured: isEmailProviderConfigured(),
+    requiredEnvironmentKeys: getRequiredEmailEnvironmentKeys(),
+    config: getRedactedEmailConfig(),
+  };
+}
 
-  if (validationErrors.length > 0) {
+export async function sendAppointmentConfirmationEmail(payload) {
+  const errors = validateAppointmentNotificationPayload(payload);
+
+  if (errors.length > 0) {
     return {
       sent: false,
-      skipped: true,
-      reason: "Invalid notification payload.",
-      errors: validationErrors,
+      skipped: false,
+      errors,
     };
   }
 
   const message = buildAppointmentConfirmationMessage(payload);
-  const emailConfig = getEmailConfig();
+  const provider = getEmailProvider();
+  const configured = isEmailProviderConfigured();
 
-  if (EMAIL_PROVIDER === "pending") {
+  if (!configured) {
     return {
       sent: false,
       skipped: true,
-      reason: "Email provider is not configured yet.",
+      provider,
+      reason: "Email provider is not configured.",
       requiredEnvironmentKeys: getRequiredEmailEnvironmentKeys(),
-      provider: EMAIL_PROVIDER,
       message,
     };
   }
 
+  const config = getEmailConfig();
+
   return {
     sent: false,
     skipped: true,
-    reason: "Provider transport is not implemented in Phase 1.",
-    provider: EMAIL_PROVIDER,
-    config: emailConfig,
+    provider,
+    reason: "Outbound email transport is not connected yet. Message was built and validated successfully.",
+    config: getRedactedEmailConfig(),
     message,
+    transportReady: Boolean(config),
   };
 }
