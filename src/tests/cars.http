@@ -41,3 +41,177 @@ Authorization:
   "price":45000000,
   "mileage":5000
 }
+
+### Sprint 3 Edwin - Valid car payload
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_TOKEN_HERE
+
+{
+  "name": "Toyota Harrier",
+  "brand": "Toyota",
+  "type": "SUV",
+  "category": "luxury",
+  "year": 2024,
+  "price": 85000000,
+  "mileage": 50000,
+  "power": "200 HP",
+  "engine": "2.0L",
+  "drive": "AWD",
+  "images": [
+    "https://example.com/car.jpg"
+  ]
+}
+
+### Sprint 3 Edwin - Invalid price as text
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_TOKEN_HERE
+
+{
+  "name": "Toyota Harrier",
+  "brand": "Toyota",
+  "type": "SUV",
+  "category": "luxury",
+  "year": 2024,
+  "price": "abc<script>",
+  "mileage": 50000
+}
+
+### Expected response
+# 400 Bad Request
+# Price must be a valid positive number.
+
+### Sprint 3 Edwin - Invalid empty price
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_TOKEN_HERE
+
+{
+  "name": "Toyota Harrier",
+  "brand": "Toyota",
+  "type": "SUV",
+  "category": "luxury",
+  "year": 2024,
+  "price": "",
+  "mileage": 50000
+}
+
+### Expected response
+# 400 Bad Request
+# Price is required.
+
+### Sprint 3 Edwin - Invalid zero price
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_TOKEN_HERE
+
+{
+  "name": "Toyota Harrier",
+  "brand": "Toyota",
+  "type": "SUV",
+  "category": "luxury",
+  "year": 2024,
+  "price": 0,
+  "mileage": 50000
+}
+
+### Expected response
+# 400 Bad Request
+# Price must be a valid positive number.
+
+### Sprint 3 Edwin - Invalid mileage as text
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_TOKEN_HERE
+
+{
+  "name": "Toyota Harrier",
+  "brand": "Toyota",
+  "type": "SUV",
+  "category": "luxury",
+  "year": 2024,
+  "price": 85000000,
+  "mileage": "not-mileage"
+}
+
+### Expected response
+# 400 Bad Request
+# Mileage must be a valid non-negative number.
+
+### Sprint 3 Edwin - Invalid negative mileage
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_TOKEN_HERE
+
+{
+  "name": "Toyota Harrier",
+  "brand": "Toyota",
+  "type": "SUV",
+  "category": "luxury",
+  "year": 2024,
+  "price": 85000000,
+  "mileage": -1
+}
+
+### Expected response
+# 400 Bad Request
+# Mileage must be a valid non-negative number.
+
+### Sprint 3 Edwin - Invalid year as text
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_TOKEN_HERE
+
+{
+  "name": "Toyota Harrier",
+  "brand": "Toyota",
+  "type": "SUV",
+  "category": "luxury",
+  "year": "bad-year",
+  "price": 85000000,
+  "mileage": 50000
+}
+
+### Expected response
+# 400 Bad Request
+# Year must be valid.
+
+### Sprint 3 Edwin - Missing required name
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_TOKEN_HERE
+
+{
+  "brand": "Toyota",
+  "type": "SUV",
+  "category": "luxury",
+  "year": 2024,
+  "price": 85000000,
+  "mileage": 50000
+}
+
+### Expected response
+# 400 Bad Request
+# name is required.
+
+### Sprint 3 Edwin - Malformed images payload
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: Bearer YOUR_ADMIN_TOKEN_HERE
+
+{
+  "name": "Toyota Harrier",
+  "brand": "Toyota",
+  "type": "SUV",
+  "category": "luxury",
+  "year": 2024,
+  "price": 85000000,
+  "mileage": 50000,
+  "images": "not-an-array"
+}
+
+### Expected response
+# 400 Bad Request
+# Images must be submitted as an array of image URLs.
+
