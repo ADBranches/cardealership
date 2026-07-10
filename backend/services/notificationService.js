@@ -5,6 +5,7 @@ import {
   getRequiredEmailEnvironmentKeys,
   isEmailProviderConfigured,
 } from "../config/email.js";
+import { buildAppointmentConfirmationTemplate } from "../templates/appointmentConfirmation.js";
 
 function isValidEmail(value) {
   if (!value || typeof value !== "string") {
@@ -13,6 +14,7 @@ function isValidEmail(value) {
 
   const atIndex = value.indexOf("@");
   const dotIndex = value.lastIndexOf(".");
+
   return atIndex > 0 && dotIndex > atIndex + 1 && dotIndex < value.length - 1;
 }
 
@@ -31,10 +33,8 @@ export function validateAppointmentNotificationPayload(payload) {
     errors.push("Customer name is required.");
   }
 
-  if (!payload.vehicleName) {
-    if (!payload.vehicleId) {
-      errors.push("Vehicle name or vehicle ID is required.");
-    }
+  if (!payload.vehicleName && !payload.vehicleId) {
+    errors.push("Vehicle name or vehicle ID is required.");
   }
 
   if (!payload.appointmentDate || typeof payload.appointmentDate !== "string") {
@@ -49,32 +49,7 @@ export function validateAppointmentNotificationPayload(payload) {
 }
 
 export function buildAppointmentConfirmationMessage(payload) {
-  const vehicleLabel = payload.vehicleName || "Vehicle ID " + payload.vehicleId;
-  const dealershipName = payload.dealershipName || "the dealership team";
-  const dealershipPhone = payload.dealershipPhone || "the dealership contact line";
-  const referenceLine = payload.reference
-    ? "Confirmation reference: " + payload.reference
-    : "Confirmation reference: pending assignment";
-
-  const messageText = [
-    "Hello " + payload.customerName + ",",
-    "",
-    "Your appointment for " + vehicleLabel + " has been confirmed.",
-    "Date: " + payload.appointmentDate,
-    "Time: " + payload.appointmentTime,
-    referenceLine,
-    "",
-    "For questions or changes, contact " + dealershipName + " on " + dealershipPhone + ".",
-    "",
-    "Thank you."
-  ].join(String.fromCharCode(10));
-
-  return {
-    to: payload.to,
-    subject: "Test drive appointment confirmed for " + vehicleLabel,
-    text: messageText,
-    html: messageText
-  };
+  return buildAppointmentConfirmationTemplate(payload);
 }
 
 export function getNotificationServiceStatus() {
@@ -93,6 +68,7 @@ export async function sendAppointmentConfirmationEmail(payload) {
     return {
       sent: false,
       skipped: false,
+      reason: "Invalid notification payload.",
       errors,
     };
   }
@@ -118,7 +94,8 @@ export async function sendAppointmentConfirmationEmail(payload) {
     sent: false,
     skipped: true,
     provider,
-    reason: "Outbound email transport is not connected yet. Message was built and validated successfully.",
+    reason:
+      "Outbound email transport is not connected yet. Message was built and validated successfully.",
     config: getRedactedEmailConfig(),
     message,
     transportReady: Boolean(config),
