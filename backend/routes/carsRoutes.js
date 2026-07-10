@@ -1,4 +1,5 @@
 import express from "express";
+import { validateCarPayload } from "../middleware/validateCarPayload.js";
 import {
   fetchCars,
   fetchCarById,
@@ -14,6 +15,6 @@ router.get("/", fetchCars);
 router.get("/:id", fetchCarById);
 
 // CREATE car
-router.post("/", addCar);
+router.post("/", validateCarPayload, addCar);
 
 export default router;
