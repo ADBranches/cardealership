@@ -1,7 +1,11 @@
 // Import required packages
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import carsRoutes from "./routes/carsRoutes.js";
+import testDriveRoutes from "./routes/testDriveRoutes.js";
+
+dotenv.config();
 
 // Create an Express application
 const app = express();
@@ -21,6 +25,11 @@ app.use(cors());
 // express.json() - Automatically parses incoming JSON data 
 // from POST requests into a JavaScript object (req.body)
 app.use(express.json());
+
+// Sprint 3 backend API routes
+app.use("/api/cars", carsRoutes);
+app.use("/api/test-drives", testDriveRoutes);
+
 
 // ============================================
 // USER STORY 1: Financial Payment Approximation

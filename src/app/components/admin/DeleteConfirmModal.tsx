@@ -8,7 +8,7 @@ import {
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 
-type DeleteVehicle = {
+export type DeleteVehicle = {
   id: number | string;
   name?: string;
   make?: string;
@@ -16,6 +16,11 @@ type DeleteVehicle = {
   brand?: string;
   year?: number;
   price?: number;
+  condition?: string;
+  status?: string;
+  specs?: {
+    drive?: string;
+  };
 };
 
 type DeleteConfirmModalProps = {
@@ -27,16 +32,16 @@ type DeleteConfirmModalProps = {
 
 function formatUGX(amount?: number) {
   if (amount === undefined) return "Price not available";
-  if (amount >= 1_000_000_000) return `UGX ${(amount / 1_000_000_000).toFixed(1)}B`;
-  if (amount >= 1_000_000) return `UGX ${(amount / 1_000_000).toFixed(0)}M`;
-  return `UGX ${amount.toLocaleString()}`;
+  if (amount >= 1_000_000_000) return "UGX " + (amount / 1_000_000_000).toFixed(1) + "B";
+  if (amount >= 1_000_000) return "UGX " + (amount / 1_000_000).toFixed(0) + "M";
+  return "UGX " + amount.toLocaleString();
 }
 
 function getVehicleLabel(vehicle: DeleteVehicle) {
   const brandOrMake = vehicle.brand ?? vehicle.make ?? "";
   const modelOrName = vehicle.name ?? vehicle.model ?? "";
 
-  return `${brandOrMake} ${modelOrName}`.trim() || "Selected vehicle";
+  return (brandOrMake + " " + modelOrName).trim() || "Selected vehicle";
 }
 
 export function DeleteConfirmModal({
@@ -45,10 +50,8 @@ export function DeleteConfirmModal({
   onOpenChange,
   onConfirm,
 }: DeleteConfirmModalProps) {
-  function handleConfirmDelete() {
-    if (!vehicle) return;
-
-    onConfirm();
+  if (!vehicle) {
+    return null;
   }
 
   return (
@@ -57,63 +60,30 @@ export function DeleteConfirmModal({
         <DialogHeader>
           <DialogTitle>Confirm Vehicle Removal</DialogTitle>
           <DialogDescription>
-            Please review the selected listing before removing it from the admin
-            dashboard view. This prevents accidental inventory changes.
+            Please review the selected listing before removing it from the admin dashboard view.
+            Backend deletion is not connected yet.
           </DialogDescription>
         </DialogHeader>
 
-        {vehicle ? (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800">
-              <p className="font-semibold">Deletion confirmation required</p>
-              <p className="text-sm">
-                This will remove the listing from the current UI state. Backend
-                deletion will be connected later through the protected inventory
-                endpoint.
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-              <p className="font-semibold">{getVehicleLabel(vehicle)}</p>
-
-              {vehicle.year !== undefined && (
-                <p className="text-sm text-muted-foreground">
-                  Year: {vehicle.year}
-                </p>
-              )}
-
-              <p className="text-sm text-muted-foreground">
-                Price: {formatUGX(vehicle.price)}
-              </p>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              Future backend integration: DELETE /api/cars/:id with an admin JWT.
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-border bg-muted/30 p-4">
-            <p className="text-sm text-muted-foreground">
-              No vehicle is currently selected for deletion.
-            </p>
-          </div>
-        )}
+        <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+          <p className="font-semibold text-foreground">{getVehicleLabel(vehicle)}</p>
+          <p className="text-sm text-muted-foreground">
+            Year: {vehicle.year ?? "Not available"}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Condition: {vehicle.condition ?? "Not available"}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Drive: {vehicle.specs?.drive ?? "Not available"}
+          </p>
+          <p className="text-sm font-medium text-primary">{formatUGX(vehicle.price)}</p>
+        </div>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-
-          <Button
-            type="button"
-            className="bg-red-600 text-white hover:bg-red-700"
-            disabled={!vehicle}
-            onClick={handleConfirmDelete}
-          >
+          <Button type="button" variant="destructive" onClick={onConfirm}>
             Confirm Delete
           </Button>
         </DialogFooter>
