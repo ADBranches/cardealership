@@ -4,11 +4,11 @@ import {
   Menu, X, ChevronRight, Phone, Mail, MapPin, Search, Calendar,
   Shield, Wrench, FileText, MessageCircle, ArrowUp
 } from "lucide-react";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
-import { Card, CardContent } from "./components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { TestDriveScheduler } from "./components/test-drive/TestDriveScheduler";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card, CardContent } from "../components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { TestDriveScheduler } from "../app/components/test-drive/TestDriveScheduler";
 import Admin from "../pages/admin";
 import Login from "../pages/login";
 
@@ -498,3 +498,4 @@ function MainApp() {
     </div>
   );
 }
+export default Home;
