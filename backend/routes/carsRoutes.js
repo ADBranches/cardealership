@@ -1,19 +1,31 @@
 import express from "express";
+
 import { validateCarPayload } from "../middleware/validateCarPayload.js";
 import {
   fetchCars,
   fetchCarById,
-  addCar
+  addCar,
 } from "../controllers/carsController.js";
+
+import { uploadCarImage } from "../controllers/carImageController.js";
+
+import upload from "../middleware/uploadMiddleware.js";
+import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// GET all cars
 router.get("/", fetchCars);
-
-// GET single car
 router.get("/:id", fetchCarById);
 
+router.post("/", protect, adminOnly, addCar);
+
+router.post(
+  "/upload",
+  protect,
+  adminOnly,
+  upload.single("image"),
+  uploadCarImage
+);
 // CREATE car
 // TODO: Add requireAuth and requireAdmin before validateCarPayload once the
 // backend auth middleware exports are finalized by the backend owner.

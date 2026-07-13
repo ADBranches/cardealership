@@ -2,10 +2,21 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+import cloudinary from "./config/cloudinary.js";
+
+
+import carsRoutes from "./routes/carsRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+
+
+// // Swagger setup (we will connect later)
+// import setupSwagger from "./docs/swagger.js";
 import carsRoutes from "./routes/carsRoutes.js";
 import testDriveRoutes from "./routes/testDriveRoutes.js";
 
-dotenv.config();
+dotenv.config({ path: ".env.development" });
 
 // Create an Express application
 const app = express();
@@ -236,6 +247,15 @@ app.get('/api/dealership/location', (req, res) => {
 
         // Send the response
         res.json(dealershipInfo);
+
+app.use("/api/auth", authRoutes);
+
+// -------------------- SERVER START --------------------
+const PORT = process.env.PORT || 5500;
+
+app.listen(PORT, () => {
+  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log("CLOUDINARY TEST: succesful");
 
     } catch (error) {
         console.error('Location error:', error);

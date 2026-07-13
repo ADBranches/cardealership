@@ -1,0 +1,82 @@
+############################################
+# AUTH ROUTES
+############################################
+
+### REGISTER USER
+POST http://localhost:5500/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Admin User",
+  "email": "admin@cars.com",
+  "password": "admin",
+  "role": "admin"
+}
+
+
+### LOGIN USER
+POST http://localhost:5500/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@cars.com",
+  "password": "admin"
+}
+
+
+############################################
+# CAR ROUTES - PUBLIC
+############################################
+
+### GET ALL CARS
+GET http://localhost:5500/api/cars
+
+
+### GET SINGLE CAR
+GET http://localhost:5500/api/cars/1
+
+
+### FILTER BY MAKE
+GET http://localhost:5500/api/cars?make=Toyota
+
+
+### FILTER BY MODEL
+GET http://localhost:5500/api/cars?model=Harrier
+
+
+### FILTER BY YEAR
+GET http://localhost:5500/api/cars?year=2022
+
+
+### FILTER BY PRICE RANGE
+GET http://localhost:5500/api/cars?minPrice=20000000&maxPrice=50000000
+
+
+############################################
+# CAR ROUTES - PROTECTED (ADMIN ONLY)
+############################################
+
+### CREATE CAR
+POST http://localhost:5500/api/cars
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "vin": "123ABC",
+  "make": "Toyota",
+  "model": "Harrier",
+  "year": 2022,
+  "price": 45000000,
+  "mileage": 5000
+}
+
+
+############################################
+# IMAGE UPLOAD TEST (MULTER)
+############################################
+
+### TEST IMAGE UPLOAD
+POST http://localhost:5500/api/cars/test-upload
+Content-Type: multipart/form-data
+
+image: @C:/Users/YOURNAME/Pictures/test.jpg
