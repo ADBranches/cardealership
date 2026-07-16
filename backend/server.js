@@ -1,7 +1,18 @@
 // Import required packages
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
+;
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config();
+// Import routes
+const bookingRoutes = require('./routes/bookingRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 // Create an Express application
 const app = express();
@@ -21,6 +32,16 @@ app.use(cors());
 // express.json() - Automatically parses incoming JSON data 
 // from POST requests into a JavaScript object (req.body)
 app.use(express.json());
+
+// ============================================
+// ROUTES
+// ============================================
+
+// Booking routes (Task 1)
+app.use('/api/bookings', bookingRoutes);
+
+// Admin routes (Task 2)
+app.use('/api/admin', adminRoutes);
 
 // ============================================
 // USER STORY 1: Financial Payment Approximation
@@ -293,7 +314,10 @@ app.get('/api/health', (req, res) => {
         endpoints: [
             'POST /api/finance/calculate - Calculate loan payments',
             'GET /api/dealership/location - Get dealership location',
-            'GET /api/dealership/status - Check if open'
+            'GET /api/dealership/status - Check if open',
+            'POST /api/bookings/create - Book test drive',
+            'GET /api/bookings/check-availability - Check availability',
+            'GET /api/admin/stats - Admin analytics'
         ]
     });
 });
@@ -307,9 +331,20 @@ app.listen(PORT, () => {
     console.log('========================================');
     console.log(`?? Server running on: http://localhost:${PORT}`);
     console.log('\n?? Available Endpoints:');
+    console.log('   --- Financial ---');
     console.log(`   POST /api/finance/calculate  - Loan calculator`);
+    console.log('   --- Dealership ---');
     console.log(`   GET  /api/dealership/location - Store location`);
     console.log(`   GET  /api/dealership/status   - Open status`);
+    console.log('   --- Test Drive Booking (Task 1) ---');
+    console.log(`   POST /api/bookings/create     - Book test drive with conflict logic`);
+    console.log(`   GET  /api/bookings/check-availability - Check availability`);
+    console.log(`   GET  /api/bookings/user/:user_id - Get user bookings`);
+    console.log(`   PUT  /api/bookings/:id/cancel - Cancel booking`);
+    console.log('   --- Admin Analytics (Task 2) ---');
+    console.log(`   GET  /api/admin/stats         - Full admin statistics`);
+    console.log(`   GET  /api/admin/stats/summary - Quick summary`);
+    console.log('   --- Health ---');
     console.log(`   GET  /api/health              - Health check`);
     console.log('========================================\n');
 });
