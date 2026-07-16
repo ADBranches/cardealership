@@ -1,7 +1,10 @@
 // Import required packages
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+
+dotenv.config();
+
 
 // Create an Express application
 const app = express();
@@ -21,6 +24,25 @@ app.use(cors());
 // express.json() - Automatically parses incoming JSON data 
 // from POST requests into a JavaScript object (req.body)
 app.use(express.json());
+
+// ============================================
+// HOME PAGE ROUTE
+// ============================================
+
+app.get("/", (req, res) => {
+    console.log("Home route was visited");
+
+    res.json({
+        message: "Welcome to Panda Motors API 🚗",
+        status: "Server is running successfully",
+        availableEndpoints: [
+            "GET /api/health",
+            "GET /api/dealership/location",
+            "GET /api/dealership/status",
+            "POST /api/finance/calculate"
+        ]
+    });
+});
 
 // ============================================
 // USER STORY 1: Financial Payment Approximation

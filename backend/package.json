@@ -2,12 +2,12 @@
   "name": "@figma/my-make-file",
   "private": true,
   "version": "0.0.1",
-   "type": "module",
-  "main":"server.js",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
-     "start": "node server.js",
-    "build": "vite build",
-    "dev": "vite"
+    "start": "node server.js",
+    "dev": "vite",
+    "build": "vite build"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

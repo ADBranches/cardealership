@@ -4,15 +4,23 @@ import {
   Menu, X, ChevronRight, Phone, Mail, MapPin, Search, Calendar,
   Shield, Wrench, FileText, MessageCircle, ArrowUp
 } from "lucide-react";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
-import { Card, CardContent } from "./components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { TestDriveScheduler } from "./components/test-drive/TestDriveScheduler";
-import Admin from "../pages/admin";
-import Login from "../pages/login";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card, CardContent } from "../components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 
+function TestDriveScheduler({ vehicles }: { vehicles: any[] }) {
+  return (
+    <section id="test-drive" className="py-24 px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto text-center">
+        <h3 className="text-4xl font-bold mb-4">TEST DRIVE SCHEDULER</h3>
+        <p className="text-muted-foreground">Coming soon. Contact us to book your drive.</p>
+      </div>
+    </section>
+  );
+}
 
+export default MainApp;
 
 function formatUGX(amount: number) {
   if (amount >= 1_000_000_000) return `UGX ${(amount / 1_000_000_000).toFixed(1)}B`;
