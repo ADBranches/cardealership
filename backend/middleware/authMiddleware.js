@@ -36,10 +36,53 @@ export const authenticateToken = async (req, res, next) => {
     }
 };
 
+<<<<<<< HEAD
 export const isAdmin = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
         next();
     } else {
         res.status(403).json({ message: 'Admin access required' });
     }
+=======
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
+
+
+export const adminOnly = (req,res,next)=>{
+
+
+  if(!req.user){
+
+    return res.status(401).json({
+      message:"Not authenticated"
+    });
+
+  }
+
+
+  if(req.user.role !== "admin"){
+
+    return res.status(403).json({
+      message:"Admin access required"
+    });
+
+  }
+
+
+  next();
+
+>>>>>>> a32549b8176a45ef98887f247a6345ce7ee89844
 };

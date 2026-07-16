@@ -8,10 +8,29 @@ export function getAuthToken() {
   }
 
   return (
-    localStorage.getItem("authToken") ||
     localStorage.getItem("token") ||
+    localStorage.getItem("authToken") ||
+    localStorage.getItem("jwt") ||
     localStorage.getItem("accessToken")
   );
+}
+
+export function getStoredUser() {
+  if (!canUseLocalStorage()) {
+    return null;
+  }
+
+  const rawUser = localStorage.getItem("user");
+
+  if (!rawUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawUser);
+  } catch {
+    return null;
+  }
 }
 
 export function isAuthenticated() {
@@ -19,12 +38,7 @@ export function isAuthenticated() {
     return false;
   }
 
-  return Boolean(
-    getAuthToken() ||
-      localStorage.getItem("user") ||
-      localStorage.getItem("role") ||
-      localStorage.getItem("isAdmin")
-  );
+  return Boolean(getAuthToken() || getStoredUser());
 }
 
 export function isAdminUser() {
@@ -32,11 +46,11 @@ export function isAdminUser() {
     return false;
   }
 
-  const rawUser = localStorage.getItem("user");
+  const user = getStoredUser();
   const role = localStorage.getItem("role");
   const isAdmin = localStorage.getItem("isAdmin");
 
-  if (isAdmin === "true") {
+  if (user?.role === "admin" || user?.isAdmin === true) {
     return true;
   }
 
@@ -44,14 +58,9 @@ export function isAdminUser() {
     return true;
   }
 
-  if (!rawUser) {
-    return false;
+  if (isAdmin === "true") {
+    return true;
   }
 
-  try {
-    const user = JSON.parse(rawUser);
-    return user?.role === "admin" || user?.isAdmin === true;
-  } catch {
-    return false;
-  }
+  return false;
 }

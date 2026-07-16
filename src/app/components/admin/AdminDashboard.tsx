@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { isAdminUser, isAuthenticated } from "../../lib/auth";
 import { Button } from "../ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AdminListingsTable } from "./AdminListingsTable";
+import { AddNewCarForm } from "./AddNewCarForm";
 
 type AdminVehicle = {
   id: number;
@@ -130,7 +132,24 @@ export function AdminDashboard({ vehicles }: AdminDashboardProps) {
           </p>
         </div>
 
-        <AdminListingsTable vehicles={vehicles} />
+        <Tabs defaultValue="add-vehicle" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-8 h-12">
+            <TabsTrigger value="add-vehicle" className="font-semibold">
+              Add Vehicle
+            </TabsTrigger>
+            <TabsTrigger value="manage-inventory" className="font-semibold">
+              Manage Inventory
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="add-vehicle">
+            <AddNewCarForm />
+          </TabsContent>
+
+          <TabsContent value="manage-inventory">
+            <AdminListingsTable vehicles={vehicles} />
+          </TabsContent>
+        </Tabs>
       </div>
     </section>
   );
