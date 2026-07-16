@@ -4,10 +4,12 @@
   "version": "0.0.1",
    "type": "module",
   "main":"server.js",
-  "scripts": {
-     "start": "node server.js",
-    "build": "vite build",
-    "dev": "vite"
+ "scripts": {
+  "start": "node server.cjs",
+  "dev": "node server.cjs",
+  "build": "vite build",
+  "vite": "vite"
+}
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
