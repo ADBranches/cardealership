@@ -9,8 +9,8 @@ dotenv.config();
 // Create an Express application
 const app = express();
 
-// Define the port (use environment variable or default to 5000)
-const PORT = process.env.PORT || 5000;
+// Define the port (use environment variable or default to 5500)
+const PORT = process.env.PORT || 5500;
 
 // ============================================
 // MIDDLEWARE
@@ -18,8 +18,12 @@ const PORT = process.env.PORT || 5000;
 // Middleware functions that run before every request
 
 // cors() - Allows your React frontend (running on port 5173) 
-// to communicate with this backend (running on port 5000)
-app.use(cors());
+// to communicate with this backend (running on port 5500)
+
+app.use(cors({
+    origin: "http://localhost:5173",
+    credentials: true
+}));
 
 // express.json() - Automatically parses incoming JSON data 
 // from POST requests into a JavaScript object (req.body)
@@ -39,7 +43,8 @@ app.get("/", (req, res) => {
             "GET /api/health",
             "GET /api/dealership/location",
             "GET /api/dealership/status",
-            "POST /api/finance/calculate"
+            "POST /api/finance/calculate",
+            "POST /api/auth/login"
         ]
     });
 });
@@ -321,17 +326,74 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================================
+// USER LOGIN ROUTE
+// ============================================
+// POST /api/auth/login
+
+app.post("/api/auth/login", (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Check empty fields
+        if (!email || !password) {
+            return res.status(400).json({
+                message: "Email and password are required"
+            });
+        }
+
+
+        // Temporary user (for testing)
+        const user = {
+            id: 1,
+            name: "Devine Phoebe",
+            email: "devine@gmail.com",
+            role: "customer"
+        };
+
+
+        // Check login details
+        if (
+            email !== "devine@gmail.com" ||
+            password !== "123456"
+        ) {
+            return res.status(401).json({
+                message: "Invalid email or password"
+            });
+        }
+
+
+        // Successful login
+        res.json({
+            message: "Login successful",
+            user: user,
+            token: "sample-token"
+        });
+
+
+    } catch(error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            message:"Server error"
+        });
+
+    }
+});
+// ============================================
 // Start the Server
 // ============================================
 app.listen(PORT, () => {
     console.log('\n========================================');
-    console.log('?? Panda Motors API Server');
+    console.log(' Panda Motors API Server');
     console.log('========================================');
-    console.log(`?? Server running on: http://localhost:${PORT}`);
-    console.log('\n?? Available Endpoints:');
+    console.log(` Server running on: http://localhost:${PORT}`);
+    console.log('\n Available Endpoints:');
     console.log(`   POST /api/finance/calculate  - Loan calculator`);
     console.log(`   GET  /api/dealership/location - Store location`);
     console.log(`   GET  /api/dealership/status   - Open status`);
     console.log(`   GET  /api/health              - Health check`);
+    console.log(`   POST /api/auth/login          - User login`);
     console.log('========================================\n');
+   
 });

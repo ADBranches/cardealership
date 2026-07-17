@@ -8,7 +8,7 @@ import store from '../store/store'; // Your Redux store
 import { logout } from '../store/authSlice';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5500/api',
 });
 
 /**

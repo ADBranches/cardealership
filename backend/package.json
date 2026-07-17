@@ -6,8 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "vite",
-    "build": "vite build"
+    "dev": "nodemon server.js",
+    "build": "vite build",
+    "server": "node server.js"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
