@@ -12,6 +12,7 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import type { AdminVehicle } from "../../../types/vehicle";
 
 type EditVehicle = {
   id: number;
@@ -24,10 +25,10 @@ type EditVehicle = {
 };
 
 type EditVehicleModalProps = {
-  vehicle: EditVehicle | null;
+  vehicle: AdminVehicle | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (updatedVehicle: EditVehicle) => void;
+  onSave: (updatedVehicle: AdminVehicle) => void;
 };
 
 function getInitialStatus(vehicle: EditVehicle): VehicleStatus {

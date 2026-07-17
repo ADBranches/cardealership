@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
+import type { AdminVehicle } from "../../../types/vehicle";
 import {
   Table,
   TableBody,
@@ -13,23 +14,6 @@ import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import type { VehicleStatus } from "../../lib/adminInventory";
 import { buildPaginatedCarsUrl } from "../../lib/api";
 import { EditVehicleModal } from "./EditVehicleModal";
-
-type AdminVehicle = {
-  id: number;
-  name: string;
-  brand: string;
-  type: string;
-  year: number;
-  price: number;
-  condition: string;
-  status?: VehicleStatus;
-  image: string;
-  specs: {
-    power: string;
-    engine: string;
-    drive: string;
-  };
-};
 
 type AdminListingsTableProps = {
   vehicles: AdminVehicle[];
