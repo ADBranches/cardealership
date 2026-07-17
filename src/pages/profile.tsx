@@ -1,75 +1,163 @@
-import { useState, useEffect } from "react";
 
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+// @ts-ignore: Allow side-effect CSS import without type declarations
+import "./profile.css";
+
+
+interface User {
+    name: string;
+    email: string;
+    createdAt: string;
+}
 
 export default function Profile() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [createdAt, setCreatedAt] = useState("");
+    const navigate = useNavigate();
 
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const [user, setUser] = useState<User>({
+        name: "",
+        email: "",
+        createdAt: "",
+    });
 
-    setName(user.name || "Guest User");
-    setEmail(user.email || "No Email");
-    setCreatedAt(user.createdAt || "Unknown");
-  }, []);
+    const [isEditing, setIsEditing] = useState(false);
 
-  const handleSave = () => {
-    const updatedUser = {
-      name,
-      email,
-      createdAt,
+    useEffect(() => {
+        const savedUser = localStorage.getItem("user");
+
+        if (savedUser) {
+            setUser(JSON.parse(savedUser));
+        }
+    }, []);
+
+
+    const handleSave = () => {
+
+        localStorage.setItem(
+            "user",
+            JSON.stringify(user)
+        );
+
+        setIsEditing(false);
+
+        alert("Profile updated successfully!");
     };
 
-    localStorage.setItem("user", JSON.stringify(updatedUser));
 
-    alert("Profile Updated Successfully!");
-  };
+    const handleLogout = () => {
 
-  return (
-    <div
-      style={{
-        maxWidth: "500px",
-        margin: "50px auto",
-        padding: "20px",
-        border: "1px solid #ddd",
-        borderRadius: "10px",
-      }}
-    >
-      <h1>My Profile</h1>
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
 
-      <p>
-        <strong>Member Since:</strong> {createdAt}
-      </p>
+        alert("Logged out successfully");
 
-      <label>Name</label>
+        navigate("/login");
+    };
 
-      <input
-        style={{ width: "100%", padding: "10px", marginBottom: "20px" }}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
 
-      <label>Email</label>
+    return (
+        <div className="profile-container">
 
-      <input
-        style={{ width: "100%", padding: "10px", marginBottom: "20px" }}
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+            <div className="profile-card">
 
-      <button
-        onClick={handleSave}
-        style={{
-          padding: "10px 20px",
-          background: "#0077ff",
-          color: "white",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        Save Changes
-      </button>
-    </div>
-  );
+                <h1>
+                    Welcome, {user.name}
+                </h1>
+
+                <p className="subtitle">
+                    Manage your account information
+                </p>
+
+
+                <div className="profile-info">
+
+
+                    <label>
+                        Full Name
+                    </label>
+
+                    <input
+                        type="text"
+                        value={user.name}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                            setUser({
+                                ...user,
+                                name: e.target.value
+                            })
+                        }
+                    />
+
+
+                    <label>
+                        Email Address
+                    </label>
+
+                    <input
+                        type="email"
+                        value={user.email}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                            setUser({
+                                ...user,
+                                email: e.target.value
+                            })
+                        }
+                    />
+
+
+                    <label>
+                        Registration Date
+                    </label>
+
+                    <input
+                        value={user.createdAt}
+                        disabled
+                    />
+
+
+                </div>
+
+
+                <div className="profile-buttons">
+
+                    {
+                        isEditing ? (
+
+                            <button onClick={handleSave}>
+                                Save Changes
+                            </button>
+
+                        ) : (
+
+                            <button
+                                onClick={() => setIsEditing(true)}
+                            >
+                                Edit Profile
+                            </button>
+
+                        )
+                    }
+
+                    <button
+                        onClick={() => navigate("/")}
+                    >
+                        Back to Home
+                    </button>
+
+                    <button
+                        className="logout"
+                        onClick={handleLogout}
+                    >
+                        Logout
+                    </button>
+
+
+                </div>
+
+
+            </div>
+
+        </div>
+    );
 }

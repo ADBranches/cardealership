@@ -1,4 +1,5 @@
-﻿import { BrowserRouter, Routes, Route } from "react-router-dom";
+﻿import type { ComponentType } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "../pages/Login";
 import Register from "../pages/Register";
@@ -9,6 +10,8 @@ import Profile from "../pages/profile";
 
 import ProtectedRoute from "../components/ProtectedRoute";
 
+const ProtectedRouteComponent = ProtectedRoute as ComponentType<any>;
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -17,28 +20,40 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Protected Routes */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute>
-              <Admin />
-            </ProtectedRoute>
-          }
-        />
+      {/* Protected Routes */}
 
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
+<Route
+  path="/admin"
+  element={
+    <ProtectedRouteComponent>
+      <Admin />
+    </ProtectedRouteComponent>
+  }
+/>
 
-        {/* Home */}
-        <Route path="/*" element={<Home />} />
-      </Routes>
-    </BrowserRouter>
-  );
+<Route
+  path="/profile"
+  element={
+    <ProtectedRouteComponent>
+      <Profile />
+    </ProtectedRouteComponent>
+  }
+/>
+
+
+{/* Home Route */}
+<Route
+  path="/"
+  element={<Home />}
+/>
+
+{/* Catch unknown routes */}
+<Route
+  path="*"
+  element={<Home />}
+/>
+
+</Routes>
+</BrowserRouter>
+);
 }
