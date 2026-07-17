@@ -95,10 +95,6 @@ export function CarImageUploader() {
 
   }
 
-
-
-
-
   function simulateUpload() {
 
     if (!file) return;
