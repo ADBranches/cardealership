@@ -1,18 +1,14 @@
-import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+﻿import { useState, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
 import {
   Menu, X, ChevronRight, Phone, Mail, MapPin, Search, Calendar,
   Shield, Wrench, FileText, MessageCircle, ArrowUp
 } from "lucide-react";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
-import { Card, CardContent } from "./components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { TestDriveScheduler } from "./components/test-drive/TestDriveScheduler";
-import Admin from "../pages/admin";
-import Login from "../pages/login";
-
-
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card, CardContent } from "../components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { TestDriveScheduler } from "../app/components/test-drive/TestDriveScheduler";
 
 function formatUGX(amount: number) {
   if (amount >= 1_000_000_000) return `UGX ${(amount / 1_000_000_000).toFixed(1)}B`;
@@ -20,40 +16,8 @@ function formatUGX(amount: number) {
   return `UGX ${amount.toLocaleString()}`;
 }
 
-function Login() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-6">
-      <div className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-xl">
-        <h1 className="text-4xl font-bold mb-6">Login to Panda Motors</h1>
-        <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-          <Input type="email" placeholder="Email address" className="h-12" />
-          <Input type="password" placeholder="Password" className="h-12" />
-          <Button type="submit" className="w-full h-12 bg-primary text-white hover:bg-primary/90">LOGIN</Button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function Register() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-6">
-      <div className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-xl">
-        <h1 className="text-4xl font-bold mb-6">Register with Panda Motors</h1>
-        <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-          <Input placeholder="Full name" className="h-12" />
-          <Input type="email" placeholder="Email address" className="h-12" />
-          <Input type="tel" placeholder="Phone number" className="h-12" />
-          <Input type="password" placeholder="Password" className="h-12" />
-          <Button type="submit" className="w-full h-12 bg-primary text-white hover:bg-primary/90">REGISTER</Button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 // Main App Content
-function MainApp() {
+function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [priceRange, setPriceRange] = useState(500000000);
@@ -498,3 +462,5 @@ function MainApp() {
     </div>
   );
 }
+
+export default Home;
