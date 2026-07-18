@@ -8,6 +8,12 @@ export interface VehicleSpecs {
   drive: VehicleDrive;
 }
 
+export type VehicleStatus =
+  | "Available"
+  | "Pending Test Drive"
+  | "Reserved"
+  | "Sold";
+
 export interface Vehicle {
   id: number;
   name: string;
@@ -19,6 +25,7 @@ export interface Vehicle {
   specs: VehicleSpecs;
   category: VehicleCategory;
   condition: VehicleCondition;
+  status: VehicleStatus;
 }
 
 export interface VehicleFilterState {

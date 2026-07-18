@@ -1,61 +1,87 @@
-import { useCars, useVehicleFilters } from "@/features/cars/hooks";
-import {
-  VehicleInventorySection,
-  VehicleSearchSection,
-} from "@/features/cars/components";
-import { TestDriveScheduler } from "@/features/test-drive/components";
-import { LoadingSpinner } from "@/components/common/LoadingSpinner/LoadingSpinner";
+import { Footer } from "../../app/components/Footer/Footer";
+import { Navbar } from "../../app/components/Navbar/Navbar";
+
 import { HeroSection } from "./components/HeroSection";
 import { ServicesSection } from "./components/ServicesSection";
 import { AboutSection } from "./components/AboutSection";
 import { ContactSection } from "./components/ContactSection";
 
+import { VehicleSearchSection } from "../../features/cars/components/VehicleSearchSection";
+import { VehicleInventorySection } from "../../features/cars/components/VehicleInventorySection";
+import { TestDriveScheduler } from "../../features/test-drive/components/TestDriveScheduler";
+import type { AdminVehicle } from "../../types/vehicle";
+import type { Vehicle } from "../../features/cars/types/car.types";
+
+
 export function HomePage() {
-  const { vehicles, loading, error } = useCars();
-  const filters = useVehicleFilters(vehicles);
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  const vehicles: Vehicle[] = [
+  {
+    id: 1,
+    name: "Toyota Land Cruiser ZX",
+    brand: "Toyota",
+    category: "luxury",
+    type: "luxury",
+    year: 2023,
+    price: 380000000,
+    condition: "New",
+    status: "Available",
+    image: "...",
+    specs: {
+      power: "305 HP",
+      engine: "3.5L V6",
+      drive: "4WD",
+    },
+  },
+];
 
-  if (error) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center px-6 text-center">
-        <p className="text-muted-foreground">{error}</p>
-      </div>
-    );
-  }
-
-  const testDriveVehicles = vehicles.map(({ id, name, brand, year }) => ({
-    id,
-    name,
-    brand,
-    year,
-  }));
 
   return (
     <>
-      <HeroSection />
-      <VehicleSearchSection
-        searchBrand={filters.searchBrand}
-        setSearchBrand={filters.setSearchBrand}
-        searchYear={filters.searchYear}
-        setSearchYear={filters.setSearchYear}
-        priceRange={filters.priceRange}
-        setPriceRange={filters.setPriceRange}
-        showAdvanced={filters.showAdvanced}
-        setShowAdvanced={filters.setShowAdvanced}
-        filteredCount={filters.filteredVehicles.length}
-        resetFilters={filters.resetFilters}
-      />
-      <VehicleInventorySection
-        vehicles={filters.filteredVehicles}
-        filterByTab={filters.filterByTab}
-      />
-      <TestDriveScheduler vehicles={testDriveVehicles} />
-      <ServicesSection />
-      <AboutSection />
-      <ContactSection />
+      <Navbar />
+
+      <main>
+
+        <HeroSection />
+
+        {/* Test search component */}
+        <VehicleSearchSection
+          searchBrand=""
+          setSearchBrand={() => {}}
+          searchYear=""
+          setSearchYear={() => {}}
+          priceRange={500000000}
+          setPriceRange={() => {}}
+          showAdvanced={false}
+          setShowAdvanced={() => {}}
+          filteredCount={vehicles.length}
+          resetFilters={() => {}}
+        />
+
+
+        {/* Test inventory */}
+        <VehicleInventorySection
+          vehicles={vehicles}
+          filterByTab={() => vehicles}
+        />
+
+
+        {/* Test drive */}
+        <TestDriveScheduler 
+          vehicles={vehicles}
+        />
+
+
+        <ServicesSection />
+
+        <AboutSection />
+
+        <ContactSection />
+
+      </main>
+
+
+      <Footer />
     </>
   );
 }
