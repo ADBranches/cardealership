@@ -6,7 +6,6 @@ import TestTasks from "../pages/TestTasks/TestTasks";
 import {HomePage} from "../pages/Home/HomePage";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
-import Admin from "../pages/Admin";
 import Home from "../pages/Home";
 export default function App() {
   return (
