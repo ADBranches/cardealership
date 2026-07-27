@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node server.cjs",
     "dev": "node server.cjs",
-    "build": "vite build"
+    "build": "vite build",
+    "cleanup:car-images": "node scripts/cleanupStaleCarImages.js --dry-run",
+    "cleanup:car-images:execute": "node scripts/cleanupStaleCarImages.js --execute"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
