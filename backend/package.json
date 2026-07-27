@@ -10,7 +10,8 @@
     "build": "vite build",
     "cleanup:car-images": "node scripts/cleanupStaleCarImages.js --dry-run",
     "cleanup:car-images:execute": "node scripts/cleanupStaleCarImages.js --execute",
-    "cleanup:car-images:job": "node -e \"import('./jobs/cleanupStaleCarImagesJob.js').then(async (m) => console.log(JSON.stringify(await m.runCleanupStaleCarImagesJob(), null, 2)))\""
+    "cleanup:car-images:job": "node -e \"import('./jobs/cleanupStaleCarImagesJob.js').then(async (m) => console.log(JSON.stringify(await m.runCleanupStaleCarImagesJob(), null, 2)))\"",
+    "test:car-image-cleanup": "node tests/carImageCleanup.manual.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
