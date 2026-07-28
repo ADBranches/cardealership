@@ -1,7 +1,8 @@
 
 import { v2 as cloudinary } from "cloudinary";
 import dotenv from "dotenv";
-dotenv.config({ path: ".env.development" });
+dotenv.config({ path: ".env.development", quiet: true });
+dotenv.config({ path: "backend/.env.development", quiet: true });
 
 
 cloudinary.config({
