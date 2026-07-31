@@ -9,7 +9,8 @@
     "test:auth-storage": "tsx src/tests/authStorage.manual.ts",
     "test:auth-service": "tsx src/tests/authService.manual.ts",
     "test:auth": "npm run test:auth-storage && npm run test:auth-service && npm run test:auth-bootstrap",
-    "test:auth-bootstrap": "tsx src/tests/authBootstrap.manual.ts"
+    "test:auth-bootstrap": "tsx src/tests/authBootstrap.manual.ts",
+    "test:protected-route": "tsx src/tests/protectedRoute.manual.ts"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
