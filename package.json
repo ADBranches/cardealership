@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "test:auth-storage": "tsx src/tests/authStorage.manual.ts",
+    "test:auth-service": "tsx src/tests/authService.manual.ts",
+    "test:auth": "npm run test:auth-storage && npm run test:auth-service"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -86,6 +89,7 @@
     "postcss": "^8.5.15",
     "react-dom": "^18.3.1",
     "tailwindcss": "^4.1.12",
+    "tsx": "^4.23.1",
     "vite": "^6.4.3"
   },
   "peerDependencies": {
