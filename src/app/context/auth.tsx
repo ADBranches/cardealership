@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import type { AuthError, AuthSession, AuthState } from "@/features/auth/types";
-import { clearStoredSession, restoreStoredSession, saveSession } from "@/features/auth/services";
+import type { AuthError, AuthSession, AuthState } from "../../features/auth/types";
+import { clearStoredSession, restoreStoredSession, saveSession } from "../../features/auth/services";
 
 const initialAuthState: AuthState = {
   user: null,
