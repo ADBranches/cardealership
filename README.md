@@ -107,3 +107,15 @@ The active router remains `src/app/App.tsx`. The unused `src/app/routes.tsx` con
 - Return sanitized errors to the UI.
 - Do not redirect before restoration completes.
 - Preserve the requested protected destination where practical.
+
+## Sprint 5 Authentication Persistence Validation
+
+The authentication persistence flow is validated with deterministic in-memory storage and an injectable mock verification API contract. Validation covers login storage, refresh and browser-reopen restoration, protected-route access after successful verification, expired and invalid token cleanup, unauthorized redirects, safe network-failure handling, logout cleanup, and token-redaction checks.
+
+Run the validation with:
+
+```text
+npm run test:auth-persistence
+```
+
+Live backend verification remains pending Devine confirmation. The expected frontend endpoint is `GET /api/auth/session` with `Authorization: Bearer <access-token>`. The current backend does not expose that route, and `backend/middleware/authMiddleware.js` contains unresolved merge-conflict markers. The frontend does not use local JWT decoding as proof of authentication.
