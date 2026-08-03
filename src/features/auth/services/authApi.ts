@@ -1,4 +1,5 @@
 import type { AuthErrorCode, AuthUser, VerifySessionResult } from "../types";
+import { buildApiUrl } from "../../../api/client";
 
 export const AUTH_SESSION_VERIFICATION_ENDPOINT = "/api/auth/session";
 
@@ -24,8 +25,10 @@ export function createAuthorizationHeaders(token: string): HeadersInit {
 
 export async function verifySession(token: string, options: VerifySessionOptions = {}): Promise<VerifySessionResult> {
   const fetcher = options.fetcher ?? fetch;
+    const endpoint = options.endpoint ?? AUTH_SESSION_VERIFICATION_ENDPOINT;
+    const requestUrl = options.fetcher ? endpoint : buildApiUrl(endpoint);
   try {
-    const response = await fetcher(options.endpoint ?? AUTH_SESSION_VERIFICATION_ENDPOINT, {
+    const response = await fetcher(requestUrl, {
       method: "GET",
       headers: createAuthorizationHeaders(token),
     });

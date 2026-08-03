@@ -119,3 +119,34 @@ npm run test:auth-persistence
 ```
 
 Live backend verification remains pending Devine confirmation. The expected frontend endpoint is `GET /api/auth/session` with `Authorization: Bearer <access-token>`. The current backend does not expose that route, and `backend/middleware/authMiddleware.js` contains unresolved merge-conflict markers. The frontend does not use local JWT decoding as proof of authentication.
+
+## Sprint 5 Frontend API Environment
+
+The frontend reads its public API origin from `VITE_API_BASE_URL`. API paths are joined through `src/api/client.ts`, and trailing slashes are normalized before requests are built.
+
+Copy `.env.example` to an ignored environment file and replace the placeholder with the deployment owner-approved API origin.
+
+Development example:
+
+```text
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+Production example:
+
+```text
+VITE_API_BASE_URL=https://approved-production-api.example.com
+```
+
+The production value above is a placeholder. A valid absolute HTTP or HTTPS URL is required at build time. Only public `VITE_` variables may be exposed to frontend code. Database URLs, JWT secrets, Cloudinary secrets, email credentials, private keys, and other backend credentials must never be placed in frontend environment files.
+
+Validation commands:
+
+```text
+npm run test:api-config
+VITE_API_BASE_URL=https://approved-production-api.example.com npm run build
+```
+
+Project demonstration:
+
+https://youtu.be/HNtln75HTEg
