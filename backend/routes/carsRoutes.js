@@ -9,7 +9,7 @@ import {
 
 import { uploadCarImage } from "../controllers/carImageController.js";
 
-import upload from "../middleware/uploadMiddleware.js";
+import { uploadSingleCarImage } from "../middleware/uploadMiddleware.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -23,8 +23,8 @@ router.post(
   "/upload",
   protect,
   adminOnly,
-  upload.single("image"),
-  uploadCarImage
+  uploadSingleCarImage,
+  uploadCarImage,
 );
 // CREATE car
 // TODO: Add requireAuth and requireAdmin before validateCarPayload once the

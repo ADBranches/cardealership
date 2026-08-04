@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "db:indexes:cars": "node backend/scripts/ensureCarSearchIndexes.cjs",
+    "test:image-opt:manual": "node backend/tests/imageOptimization.manual.js"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -45,6 +47,7 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",
+    "compression": "^1.8.1",
     "cors": "^2.8.6",
     "date-fns": "3.6.0",
     "dotenv": "^17.4.2",
