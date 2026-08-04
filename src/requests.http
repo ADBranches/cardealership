@@ -80,3 +80,23 @@ POST http://localhost:5500/api/cars/test-upload
 Content-Type: multipart/form-data
 
 image: @C:/Users/YOURNAME/Pictures/test.jpg
+
+### UPLOAD AND OPTIMIZE CAR IMAGE
+POST http://localhost:5500/api/cars/upload
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBjYXJzLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NTg1NjM4MSwiZXhwIjoxNzg2NDYxMTgxfQ.5aDnYxkKEiCMWbDCNkqY0jGp-SKTdk0mYAxQNhRztoQ
+Content-Type: multipart/form-data; boundary=CarImageBoundary
+
+--CarImageBoundary
+Content-Disposition: form-data; name="carId"
+
+1
+--CarImageBoundary
+Content-Disposition: form-data; name="imageType"
+
+primary
+--CarImageBoundary
+Content-Disposition: form-data; name="image"; filename="toyota-car.jpg"
+Content-Type: image/jpeg
+
+< C:/Users/admin/Downloads/toyota-vehicle.jpg
+--CarImageBoundary--
