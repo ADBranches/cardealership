@@ -6,8 +6,13 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "db:indexes:cars": "node backend/scripts/ensureCarSearchIndexes.cjs",
-    "test:image-opt:manual": "node backend/tests/imageOptimization.manual.js"
+    "test:auth-storage": "tsx src/tests/authStorage.manual.ts",
+    "test:auth-service": "tsx src/tests/authService.manual.ts",
+    "test:auth": "npm run test:auth-storage && npm run test:auth-service && npm run test:auth-bootstrap",
+    "test:auth-bootstrap": "tsx src/tests/authBootstrap.manual.ts",
+    "test:protected-route": "tsx src/tests/protectedRoute.manual.ts",
+    "test:auth-persistence": "tsx src/tests/authPersistence.manual.ts",
+    "test:api-config": "tsx src/tests/apiConfig.manual.ts"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -89,6 +94,7 @@
     "postcss": "^8.5.15",
     "react-dom": "^18.3.1",
     "tailwindcss": "^4.1.12",
+    "tsx": "^4.23.1",
     "vite": "^6.4.3"
   },
   "peerDependencies": {

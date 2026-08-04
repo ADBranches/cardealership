@@ -9,13 +9,7 @@ export type TestDriveBookingPayload = {
 
 export const TEST_DRIVE_BOOKING_ENDPOINT = "/api/test-drives";
 
-export function getAuthToken() {
-  return (
-    localStorage.getItem("token") ||
-    localStorage.getItem("authToken") ||
-    localStorage.getItem("jwt")
-  );
-}
+export { getAuthToken } from "@/features/auth/services";
 
 /**
  * TODO: Connect this helper to POST /api/test-drives once the active backend
