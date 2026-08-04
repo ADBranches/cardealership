@@ -1,6 +1,7 @@
 import express from "express";
 
 import { validateCarPayload } from "../middleware/validateCarPayload.js";
+
 import {
   fetchCars,
   fetchCarById,
@@ -10,14 +11,32 @@ import {
 import { uploadCarImage } from "../controllers/carImageController.js";
 
 import { uploadSingleCarImage } from "../middleware/uploadMiddleware.js";
+
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/", fetchCars);
-router.get("/:id", fetchCarById);
+/*
+|--------------------------------------------------------------------------
+| CAR INVENTORY ROUTES
+|--------------------------------------------------------------------------
+*/
 
-router.post("/", protect, adminOnly, addCar);
+router.get("/", fetchCars);
+
+/*
+|--------------------------------------------------------------------------
+| CAR IMAGE UPLOAD
+|--------------------------------------------------------------------------
+|
+| POST /api/cars/upload
+|
+| multipart/form-data:
+| image      = image file
+| carId      = existing car ID
+| imageType  = primary or general
+|
+*/
 
 router.post(
   "/upload",
@@ -26,14 +45,24 @@ router.post(
   uploadSingleCarImage,
   uploadCarImage,
 );
-// CREATE car
-// TODO: Add requireAuth and requireAdmin before validateCarPayload once the
-// backend auth middleware exports are finalized by the backend owner.
-// Expected final order:
-// router.post("/", requireAuth, requireAdmin, validateCarPayload, addCar);
-router.post("/", validateCarPayload, addCar);
+
+/*
+|--------------------------------------------------------------------------
+| CREATE CAR
+|--------------------------------------------------------------------------
+*/
+
+router.post("/", protect, adminOnly, validateCarPayload, addCar);
+
+/*
+|--------------------------------------------------------------------------
+| GET SINGLE CAR
+|--------------------------------------------------------------------------
+|
+| Keep this dynamic route after specific routes such as /upload.
+|
+*/
+
+router.get("/:id", fetchCarById);
 
 export default router;
-
-// POST /api/cars/upload is intentionally not wired here yet.
-// It should be connected only after the image upload endpoint and ownership are approved.
