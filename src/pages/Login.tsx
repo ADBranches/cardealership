@@ -1,6 +1,7 @@
 // src/pages/Login.tsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { apiRequest } from '../api/client';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('maxtinka7@gmail.com');
@@ -19,7 +20,7 @@ const Login: React.FC = () => {
     try {
       setDebugInfo('1. Trying to connect to backend...');
       
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await apiRequest('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,7 +51,7 @@ const Login: React.FC = () => {
     } catch (error: any) {
       console.error('Login error:', error);
       setDebugInfo(`Error: ${error.message}`);
-      setError('Cannot connect to server. Please make sure the backend is running on port 5000.');
+      setError('Cannot connect to the configured API service.');
     } finally {
       setLoading(false);
     }
