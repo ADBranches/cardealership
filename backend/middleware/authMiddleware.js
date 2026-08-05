@@ -1,112 +1,179 @@
-// backend/middleware/authMiddleware.js
+// ============================================
+// AUTHENTICATION MIDDLEWARE
+// ============================================
+// This middleware handles JWT authentication for protected routes
 
-import jwt from "jsonwebtoken";
-import pool from "../config/db.js";
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
-export const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
+dotenv.config();
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required",
-      });
-    }
+const JWT_SECRET = process.env.JWT_SECRET || 'panda_motors_secret_key_2026';
 
-    const token = authHeader.split(" ")[1];
+// ============================================
+// Middleware: Authenticate Token
+// ============================================
+// Verifies the JWT token from the Authorization header
+export const authenticateToken = (req, res, next) => {
+    // Get the token from the Authorization header
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication token is missing",
-      });
+        return res.status(401).json({
+            success: false,
+            error: 'Access denied. No token provided.'
+        });
     }
 
-    if (!process.env.JWT_SECRET) {
-      console.error("JWT_SECRET is not configured.");
+    try {
+        // Verify the token
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded; // Attach user info to request
+        next();
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({
+                success: false,
+                error: 'Token has expired. Please login again.'
+            });
+        }
+        return res.status(403).json({
+            success: false,
+            error: 'Invalid token. Access denied.'
+        });
+    }
+};
 
-      return res.status(500).json({
-        success: false,
-        message: "Authentication configuration is missing",
-      });
+// ============================================
+// Middleware: Check User Role
+// ============================================
+// Verifies the user has the required role
+export const checkRole = (allowedRoles) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required.'
+            });
+        }
+
+        const userRole = req.user.role || 'user';
+        
+        if (!allowedRoles.includes(userRole)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied. Insufficient permissions.',
+                requiredRoles: allowedRoles,
+                yourRole: userRole
+            });
+        }
+
+        next();
+    };
+};
+
+// ============================================
+// Middleware: Optional Authentication
+// ============================================
+// Tries to authenticate but doesn't require it
+export const optionalAuth = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET);
+            req.user = decoded;
+        } catch (error) {
+            // Token is invalid but we don't block the request
+            req.user = null;
+        }
+    } else {
+        req.user = null;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+};
 
-    const result = await pool.query(
-      `
-        SELECT
-          id,
-          name,
-          email,
-          role
-        FROM users
-        WHERE id = $1
-        LIMIT 1
-      `,
-      [decoded.id],
-    );
+// ============================================
+// Helper: Generate JWT Token
+// ============================================
+export const generateToken = (user) => {
+    const payload = {
+        id: user.id || user._id,
+        email: user.email,
+        role: user.role || 'user',
+        name: user.name || user.user_name
+    };
 
-    if (result.rows.length === 0) {
-      return res.status(401).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    req.user = result.rows[0];
-
-    return next();
-  } catch (error) {
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid token",
-      });
-    }
-
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token expired",
-      });
-    }
-
-    console.error("Authentication error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Authentication server error",
+    return jwt.sign(payload, JWT_SECRET, {
+        expiresIn: '7d' // Token expires in 7 days
     });
-  }
 };
 
-export const isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
-    return next();
-  }
-
-  return res.status(403).json({
-    success: false,
-    message: "Admin access required",
-  });
+// ============================================
+// Helper: Verify Token
+// ============================================
+export const verifyToken = (token) => {
+    try {
+        return jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+        return null;
+    }
 };
 
-/*
-|--------------------------------------------------------------------------
-| ROUTE-FRIENDLY ALIASES
-|--------------------------------------------------------------------------
-|
-| Your carsRoutes.js imports:
-|
-| protect
-| adminOnly
-|
-| These aliases allow that route file to work without changing its imports.
-|
-*/
+// ============================================
+// Helper: Decode Token (without verification)
+// ============================================
+export const decodeToken = (token) => {
+    try {
+        return jwt.decode(token);
+    } catch (error) {
+        return null;
+    }
+};
 
-export const protect = authenticateToken;
+// ============================================
+// Middleware: Rate Limiting for Auth Routes
+// ============================================
+const loginAttempts = new Map();
 
-export const adminOnly = isAdmin;
+export const rateLimitLogin = (req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    
+    if (!loginAttempts.has(ip)) {
+        loginAttempts.set(ip, []);
+    }
+    
+    const attempts = loginAttempts.get(ip);
+    
+    // Remove attempts older than 15 minutes
+    const recentAttempts = attempts.filter(time => now - time < 15 * 60 * 1000);
+    
+    if (recentAttempts.length >= 5) {
+        return res.status(429).json({
+            success: false,
+            error: 'Too many login attempts. Please try again in 15 minutes.'
+        });
+    }
+    
+    recentAttempts.push(now);
+    loginAttempts.set(ip, recentAttempts);
+    
+    next();
+};
+
+// ============================================
+// Export all middleware
+// ============================================
+export default {
+    authenticateToken,
+    checkRole,
+    optionalAuth,
+    generateToken,
+    verifyToken,
+    decodeToken,
+    rateLimitLogin
+};

@@ -1,304 +1,425 @@
-﻿// backend/server.js
+// Import required packages
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-import express from "express";
-import cors from "cors";
-import compression from "compression";
-import dotenv from "dotenv";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-import authRoutes from "./routes/authRoutes.js";
-import carsRoutes from "./routes/carsRoutes.js";
+dotenv.config();
 
-import { ensureCarSearchIndexes } from "./scripts/ensureCarSearchIndexes.js";
+// Import routes (using ES module syntax)
+import bookingRoutes from './routes/bookingRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import optimizedRoutes from './routes/optimizedRoutes.js';
+import adminMetricsRoutes from './routes/adminMetricsRoutes.js';
 
-dotenv.config({
-  path:
-    process.env.NODE_ENV === "production"
-      ? ".env.production"
-      : ".env.development",
-});
+// Import performance middleware
+import { performanceMiddleware } from './middleware/performanceMiddleware.js';
 
+// Import database configuration and indexes
+import { createIndexes, verifyIndexes } from './config/indexes.js';
+
+// Create an Express application
 const app = express();
-const PORT = process.env.PORT || 5500;
 
-/*
-|--------------------------------------------------------------------------
-| CORS
-|--------------------------------------------------------------------------
-*/
+// Define the port (use environment variable or default to 5000)
+const PORT = process.env.PORT || 5000;
 
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://127.0.0.1:5173",
-      "http://127.0.0.1:5174",
-    ],
+// ============================================
+// MIDDLEWARE
+// ============================================
+// cors() - Allows your React frontend (running on port 5173) 
+// to communicate with this backend (running on port 5000)
+app.use(cors());
 
-    credentials: true,
-  }),
-);
-
-/*
-|--------------------------------------------------------------------------
-| API RESPONSE COMPRESSION
-|--------------------------------------------------------------------------
-|
-| Compresses supported responses using Gzip or Brotli depending on the
-| client's Accept-Encoding header.
-|
-*/
-
-app.use(
-  compression({
-    threshold: 1024,
-    level: 6,
-
-    filter: (req, res) => {
-      if (req.headers["x-no-compression"]) {
-        return false;
-      }
-
-      return compression.filter(req, res);
-    },
-  }),
-);
-
-/*
-|--------------------------------------------------------------------------
-| REQUEST BODY PARSING
-|--------------------------------------------------------------------------
-*/
-
+// express.json() - Automatically parses incoming JSON data 
+// from POST requests into a JavaScript object (req.body)
 app.use(express.json());
 
-app.use(
-  express.urlencoded({
-    extended: true,
-  }),
-);
+// Performance monitoring middleware
+app.use(performanceMiddleware);
 
-/*
-|--------------------------------------------------------------------------
-| HEALTH CHECK
-|--------------------------------------------------------------------------
-*/
+// ============================================
+// ROUTES
+// ============================================
 
-app.get("/api/health", (req, res) => {
-  return res.status(200).json({
-    success: true,
-    status: "OK",
-    message: "Backend server is running",
-    timestamp: new Date().toISOString(),
-  });
-});
+// Booking routes (Task 1)
+app.use('/api/bookings', bookingRoutes);
 
-/*
-|--------------------------------------------------------------------------
-| AUTHENTICATION ROUTES
-|--------------------------------------------------------------------------
-|
-| POST /api/auth/register
-| POST /api/auth/login
-|
-| These routes use the real PostgreSQL-backed authentication controller.
-|
-*/
+// Admin routes (Task 2)
+app.use('/api/admin', adminRoutes);
 
-app.use("/api/auth", authRoutes);
+// Optimized query routes (Performance & Analytics)
+app.use('/api/optimized', optimizedRoutes);
 
-/*
-|--------------------------------------------------------------------------
-| ADMIN STATS
-|--------------------------------------------------------------------------
-*/
+// Admin metrics routes (Unified Admin Analytics Dashboard)
+app.use('/api/admin/metrics', adminMetricsRoutes);
 
-app.get("/api/admin/stats", (req, res) => {
-  return res.status(200).json({
-    success: true,
+// ============================================
+// USER STORY 1: Financial Payment Approximation
+// ============================================
+// POST /api/finance/calculate
+// This endpoint calculates monthly loan payments
+app.post('/api/finance/calculate', (req, res) => {
+    try {
+        // STEP 1: Extract data from the request body
+        // The frontend sends a JSON object with these fields
+        const {
+            carPrice,        // Price of the car (e.g., 285,000,000 UGX)
+            downPayment,     // Down payment amount (e.g., 50,000,000 UGX)
+            interestRate,    // Annual interest rate (e.g., 12 for 12%)
+            loanTermMonths   // Loan duration in months (e.g., 60 for 5 years)
+        } = req.body;
 
-    stats: {
-      totalCars: 6,
-      totalUsers: 10,
-      totalBookings: 25,
-      pendingBookings: 3,
-    },
-  });
-});
+        // STEP 2: Input Validation
+        // Check if all required fields are present
+        if (carPrice === undefined || downPayment === undefined || 
+            interestRate === undefined || loanTermMonths === undefined) {
+            return res.status(400).json({
+                error: 'Missing required fields',
+                required: ['carPrice', 'downPayment', 'interestRate', 'loanTermMonths']
+            });
+        }
 
-/*
-|--------------------------------------------------------------------------
-| CAR ROUTES
-|--------------------------------------------------------------------------
-|
-| GET  /api/cars
-| GET  /api/cars/:id
-| POST /api/cars
-| POST /api/cars/upload
-|
-| Upload pipeline:
-|
-| Multer validation
-| → Cloudinary resize and compression
-| → WebP conversion
-| → PostgreSQL car_images insert
-|
-*/
+        // Convert string inputs to numbers (they come as strings from JSON)
+        const price = parseFloat(carPrice);
+        const down = parseFloat(downPayment);
+        const rate = parseFloat(interestRate);
+        const term = parseInt(loanTermMonths);
 
-app.use("/api/cars", carsRoutes);
+        // STEP 3: Validate non-negative values (Acceptance Criteria)
+        if (price < 0) {
+            return res.status(400).json({ error: 'Car price cannot be negative' });
+        }
+        if (down < 0) {
+            return res.status(400).json({ error: 'Down payment cannot be negative' });
+        }
+        if (rate < 0) {
+            return res.status(400).json({ error: 'Interest rate cannot be negative' });
+        }
+        if (term <= 0) {
+            return res.status(400).json({ error: 'Loan term must be greater than 0 months' });
+        }
 
-/*
-|--------------------------------------------------------------------------
-| BOOKING ROUTES
-|--------------------------------------------------------------------------
-*/
+        // STEP 4: Calculate the loan amount
+        const loanAmount = price - down;
+        
+        // Check if down payment is larger than car price
+        if (loanAmount <= 0) {
+            return res.status(400).json({ 
+                error: 'Down payment must be less than car price',
+                message: 'Your down payment already covers the full price!'
+            });
+        }
 
-app.post("/api/bookings/create", (req, res) => {
-  const { car_id, booking_date, time_slot } = req.body;
+        // STEP 5: Calculate Monthly Payment using Amortization Formula
+        // Convert annual interest rate to monthly decimal
+        // Example: 12% annual = 0.12 yearly = 0.12/12 = 0.01 monthly
+        const monthlyRate = (rate / 100) / 12;
 
-  console.log("Booking:", car_id, booking_date, time_slot);
+        let monthlyPayment;
+        let totalPayment;
+        let totalInterest;
 
-  if (!car_id || !booking_date || !time_slot) {
-    return res.status(400).json({
-      success: false,
-      message: "Missing required fields",
-    });
-  }
+        // Formula: P = (r * PV) / (1 - (1 + r)^-n)
+        // Where:
+        // P = monthly payment
+        // r = monthly interest rate
+        // PV = present value (loan amount)
+        // n = number of payments (term)
+        
+        if (monthlyRate === 0) {
+            // If interest rate is 0%, it's simple division
+            monthlyPayment = loanAmount / term;
+            totalPayment = loanAmount;
+            totalInterest = 0;
+        } else {
+            // Standard amortization formula
+            const compoundFactor = Math.pow(1 + monthlyRate, term);
+            monthlyPayment = loanAmount * (monthlyRate * compoundFactor) / (compoundFactor - 1);
+            totalPayment = monthlyPayment * term;
+            totalInterest = totalPayment - loanAmount;
+        }
 
-  return res.status(201).json({
-    success: true,
-    message: "Booking created successfully!",
+        // STEP 6: Generate Payment Schedule (first 6 months)
+        // This shows how each payment breaks down into principal + interest
+        const paymentSchedule = [];
+        let remainingBalance = loanAmount;
+        
+        for (let month = 1; month <= Math.min(6, term); month++) {
+            // Interest for this month = remaining balance * monthly rate
+            const interestPayment = remainingBalance * monthlyRate;
+            // Principal payment = total payment - interest
+            const principalPayment = monthlyPayment - interestPayment;
+            // New remaining balance
+            remainingBalance -= principalPayment;
+            
+            paymentSchedule.push({
+                month: month,
+                payment: Math.round(monthlyPayment),
+                principal: Math.round(principalPayment),
+                interest: Math.round(interestPayment),
+                remainingBalance: Math.max(0, Math.round(remainingBalance))
+            });
+        }
 
-    booking: {
-      id: Date.now(),
-      car_id,
-      booking_date,
-      time_slot,
-      status: "pending",
-    },
-  });
-});
-
-app.get("/api/bookings/check-availability", (req, res) => {
-  return res.status(200).json({
-    success: true,
-    isAvailable: true,
-    message: "This time slot is available!",
-  });
-});
-
-/*
-|--------------------------------------------------------------------------
-| 404 HANDLER
-|--------------------------------------------------------------------------
-*/
-
-app.use((req, res) => {
-  return res.status(404).json({
-    success: false,
-    message: "Endpoint not found",
-  });
-});
-
-/*
-|--------------------------------------------------------------------------
-| GLOBAL ERROR HANDLER
-|--------------------------------------------------------------------------
-*/
-
-app.use((err, req, res, next) => {
-  console.error("Error:", err);
-
-  if (res.headersSent) {
-    return next(err);
-  }
-
-  return res.status(err.status || err.statusCode || 500).json({
-    success: false,
-    message: err.message || "Internal server error",
-
-    error:
-      process.env.NODE_ENV === "development"
-        ? {
-            name: err.name,
-            message: err.message,
-            code: err.code || null,
-          }
-        : undefined,
-  });
-});
-
-/*
-|--------------------------------------------------------------------------
-| START SERVER
-|--------------------------------------------------------------------------
-*/
-
-const server = app.listen(PORT, () => {
-  console.log("========================================");
-
-  console.log(`🚀 Backend Server running on http://localhost:${PORT}`);
-
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-
-  console.log(`🔐 Authentication: http://localhost:${PORT}/api/auth`);
-
-  console.log(`🚗 Cars API: http://localhost:${PORT}/api/cars`);
-
-  console.log(`🖼️ Image upload: http://localhost:${PORT}/api/cars/upload`);
-
-  console.log("========================================");
-
-  /*
-  |--------------------------------------------------------------------------
-  | LAZY DATABASE INDEXING
-  |--------------------------------------------------------------------------
-  |
-  | Runs after the HTTP server starts so index checks do not delay startup.
-  |
-  */
-
-  if (process.env.LAZY_INDEXING_ENABLED !== "false") {
-    setImmediate(() => {
-      ensureCarSearchIndexes()
-        .then(() => {
-          console.log("[indexing] Lazy index check completed.");
-        })
-        .catch((error) => {
-          console.error("[indexing] Lazy index setup failed:", error.message);
+        // STEP 7: Return the calculated results
+        res.json({
+            success: true,
+            inputs: {
+                carPrice: price,
+                downPayment: down,
+                loanAmount: loanAmount,
+                interestRate: rate,
+                loanTermMonths: term
+            },
+            results: {
+                monthlyPayment: Math.round(monthlyPayment),
+                totalPayment: Math.round(totalPayment),
+                totalInterest: Math.round(totalInterest),
+                paymentSchedule: paymentSchedule,
+                currency: 'UGX'
+            }
         });
-    });
-  } else {
-    console.log("[indexing] Lazy indexing is disabled.");
-  }
+
+    } catch (error) {
+        // Handle any unexpected errors
+        console.error('Calculation error:', error);
+        res.status(500).json({ 
+            error: 'Internal server error', 
+            message: error.message 
+        });
+    }
 });
 
-/*
-|--------------------------------------------------------------------------
-| GRACEFUL SHUTDOWN
-|--------------------------------------------------------------------------
-*/
+// ============================================
+// USER STORY 2: Dealership Localization
+// ============================================
+// GET /api/dealership/location
+// This endpoint returns dealership information formatted for Google Maps
+app.get('/api/dealership/location', (req, res) => {
+    try {
+        // Dealership information for Panda Motors in Banda, Kampala
+        const dealershipInfo = {
+            success: true,
+            dealership: {
+                // Basic info
+                name: 'Panda Motors Ltd',
+                description: 'Uganda\'s trusted luxury vehicle importer',
+                
+                // Address - structured for easy display
+                address: {
+                    street: 'Banda, Jinja Road',
+                    city: 'Kampala',
+                    district: 'Kampala District',
+                    country: 'Uganda',
+                    fullAddress: 'Banda, Jinja Road, Kampala, Uganda'
+                },
+                
+                // LOCATION COORDINATES - For Google Maps integration
+                // These coordinates point to Banda, Kampala, Uganda
+                location: {
+                    latitude: 0.3488,    // Decimal degrees
+                    longitude: 32.6160,   // Decimal degrees
+                    zoom: 15              // Recommended zoom level for map
+                },
+                
+                // Operating hours for each day
+                operatingHours: {
+                    monday: { open: '08:00', close: '18:00', isOpen: true },
+                    tuesday: { open: '08:00', close: '18:00', isOpen: true },
+                    wednesday: { open: '08:00', close: '18:00', isOpen: true },
+                    thursday: { open: '08:00', close: '18:00', isOpen: true },
+                    friday: { open: '08:00', close: '18:00', isOpen: true },
+                    saturday: { open: '09:00', close: '17:00', isOpen: true },
+                    sunday: { open: '00:00', close: '00:00', isOpen: false, note: 'Closed' }
+                },
+                
+                // Contact information
+                contact: {
+                    phone: ['+256 770 826 951', '+256 756 053 475'],
+                    whatsapp: '+256 770 826 951',
+                    email: 'sales@pandamotors.co.ug'
+                },
+                
+                // Services offered
+                services: [
+                    'URA Duty Clearance',
+                    'Import Documentation',
+                    'Certified Workshop',
+                    'Flexible Financing'
+                ],
+                
+                // GOOGLE MAPS INTEGRATION URLs
+                // These URLs can be used directly in frontend map components
+                googleMapsUrl: 'https://maps.google.com/?q=Banda,+Jinja+Road,+Kampala,+Uganda',
+                directionsUrl: 'https://maps.google.com/dir//Banda,+Jinja+Road,+Kampala,+Uganda',
+                embedMapUrl: 'https://maps.google.com/maps?q=Banda+Kampala+Uganda&z=15&output=embed'
+            }
+        };
 
-function shutdown(signal) {
-  console.log(`\n${signal} received. Shutting down server...`);
+        // Send the response
+        res.json(dealershipInfo);
 
-  server.close((error) => {
-    if (error) {
-      console.error("Server shutdown failed:", error);
-
-      process.exit(1);
+    } catch (error) {
+        console.error('Location error:', error);
+        res.status(500).json({ 
+            error: 'Internal server error', 
+            message: error.message 
+        });
     }
+});
 
-    console.log("HTTP server closed successfully.");
+// ============================================
+// BONUS: Dealership Open Status Endpoint
+// ============================================
+// GET /api/dealership/status
+// Returns whether the dealership is currently open
+app.get('/api/dealership/status', (req, res) => {
+    const now = new Date();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const currentDay = dayNames[now.getDay()];
+    
+    // Format current time as HH:MM
+    const currentTime = now.toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
+    // Operating hours (same as above)
+    const hours = {
+        monday: { open: '08:00', close: '18:00' },
+        tuesday: { open: '08:00', close: '18:00' },
+        wednesday: { open: '08:00', close: '18:00' },
+        thursday: { open: '08:00', close: '18:00' },
+        friday: { open: '08:00', close: '18:00' },
+        saturday: { open: '09:00', close: '17:00' },
+        sunday: { open: '00:00', close: '00:00' }
+    };
+    
+    const todayHours = hours[currentDay];
+    const isOpen = currentDay !== 'sunday' && 
+                   currentTime >= todayHours.open && 
+                   currentTime <= todayHours.close;
+    
+    res.json({
+        success: true,
+        currentTime: currentTime,
+        currentDay: currentDay,
+        isOpen: isOpen,
+        operatingHours: todayHours,
+        message: isOpen ? 'We are currently open! Visit us today.' : 'We are closed. Please visit during business hours.'
+    });
+});
 
-    process.exit(0);
-  });
+// ============================================
+// Health Check Endpoint
+// ============================================
+// GET /api/health
+// Simple endpoint to verify the API is running
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        message: 'Panda Motors API is running!',
+        version: '2.0.0',
+        endpoints: [
+            // Financial
+            'POST /api/finance/calculate - Calculate loan payments',
+            
+            // Dealership
+            'GET /api/dealership/location - Get dealership location',
+            'GET /api/dealership/status - Check if open',
+            
+            // Bookings
+            'POST /api/bookings/create - Book test drive',
+            'GET /api/bookings/check-availability - Check availability',
+            'GET /api/bookings/user/:user_id - Get user bookings',
+            'PUT /api/bookings/:id/cancel - Cancel booking',
+            
+            // Admin Analytics
+            'GET /api/admin/stats - Full admin statistics',
+            'GET /api/admin/stats/summary - Quick summary',
+            
+            // Performance & Optimized Queries (NEW)
+            'GET /api/optimized/search - Optimized inventory search',
+            'GET /api/optimized/availability - Quick availability check',
+            'GET /api/optimized/stats - Inventory statistics',
+            'GET /api/optimized/most-searched - Most searched makes',
+            'GET /api/optimized/performance - Query performance report',
+            
+            // Admin Metrics Dashboard (NEW)
+            'GET /api/admin/metrics - Full admin dashboard metrics',
+            'GET /api/admin/metrics/inventory - Inventory metrics only',
+            'GET /api/admin/metrics/bookings - Booking metrics only',
+            
+            // Health
+            'GET /api/health - Health check'
+        ]
+    });
+});
+
+// ============================================
+// Database Initialization (Mock for now)
+// ============================================
+// Initialize database and create indexes on startup
+async function initializeDatabase() {
+    try {
+        console.log('?? Database initialization skipped - using in-memory data');
+        console.log('? Database initialization complete!');
+    } catch (error) {
+        console.error('? Database initialization error:', error.message);
+    }
 }
 
-process.on("SIGINT", () => {
-  shutdown("SIGINT");
-});
-
-process.on("SIGTERM", () => {
-  shutdown("SIGTERM");
+// ============================================
+// Start the Server
+// ============================================
+app.listen(PORT, async () => {
+    console.log('\n========================================');
+    console.log('?? Panda Motors API Server');
+    console.log('========================================');
+    console.log(`?? Server running on: http://localhost:${PORT}`);
+    console.log(`?? Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Initialize database
+    await initializeDatabase();
+    
+    console.log('\n?? Available Endpoints:');
+    console.log('   --- Financial ---');
+    console.log(`   POST /api/finance/calculate  - Loan calculator`);
+    
+    console.log('   --- Dealership ---');
+    console.log(`   GET  /api/dealership/location - Store location`);
+    console.log(`   GET  /api/dealership/status   - Open status`);
+    
+    console.log('   --- Test Drive Booking ---');
+    console.log(`   POST /api/bookings/create     - Book test drive with conflict logic`);
+    console.log(`   GET  /api/bookings/check-availability - Check availability`);
+    console.log(`   GET  /api/bookings/user/:user_id - Get user bookings`);
+    console.log(`   PUT  /api/bookings/:id/cancel - Cancel booking`);
+    
+    console.log('   --- Admin Analytics ---');
+    console.log(`   GET  /api/admin/stats         - Full admin statistics`);
+    console.log(`   GET  /api/admin/stats/summary - Quick summary`);
+    
+    console.log('   --- Performance & Optimized Queries (NEW) ---');
+    console.log(`   GET  /api/optimized/search    - Optimized inventory search`);
+    console.log(`   GET  /api/optimized/availability - Quick availability check`);
+    console.log(`   GET  /api/optimized/stats     - Inventory statistics`);
+    console.log(`   GET  /api/optimized/most-searched - Most searched makes`);
+    console.log(`   GET  /api/optimized/performance - Query performance report`);
+    
+    console.log('   --- Admin Metrics Dashboard (NEW) ---');
+    console.log(`   GET  /api/admin/metrics       - Full dashboard metrics`);
+    console.log(`   GET  /api/admin/metrics/inventory - Inventory metrics only`);
+    console.log(`   GET  /api/admin/metrics/bookings - Booking metrics only`);
+    
+    console.log('   --- Health ---');
+    console.log(`   GET  /api/health              - Health check`);
+    console.log('========================================\n');
 });
