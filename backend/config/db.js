@@ -1,5 +1,10 @@
 import pg from "pg";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const { Pool } = pg;
 
@@ -45,7 +50,7 @@ export async function verifyDatabaseConnection() {
 }
 
 const db = {
-  async query(text, params) {
+  async query(text, params = []) {
     try {
       return await pool.query(text, params);
     } catch (error) {
@@ -56,6 +61,8 @@ const db = {
       throw error;
     }
   },
+
+  pool,
 };
 
 export default db;

@@ -1,6 +1,8 @@
 // src/pages/Admin.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../features/auth/hooks';
+import { authenticatedApiRequest } from '../api/client';
 
 const Admin: React.FC = () => {
   const [stats, setStats] = useState({
@@ -11,6 +13,7 @@ const Admin: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { logout, accessToken } = useAuth();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -37,12 +40,8 @@ const Admin: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/admin/stats', {
-        headers: {
-          'Authorization': 'Bearer ' + token
-        }
-      });
+      if (!accessToken) return;
+      const response = await authenticatedApiRequest('/api/admin/stats', accessToken);
       
       if (response.ok) {
         const data = await response.json();
@@ -56,9 +55,8 @@ const Admin: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
+    logout();
+    navigate('/login', { replace: true });
   };
 
   if (loading) {
