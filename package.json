@@ -6,7 +6,13 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "start": "vite"
+    "test:auth-storage": "tsx src/tests/authStorage.manual.ts",
+    "test:auth-service": "tsx src/tests/authService.manual.ts",
+    "test:auth": "npm run test:auth-storage && npm run test:auth-service && npm run test:auth-bootstrap",
+    "test:auth-bootstrap": "tsx src/tests/authBootstrap.manual.ts",
+    "test:protected-route": "tsx src/tests/protectedRoute.manual.ts",
+    "test:auth-persistence": "tsx src/tests/authPersistence.manual.ts",
+    "test:api-config": "tsx src/tests/apiConfig.manual.ts"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -40,13 +46,13 @@
     "@radix-ui/react-toggle": "1.1.2",
     "@radix-ui/react-toggle-group": "1.1.2",
     "@radix-ui/react-tooltip": "1.1.8",
-    "@reduxjs/toolkit": "^2.12.0",
-    "axios": "^1.18.1",
+    "axios": "^1.19.0",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "1.9.4",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",
+    "compression": "^1.8.1",
     "cors": "^2.8.6",
     "date-fns": "3.6.0",
     "dotenv": "^17.4.2",
@@ -64,11 +70,10 @@
     "react-dnd-html5-backend": "16.0.1",
     "react-hook-form": "7.55.0",
     "react-popper": "2.3.0",
-    "react-redux": "^9.3.0",
     "react-resizable-panels": "2.1.7",
     "react-responsive-masonry": "2.7.1",
     "react-router": "^7.18.0",
-    "react-router-dom": "^7.18.0",
+    "react-router-dom": "^7.18.1",
     "react-slick": "0.31.0",
     "recharts": "2.15.2",
     "sonner": "2.0.3",
@@ -80,6 +85,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
+    "@types/node": "^26.1.1",
     "@types/react-dom": "^18.3.7",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^4.7.0",
@@ -88,6 +94,7 @@
     "postcss": "^8.5.15",
     "react-dom": "^18.3.1",
     "tailwindcss": "^4.1.12",
+    "tsx": "^4.23.1",
     "vite": "^6.4.3"
   },
   "peerDependencies": {

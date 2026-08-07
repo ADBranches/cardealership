@@ -1,37 +1,39 @@
-import type { LoginCredentials, RegisterCredentials } from "../types";
+import type { AuthSession, LoginCredentials, RegisterCredentials, VerifySessionResult } from "../types";
+import { clearStoredSession, getAuthToken, getAuthenticatedUser, getStoredSession, saveSession } from "./authStorage";
+import { verifySession as verifySessionRequest } from "./authApi";
 
-const TOKEN_KEYS = ["token", "authToken", "jwt"] as const;
-
-export function getAuthToken(): string | null {
-  for (const key of TOKEN_KEYS) {
-    const value = localStorage.getItem(key);
-    if (value) return value;
-  }
-  return null;
-}
+export { clearStoredSession, getAuthenticatedUser, getAuthToken, getStoredSession, saveSession };
 
 export function isAuthenticated(): boolean {
-  return Boolean(getAuthToken());
+  return Boolean(getStoredSession());
 }
 
 export function clearAuthToken(): void {
-  TOKEN_KEYS.forEach((key) => localStorage.removeItem(key));
+  clearStoredSession();
+}
+
+export async function verifySession(token: string, options: Parameters<typeof verifySessionRequest>[1] = {}): Promise<VerifySessionResult> {
+  const result = await verifySessionRequest(token, options);
+  if (!result.valid) clearStoredSession();
+  return result;
+}
+
+export async function restoreStoredSession(options: Parameters<typeof verifySessionRequest>[1] = {}): Promise<AuthSession | null> {
+  const token = getAuthToken();
+  if (!token) return null;
+  const result = await verifySession(token, options);
+  if (!result.valid) return null;
+  const session = { accessToken: token, user: result.user };
+  saveSession(session);
+  return session;
 }
 
 export async function login(credentials: LoginCredentials): Promise<{ success: boolean; message: string }> {
-  console.log("Login attempt:", credentials.email);
-  return {
-    success: false,
-    message: "Authentication endpoint connection pending.",
-  };
+  void credentials;
+  return { success: false, message: "Authentication endpoint connection pending." };
 }
 
-export async function register(
-  credentials: RegisterCredentials
-): Promise<{ success: boolean; message: string }> {
-  console.log("Register attempt:", credentials.email);
-  return {
-    success: false,
-    message: "Registration endpoint connection pending.",
-  };
+export async function register(credentials: RegisterCredentials): Promise<{ success: boolean; message: string }> {
+  void credentials;
+  return { success: false, message: "Registration endpoint connection pending." };
 }

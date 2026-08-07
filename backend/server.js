@@ -1,53 +1,62 @@
 // Import required packages
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 
+// Import routes (using ES module syntax)
+import bookingRoutes from './routes/bookingRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import optimizedRoutes from './routes/optimizedRoutes.js';
+import adminMetricsRoutes from './routes/adminMetricsRoutes.js';
+
+// Import performance middleware
+import { performanceMiddleware } from './middleware/performanceMiddleware.js';
+
+// Import database configuration and indexes
+import { createIndexes, verifyIndexes } from './config/indexes.js';
 
 // Create an Express application
 const app = express();
 
-// Define the port (use environment variable or default to 5500)
-const PORT = process.env.PORT || 5500;
+// Define the port (use environment variable or default to 5000)
+const PORT = process.env.PORT || 5000;
 
 // ============================================
 // MIDDLEWARE
 // ============================================
-// Middleware functions that run before every request
-
 // cors() - Allows your React frontend (running on port 5173) 
-// to communicate with this backend (running on port 5500)
-
-app.use(cors({
-    origin: "http://localhost:5173",
-    credentials: true
-}));
+// to communicate with this backend (running on port 5000)
+app.use(cors());
 
 // express.json() - Automatically parses incoming JSON data 
 // from POST requests into a JavaScript object (req.body)
 app.use(express.json());
 
+// Performance monitoring middleware
+app.use(performanceMiddleware);
+
 // ============================================
-// HOME PAGE ROUTE
+// ROUTES
 // ============================================
 
-app.get("/", (req, res) => {
-    console.log("Home route was visited");
+// Booking routes (Task 1)
+app.use('/api/bookings', bookingRoutes);
 
-    res.json({
-        message: "Welcome to Panda Motors API 🚗",
-        status: "Server is running successfully",
-        availableEndpoints: [
-            "GET /api/health",
-            "GET /api/dealership/location",
-            "GET /api/dealership/status",
-            "POST /api/finance/calculate",
-            "POST /api/auth/login"
-        ]
-    });
-});
+// Admin routes (Task 2)
+app.use('/api/admin', adminRoutes);
+
+// Optimized query routes (Performance & Analytics)
+app.use('/api/optimized', optimizedRoutes);
+
+// Admin metrics routes (Unified Admin Analytics Dashboard)
+app.use('/api/admin/metrics', adminMetricsRoutes);
 
 // ============================================
 // USER STORY 1: Financial Payment Approximation
@@ -317,83 +326,100 @@ app.get('/api/health', (req, res) => {
         status: 'OK', 
         timestamp: new Date().toISOString(),
         message: 'Panda Motors API is running!',
+        version: '2.0.0',
         endpoints: [
+            // Financial
             'POST /api/finance/calculate - Calculate loan payments',
+            
+            // Dealership
             'GET /api/dealership/location - Get dealership location',
-            'GET /api/dealership/status - Check if open'
+            'GET /api/dealership/status - Check if open',
+            
+            // Bookings
+            'POST /api/bookings/create - Book test drive',
+            'GET /api/bookings/check-availability - Check availability',
+            'GET /api/bookings/user/:user_id - Get user bookings',
+            'PUT /api/bookings/:id/cancel - Cancel booking',
+            
+            // Admin Analytics
+            'GET /api/admin/stats - Full admin statistics',
+            'GET /api/admin/stats/summary - Quick summary',
+            
+            // Performance & Optimized Queries (NEW)
+            'GET /api/optimized/search - Optimized inventory search',
+            'GET /api/optimized/availability - Quick availability check',
+            'GET /api/optimized/stats - Inventory statistics',
+            'GET /api/optimized/most-searched - Most searched makes',
+            'GET /api/optimized/performance - Query performance report',
+            
+            // Admin Metrics Dashboard (NEW)
+            'GET /api/admin/metrics - Full admin dashboard metrics',
+            'GET /api/admin/metrics/inventory - Inventory metrics only',
+            'GET /api/admin/metrics/bookings - Booking metrics only',
+            
+            // Health
+            'GET /api/health - Health check'
         ]
     });
 });
 
 // ============================================
-// USER LOGIN ROUTE
+// Database Initialization (Mock for now)
 // ============================================
-// POST /api/auth/login
-
-app.post("/api/auth/login", (req, res) => {
+// Initialize database and create indexes on startup
+async function initializeDatabase() {
     try {
-        const { email, password } = req.body;
-
-        // Check empty fields
-        if (!email || !password) {
-            return res.status(400).json({
-                message: "Email and password are required"
-            });
-        }
-
-
-        // Temporary user (for testing)
-        const user = {
-            id: 1,
-            name: "Devine Phoebe",
-            email: "devine@gmail.com",
-            role: "customer"
-        };
-
-
-        // Check login details
-        if (
-            email !== "devine@gmail.com" ||
-            password !== "123456"
-        ) {
-            return res.status(401).json({
-                message: "Invalid email or password"
-            });
-        }
-
-
-        // Successful login
-        res.json({
-            message: "Login successful",
-            user: user,
-            token: "sample-token"
-        });
-
-
-    } catch(error) {
-
-        console.error(error);
-
-        res.status(500).json({
-            message:"Server error"
-        });
-
+        console.log('?? Database initialization skipped - using in-memory data');
+        console.log('? Database initialization complete!');
+    } catch (error) {
+        console.error('? Database initialization error:', error.message);
     }
-});
+}
+
 // ============================================
 // Start the Server
 // ============================================
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log('\n========================================');
-    console.log(' Panda Motors API Server');
+    console.log('?? Panda Motors API Server');
     console.log('========================================');
-    console.log(` Server running on: http://localhost:${PORT}`);
-    console.log('\n Available Endpoints:');
+    console.log(`?? Server running on: http://localhost:${PORT}`);
+    console.log(`?? Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Initialize database
+    await initializeDatabase();
+    
+    console.log('\n?? Available Endpoints:');
+    console.log('   --- Financial ---');
     console.log(`   POST /api/finance/calculate  - Loan calculator`);
+    
+    console.log('   --- Dealership ---');
     console.log(`   GET  /api/dealership/location - Store location`);
     console.log(`   GET  /api/dealership/status   - Open status`);
+    
+    console.log('   --- Test Drive Booking ---');
+    console.log(`   POST /api/bookings/create     - Book test drive with conflict logic`);
+    console.log(`   GET  /api/bookings/check-availability - Check availability`);
+    console.log(`   GET  /api/bookings/user/:user_id - Get user bookings`);
+    console.log(`   PUT  /api/bookings/:id/cancel - Cancel booking`);
+    
+    console.log('   --- Admin Analytics ---');
+    console.log(`   GET  /api/admin/stats         - Full admin statistics`);
+    console.log(`   GET  /api/admin/stats/summary - Quick summary`);
+    
+    console.log('   --- Performance & Optimized Queries (NEW) ---');
+    console.log(`   GET  /api/optimized/search    - Optimized inventory search`);
+    console.log(`   GET  /api/optimized/availability - Quick availability check`);
+    console.log(`   GET  /api/optimized/stats     - Inventory statistics`);
+    console.log(`   GET  /api/optimized/most-searched - Most searched makes`);
+    console.log(`   GET  /api/optimized/performance - Query performance report`);
+    
+    console.log('   --- Admin Metrics Dashboard (NEW) ---');
+    console.log(`   GET  /api/admin/metrics       - Full dashboard metrics`);
+    console.log(`   GET  /api/admin/metrics/inventory - Inventory metrics only`);
+    console.log(`   GET  /api/admin/metrics/bookings - Booking metrics only`);
+    
+    console.log('   --- Health ---');
     console.log(`   GET  /api/health              - Health check`);
-    console.log(`   POST /api/auth/login          - User login`);
     console.log('========================================\n');
-   
 });

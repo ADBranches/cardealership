@@ -10,12 +10,12 @@ export const findUserByEmail = async (email) => {
 };
 
 // CREATE USER
-export const createUser = async (name, email, password) => {
+export const createUser = async (name, email, password, role) => {
   const result = await db.query(
-    `INSERT INTO users (name, email, password)
-     VALUES ($1, $2, $3)
+    `INSERT INTO users (name, email, password, role)
+     VALUES ($1, $2, $3, $4)
      RETURNING id, name, email, role`,
-    [name, email, password]
+    [name, email, password, role]
   );
 
   return result.rows[0];

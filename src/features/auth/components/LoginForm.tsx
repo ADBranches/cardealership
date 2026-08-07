@@ -3,11 +3,12 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { login } from "../services";
+import { getSafeRedirectPath } from "../../../app/components/auth/routeAccess";
 
 export function LoginForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/";
+  const redirect = getSafeRedirectPath(searchParams.get("redirect"), "/");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
+import type { AdminVehicle } from "../../../types/vehicle";
 import {
   Table,
   TableBody,
@@ -10,11 +11,10 @@ import {
   TableRow,
 } from "../ui/table";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
-import type { VehicleStatus } from "../../lib/adminInventory";
-import { buildPaginatedCarsUrl } from "../../lib/api";
-import { EditVehicleModal } from "./EditVehicleModal";
 
-type AdminVehicle = {
+type VehicleStatus = "Available" | "Pending Test Drive" | "Sold";
+
+export type AdminVehicle = {
   id: number;
   name: string;
   brand: string;
@@ -32,15 +32,64 @@ type AdminVehicle = {
 };
 
 type AdminListingsTableProps = {
-  vehicles: AdminVehicle[];
+  vehicles?: AdminVehicle[];
 };
 
-const DEFAULT_PAGE_SIZE = 12;
+const DEFAULT_VEHICLES: AdminVehicle[] = [
+  {
+    id: 1,
+    name: "Land Cruiser V8",
+    brand: "Toyota",
+    type: "Luxury SUV",
+    year: 2023,
+    price: 285000000,
+    condition: "New",
+    status: "Available",
+    image: "",
+    specs: {
+      power: "309 HP",
+      engine: "4.5L V8",
+      drive: "4WD",
+    },
+  },
+  {
+    id: 2,
+    name: "S-Class S500",
+    brand: "Mercedes-Benz",
+    type: "Luxury Sedan",
+    year: 2023,
+    price: 360000000,
+    condition: "New",
+    status: "Available",
+    image: "",
+    specs: {
+      power: "429 HP",
+      engine: "3.0L V6T",
+      drive: "RWD",
+    },
+  },
+  {
+    id: 3,
+    name: "Range Rover Sport",
+    brand: "Land Rover",
+    type: "Sport Luxury SUV",
+    year: 2023,
+    price: 420000000,
+    condition: "New",
+    status: "Pending Test Drive",
+    image: "",
+    specs: {
+      power: "395 HP",
+      engine: "3.0L I6T",
+      drive: "AWD",
+    },
+  },
+];
 
 function formatUGX(amount: number) {
-  if (amount >= 1_000_000_000) return `UGX ${(amount / 1_000_000_000).toFixed(1)}B`;
-  if (amount >= 1_000_000) return `UGX ${(amount / 1_000_000).toFixed(0)}M`;
-  return `UGX ${amount.toLocaleString()}`;
+  if (amount >= 1_000_000_000) return "UGX " + (amount / 1_000_000_000).toFixed(1) + "B";
+  if (amount >= 1_000_000) return "UGX " + (amount / 1_000_000).toFixed(0) + "M";
+  return "UGX " + amount.toLocaleString();
 }
 
 function getVehicleStatus(vehicle: AdminVehicle): VehicleStatus {
@@ -67,85 +116,39 @@ function getStatusBadgeClass(status: VehicleStatus) {
   return "bg-muted text-muted-foreground hover:bg-muted";
 }
 
-export function AdminListingsTable({ vehicles }: AdminListingsTableProps) {
-  const [listings, setListings] = useState(vehicles);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [isLoading] = useState(false);
-  const [errorMessage] = useState("");
+export function AdminListingsTable({ vehicles = DEFAULT_VEHICLES }: AdminListingsTableProps) {
+  const [listings, setListings] = useState<AdminVehicle[]>(vehicles);
   const [vehicleToDelete, setVehicleToDelete] = useState<AdminVehicle | null>(null);
-  const [vehicleToEdit, setVehicleToEdit] = useState<AdminVehicle | null>(null);
 
   useEffect(() => {
     setListings(vehicles);
-    setCurrentPage(1);
   }, [vehicles]);
+
+  function handleEdit(vehicleId: number) {
+    console.log("Edit vehicle:", vehicleId);
+  }
+
+  function handleDeleteClick(vehicle: AdminVehicle) {
+    setVehicleToDelete(vehicle);
+  }
 
   function handleConfirmDelete() {
     if (!vehicleToDelete) return;
 
-    // TODO: Replace this UI-only removal with protected DELETE /api/cars/:id
-    // once the backend inventory endpoint and admin JWT middleware are confirmed.
     setListings((currentListings) =>
       currentListings.filter((vehicle) => vehicle.id !== vehicleToDelete.id)
     );
 
+    console.log("Vehicle removed from UI state:", vehicleToDelete.id);
+    console.log("Future backend endpoint: DELETE /api/cars/:id");
+
     setVehicleToDelete(null);
-  }
-
-  function handleSaveEdit(updatedVehicle: AdminVehicle) {
-    // TODO: Replace this UI-only update with protected PUT /api/cars/:id
-    // once the backend inventory endpoint and admin JWT middleware are confirmed.
-    setListings((currentListings) =>
-      currentListings.map((vehicle) =>
-        vehicle.id === updatedVehicle.id
-          ? {
-              ...vehicle,
-              price: updatedVehicle.price,
-              condition: updatedVehicle.condition,
-              status: updatedVehicle.status,
-            }
-          : vehicle
-      )
-    );
-
-    setVehicleToEdit(null);
-  }
-
-  const totalPages = Math.max(1, Math.ceil(listings.length / pageSize));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const startIndex = (safeCurrentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const currentPageListings = listings.slice(startIndex, endIndex);
-  const paginatedCarsUrl = buildPaginatedCarsUrl({
-    page: safeCurrentPage,
-    limit: pageSize,
-  });
-
-  if (isLoading) {
-    return (
-      <div className="rounded-lg border border-border bg-card p-8 text-center">
-        <h4 className="text-2xl font-bold mb-2">Loading Listings</h4>
-        <p className="text-muted-foreground">
-          Preparing the latest inventory records...
-        </p>
-      </div>
-    );
-  }
-
-  if (errorMessage) {
-    return (
-      <div className="rounded-lg border border-red-300 bg-red-50 p-8 text-center text-red-700">
-        <h4 className="text-2xl font-bold mb-2">Unable To Load Listings</h4>
-        <p>{errorMessage}</p>
-      </div>
-    );
   }
 
   if (!listings.length) {
     return (
       <div className="rounded-lg border border-border bg-card p-8 text-center">
-        <h4 className="text-2xl font-bold mb-2">No Listings Available</h4>
+        <h4 className="text-xl font-bold mb-2">No Listings Available</h4>
         <p className="text-muted-foreground">
           There are currently no vehicle listings to manage.
         </p>
@@ -155,136 +158,71 @@ export function AdminListingsTable({ vehicles }: AdminListingsTableProps) {
 
   return (
     <>
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Brand</TableHead>
-                <TableHead>Year</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Condition</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Drive</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+      <div className="w-full overflow-x-auto rounded-lg border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Vehicle</TableHead>
+              <TableHead>Brand</TableHead>
+              <TableHead>Year</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead>Condition</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Drive</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
 
-            <TableBody>
-              {currentPageListings.map((vehicle) => (
-                <TableRow key={vehicle.id}>
+          <TableBody>
+            {listings.map((listing) => {
+              const status = getVehicleStatus(listing);
+
+              return (
+                <TableRow key={listing.id}>
+                  <TableCell className="font-medium">{listing.name}</TableCell>
+                  <TableCell>{listing.brand}</TableCell>
+                  <TableCell>{listing.year}</TableCell>
+                  <TableCell>{formatUGX(listing.price)}</TableCell>
+                  <TableCell>{listing.condition}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-3 min-w-[240px]">
-                      <img
-                        src={vehicle.image}
-                        alt={vehicle.name}
-                        className="h-12 w-16 rounded-md object-cover border border-border"
-                        onError={(event) => {
-                          const target = event.target as HTMLImageElement;
-                          target.src =
-                            "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=400&q=80";
-                        }}
-                      />
-
-                      <div>
-                        <p className="font-semibold">{vehicle.name}</p>
-                        <p className="text-xs text-muted-foreground">{vehicle.type}</p>
-                      </div>
-                    </div>
+                    <Badge className={getStatusBadgeClass(status)}>{status}</Badge>
                   </TableCell>
-
-                  <TableCell>{vehicle.brand}</TableCell>
-                  <TableCell>{vehicle.year}</TableCell>
-                  <TableCell className="font-semibold text-primary">
-                    {formatUGX(vehicle.price)}
-                  </TableCell>
-                  <TableCell>{vehicle.condition}</TableCell>
-                  <TableCell>
-                    <Badge className={getStatusBadgeClass(getVehicleStatus(vehicle))}>
-                      {getVehicleStatus(vehicle)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{vehicle.specs.drive}</TableCell>
-
+                  <TableCell>{listing.specs.drive}</TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-2">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setVehicleToEdit(vehicle)}
+                        onClick={() => handleEdit(listing.id)}
                       >
                         Edit
                       </Button>
 
                       <Button
                         type="button"
+                        variant="destructive"
                         size="sm"
-                        className="bg-red-600 text-white hover:bg-red-700"
-                        onClick={() => setVehicleToDelete(vehicle)}
+                        onClick={() => handleDeleteClick(listing)}
                       >
                         Delete
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        <div className="flex flex-col gap-4 border-t border-border px-4 py-4 md:flex-row md:items-center md:justify-between">
-          <div className="text-sm text-muted-foreground">
-            Page {safeCurrentPage} of {totalPages} · Showing{" "}
-            {listings.length ? startIndex + 1 : 0}-
-            {Math.min(endIndex, listings.length)} of {listings.length} listings
-          </div>
-
-          <div className="text-xs text-muted-foreground">
-            Future API: {paginatedCarsUrl}
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={safeCurrentPage === 1}
-              onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
-            >
-              Previous
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={safeCurrentPage === totalPages}
-              onClick={() =>
-                setCurrentPage((page) => Math.min(page + 1, totalPages))
-              }
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
 
-      <EditVehicleModal
-        vehicle={vehicleToEdit}
-        open={Boolean(vehicleToEdit)}
-        onOpenChange={(open) => {
-          if (!open) setVehicleToEdit(null);
-        }}
-        onSave={handleSaveEdit}
-      />
-
       <DeleteConfirmModal
-        vehicle={vehicleToDelete}
         open={Boolean(vehicleToDelete)}
+        vehicle={vehicleToDelete}
         onOpenChange={(open) => {
-          if (!open) setVehicleToDelete(null);
+          if (!open) {
+            setVehicleToDelete(null);
+          }
         }}
         onConfirm={handleConfirmDelete}
       />

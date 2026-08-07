@@ -4,6 +4,7 @@ import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AdminListingsTable } from "./AdminListingsTable";
 import { AddNewCarForm } from "./AddNewCarForm";
+import { CarImageUploader } from "./CarImageUploader";
 
 type AdminVehicle = {
   id: number;
@@ -144,6 +145,7 @@ export function AdminDashboard({ vehicles }: AdminDashboardProps) {
 
           <TabsContent value="add-vehicle">
             <AddNewCarForm />
+            <CarImageUploader />
           </TabsContent>
 
           <TabsContent value="manage-inventory">
