@@ -1,0 +1,83 @@
+.profile-container {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+
+.profile-card {
+  width: 500px;
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  padding: 30px;
+  border-radius: 15px;
+}
+
+
+.profile-card h1 {
+  color: var(--primary);
+  text-align: center;
+}
+
+
+.subtitle {
+  text-align: center;
+  color: var(--muted-foreground);
+  margin-bottom: 25px;
+}
+
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+
+.profile-info label {
+  font-weight: var(--font-weight-medium);
+}
+
+
+.profile-info input {
+  width: 100%;
+  padding: 12px;
+  background: var(--input-background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+
+.profile-info input:disabled {
+  opacity: 0.8;
+}
+
+
+.profile-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+
+.profile-buttons button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+
+.profile-buttons .logout {
+  background: var(--destructive);
+  color: white;
+}
