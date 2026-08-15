@@ -239,13 +239,7 @@ export function HomePage() {
 
 
 
-  function resetFilters(){
-
-    console.log(
-      "Filters reset"
-    );
-
-  }
+  function resetFilters() {}
 
 
 
@@ -313,9 +307,7 @@ export function HomePage() {
   loading={loading}
   vehicles={vehicles}
   filterByTab={filterByTab}
-  resetFilters={() => {
-    console.log("Reset filters clicked");
-  }}
+  resetFilters={resetFilters}
 />
 
 

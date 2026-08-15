@@ -19,10 +19,6 @@ export const AVAILABLE_TEST_DRIVE_TIMES = [
 export async function submitTestDriveBooking(
   payload: TestDriveBookingPayload
 ): Promise<{ success: boolean; message: string }> {
-  console.log("Prepared test drive booking payload:", {
-    endpoint: TEST_DRIVE_BOOKING_ENDPOINT,
-    payload,
-  });
 
   return {
     success: true,
