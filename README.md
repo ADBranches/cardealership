@@ -150,3 +150,29 @@ VITE_API_BASE_URL=https://approved-production-api.example.com npm run build
 Project demonstration:
 
 https://youtu.be/HNtln75HTEg
+
+## Sprint 5 Production Build Metrics
+
+The frontend production bundle uses Vite with esbuild minification, disabled production source maps, and the standard 500 kB chunk warning threshold.
+
+Latest validated build:
+
+```text
+Modules transformed: 1727
+HTML: 0.51 kB, gzip 0.32 kB
+CSS: 102.06 kB, gzip 16.19 kB
+JavaScript: 321.03 kB, gzip 100.62 kB
+Build duration: 3.63 seconds
+Warnings: none
+```
+
+The main JavaScript asset remains below the configured warning threshold, so manual vendor chunking was not introduced. The inspected route modules are small, so route-level lazy loading was deferred to avoid unnecessary loading-state and chunk-management complexity.
+
+Production validation confirmed:
+
+- `VITE_API_BASE_URL` is compiled into the frontend bundle.
+- No local application API endpoint is present in compiled output.
+- No backend secret names were detected in compiled assets.
+- No production source maps are generated.
+- No test runner or React refresh tooling enters the production bundle.
+- `/`, `/login`, `/register`, and `/Admin` are served by the local production preview.
