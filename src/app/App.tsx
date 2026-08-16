@@ -7,6 +7,7 @@ import RegisterPage from "../pages/Register";
 import Admin from "../pages/Admin";
 import TestTasks from "../pages/TestTasks/TestTasks";
 import { HomePage } from "../pages/Home/HomePage";
+import { SettingsPage } from "../pages/Settings/SettingsPage";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/Admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/*" element={<HomePage />} />
         </Routes>
       </BrowserRouter>
