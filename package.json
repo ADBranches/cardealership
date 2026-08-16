@@ -13,7 +13,8 @@
     "test:protected-route": "tsx src/tests/protectedRoute.manual.ts",
     "test:auth-persistence": "tsx src/tests/authPersistence.manual.ts",
     "test:api-config": "tsx src/tests/apiConfig.manual.ts",
-    "test:vehicle-filters": "tsx src/tests/vehicleFilterQuery.manual.ts"
+    "test:vehicle-filters": "tsx src/tests/vehicleFilterQuery.manual.ts",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",
