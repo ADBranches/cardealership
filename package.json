@@ -21,7 +21,8 @@
     "test:password-validation": "tsx src/tests/passwordValidation.manual.ts",
     "test:password-change": "tsx src/tests/passwordChange.manual.ts",
     "test:password": "npm run test:password-validation && npm run test:password-change",
-    "test:booking-history": "tsx src/tests/bookingHistory.manual.ts"
+    "test:booking-history": "tsx src/tests/bookingHistory.manual.ts",
+    "test:booking-availability": "tsx src/tests/bookingAvailability.manual.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",
