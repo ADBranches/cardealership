@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProfile } from "../hooks";
 import { ProfileForm } from "./ProfileForm";
 import { PasswordChangeForm } from "./PasswordChangeForm";
+import { PasswordChangeForm } from "./PasswordChangeForm";
 import { ProfileSummaryCard } from "./ProfileSummaryCard";
 import "./ProfileSettingsPanel.css";
 
@@ -17,6 +18,7 @@ export function ProfileSettingsPanel() {
     <div className="profile-settings-grid">
       <ProfileSummaryCard profile={profile} />
       <ProfileForm profile={profile} />
+      <PasswordChangeForm />
       <PasswordChangeForm />
       <Card className="profile-settings-wide">
         <CardHeader><CardTitle className="flex items-center gap-2"><CalendarClock size={22} />Test-drive history</CardTitle></CardHeader>
