@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AVAILABLE_TEST_DRIVE_TIMES } from "../services";
 import { useTestDrive } from "../hooks";
+import { AvailabilitySlotPicker } from "./AvailabilitySlotPicker";
 import type { TestDriveVehicleOption } from "../types";
 
 interface TestDriveSchedulerProps {
@@ -29,6 +29,7 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
     success,
     submitting,
     selectedVehicle,
+    availability,
     resetSuccess,
     handleSubmit,
   } = useTestDrive(vehicles);
@@ -124,25 +125,13 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="time" className="flex items-center gap-2">
-                      <Clock size={16} />
-                      Time
-                    </Label>
-                    <select
-                      id="time"
-                      value={time}
-                      onChange={(event) => setTime(event.target.value)}
-                      className="h-12 w-full rounded-lg border border-border bg-background px-4 text-sm"
-                    >
-                      <option value="">Select time</option>
-                      {AVAILABLE_TEST_DRIVE_TIMES.map((slot) => (
-                        <option key={slot} value={slot}>
-                          {slot}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <AvailabilitySlotPicker
+                    value={time}
+                    onChange={setTime}
+                    state={availability}
+                    vehicleSelected={Boolean(selectedVehicleId)}
+                    dateSelected={Boolean(date)}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -159,7 +148,7 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
 
                 <Button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || availability.status !== "ready"}
                   className="w-full h-12 bg-primary text-white hover:bg-primary/90"
                 >
                   {submitting ? "Submitting..." : "Submit Test Drive Request"}
