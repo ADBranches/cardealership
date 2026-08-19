@@ -23,7 +23,10 @@
     "test:password": "npm run test:password-validation && npm run test:password-change",
     "test:booking-history": "tsx src/tests/bookingHistory.manual.ts",
     "test:booking-availability": "tsx src/tests/bookingAvailability.manual.ts",
-    "test:availability-selection": "tsx src/tests/availabilitySelection.manual.ts"
+    "test:availability-selection": "tsx src/tests/availabilitySelection.manual.ts",
+    "test:admin-chat-state": "tsx src/tests/adminChatState.manual.ts",
+    "test:unread-chat-badge": "tsx src/tests/unreadChatBadge.manual.ts",
+    "test:admin-chat": "npm run test:admin-chat-state && npm run test:unread-chat-badge"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",
