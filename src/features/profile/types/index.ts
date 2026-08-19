@@ -93,15 +93,3 @@ export type BookingHistoryResult =
       code: "UNAUTHORIZED" | "BOOKING_HISTORY_FAILED";
       message: string;
     };
-
-export type BookingHistoryResult =
-  | {
-      success: true;
-      bookings: BookingHistoryItem[];
-      mock: boolean;
-    }
-  | {
-      success: false;
-      code: "UNAUTHORIZED" | "BOOKING_HISTORY_FAILED";
-      message: string;
-    };
