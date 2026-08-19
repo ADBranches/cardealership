@@ -425,3 +425,11 @@ Image cleanup: 10 passed, destructive mode false
 - [ ] Configure backend database, JWT, CORS, and email values through the deployment secret store.
 - [ ] Run the authenticated browser console, network, mobile viewport, booking, and email drill.
 - [ ] Confirm the pull request has no merge conflicts before administrator review.
+
+## Sprint 7 Admin Chat Contract
+
+Sprint 7 introduces Edwin's protected admin multi-chat inbox and real-time unread notification badge. The provisional contract is documented in `docs/sprint7/chat-contract.md`, with frontend domain types under `src/features/admin-chat/types/`.
+
+Ronald's inspected branch confirms transcript saving through `POST /api/chat/messages` and oldest-to-newest history retrieval through `GET /api/chat/conversations/:conversationId/messages`. Conversation listing, read-state persistence, pagination, authorization, and deduplication constraints remain pending.
+
+Devine has not published the WebSocket transport, gateway URL, room events, typing events, acknowledgements, or reconnect contract. Edward has not published the customer-widget payload contract. Production socket integration remains blocked, while deterministic mock-driven frontend state and interface work is authorized.
