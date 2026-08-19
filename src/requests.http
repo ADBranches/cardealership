@@ -100,3 +100,44 @@ Content-Type: image/jpeg
 
 < C:/Users/admin/Downloads/toyota-vehicle.jpg
 --CarImageBoundary--
+
+############################################################
+# TASK 1 — SEARCH ENGINE FEEDS
+############################################################
+
+### DYNAMIC SITEMAP
+GET http://localhost:5000/sitemap.xml
+
+
+### DYNAMIC RSS FEED
+GET http://localhost:5000/rss.xml
+
+
+############################################################
+# TASK 2 — CHAT TRANSCRIPT STORAGE
+############################################################
+
+### SAVE CUSTOMER MESSAGE
+POST http://localhost:5000/api/chat/messages
+Content-Type: application/json
+
+{
+  "conversationId": "customer-1-admin",
+  "sender": "customer",
+  "message": "Hello, is the Toyota Land Cruiser still available?"
+}
+
+
+### SAVE ADMIN MESSAGE
+POST http://localhost:5000/api/chat/messages
+Content-Type: application/json
+
+{
+  "conversationId": "customer-1-admin",
+  "sender": "admin",
+  "message": "Yes, it is currently available."
+}
+
+
+### FETCH PREVIOUS CONVERSATION
+GET http://localhost:5000/api/chat/conversations/customer-1-admin/messages
