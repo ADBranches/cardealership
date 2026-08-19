@@ -1,9 +1,9 @@
-import { AlertCircle, CalendarClock } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner/LoadingSpinner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProfile } from "../hooks";
 import { ProfileForm } from "./ProfileForm";
 import { PasswordChangeForm } from "./PasswordChangeForm";
+import { BookingHistory } from "./BookingHistory";
 import { ProfileSummaryCard } from "./ProfileSummaryCard";
 import "./ProfileSettingsPanel.css";
 
@@ -18,10 +18,7 @@ export function ProfileSettingsPanel() {
       <ProfileSummaryCard profile={profile} />
       <ProfileForm profile={profile} />
       <PasswordChangeForm />
-      <Card className="profile-settings-wide">
-        <CardHeader><CardTitle className="flex items-center gap-2"><CalendarClock size={22} />Test-drive history</CardTitle></CardHeader>
-        <CardContent><p className="text-muted-foreground">Booking history will appear here after the authenticated booking-history endpoint is available.</p></CardContent>
-      </Card>
+      <BookingHistory />
     </div>
   );
 }
