@@ -81,28 +81,3 @@ export type PasswordChangeResult =
       code: PasswordChangeErrorCode;
       message: string;
     };
-
-export interface PasswordChangeValues {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
-
-export type PasswordChangeErrorCode =
-  | "VALIDATION_FAILED"
-  | "UNAUTHORIZED"
-  | "CURRENT_PASSWORD_INCORRECT"
-  | "RATE_LIMITED"
-  | "PASSWORD_CHANGE_FAILED";
-
-export type PasswordChangeResult =
-  | {
-      success: true;
-      message: string;
-      mock: boolean;
-    }
-  | {
-      success: false;
-      code: PasswordChangeErrorCode;
-      message: string;
-    };
