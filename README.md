@@ -314,3 +314,114 @@ If authentication restoration causes a release-blocking regression:
 - [ ] Verify live inventory, optimized images, deep links, and mobile layout.
 - [ ] Inspect the browser console and network panel for release-blocking failures.
 - [ ] Record final build metrics, frontend origin, API origin, and launch-drill results in the pull request.
+
+## Sprint 6 Profile and Test-Drive Release Validation
+
+### Implemented Frontend Scope
+
+- Protected `/settings` workspace using the authenticated-session lifecycle.
+- Verified profile summary sourced from the restored authenticated user.
+- Profile name and email validation with protected update-service support.
+- Password-strength, confirmation, pending-state, and sanitized-error handling.
+- Customer test-drive history grouped into upcoming, completed, and cancelled bookings.
+- Vehicle and date availability requests through `GET /api/bookings/check-availability`.
+- Cancellation of stale availability requests during rapid vehicle or date changes.
+- Reserved test-drive times displayed but disabled.
+- Selected times cleared when the vehicle, date, or availability result changes.
+- Submission blocked while availability is loading or when the chosen slot is unavailable.
+
+The active feature directory is `src/features/test-drive/`. The legacy plural path `src/features/test-drives/` is not used.
+
+### Public Frontend Environment
+
+```text
+VITE_API_BASE_URL=https://api.example.com
+VITE_PROFILE_MOCK_MODE=false
+VITE_AVAILABILITY_MOCK_MODE=false
+```
+
+`VITE_API_BASE_URL` must be an approved absolute HTTP or HTTPS API origin. Both mock-mode flags must remain `false` in deployment builds. Vite variables are public browser values and must never contain database credentials, JWT secrets, email credentials, private keys, or storage-provider secrets.
+
+### Validated Sprint 6 Commands
+
+```bash
+npm run test:profile
+npm run test:password
+npm run test:booking-history
+npm run test:booking-availability
+npm run test:availability-selection
+npm --prefix backend run test:car-image-cleanup
+npm audit
+npm audit --omit=dev
+npm --prefix backend audit --omit=dev
+VITE_API_BASE_URL=https://api.example.com VITE_PROFILE_MOCK_MODE=false VITE_AVAILABILITY_MOCK_MODE=false npm run build
+npm run preview -- --host 127.0.0.1 --port 4173 --strictPort
+```
+
+### Latest Sprint 6 Build
+
+```text
+Build tool: Vite 6.4.3
+Modules transformed: 1768
+HTML: 0.51 kB, gzip 0.32 kB
+CSS: 104.75 kB, gzip 16.78 kB
+JavaScript: 348.16 kB, gzip 107.40 kB
+Production source maps: disabled
+Frontend audit vulnerabilities: 0
+Backend runtime audit vulnerabilities: 0
+```
+
+The final preview served `/`, `/settings`, and `/login` with HTTP 200. Every route returned the same SPA shell, and the preview asset paths matched the freshly generated `dist/index.html` asset paths.
+
+Compiled-output validation confirmed:
+
+- The approved API origin was embedded in the release bundle.
+- No local application API endpoint was embedded.
+- No backend credential name or private-key marker was detected.
+- No production source map was generated.
+- `VITE_PROFILE_MOCK_MODE` and `VITE_AVAILABILITY_MOCK_MODE` were both compiled as disabled.
+
+### Sprint 6 Validation Results
+
+```text
+API configuration: 7 passed
+Authentication: 24 passed
+Authentication persistence: 31 passed
+Protected routes: 12 passed
+Vehicle-filter queries: 5 passed
+Profile validation and service: 14 passed
+Password validation and service: 13 passed
+Booking history: 8 passed
+Booking availability: 12 passed
+Availability selection: 10 passed
+Image cleanup: 10 passed, destructive mode false
+```
+
+### Sprint 6 Known Limitations and Team Dependencies
+
+- The deterministic profile, password, history, and availability service tests use explicitly identified synthetic data.
+- Mock fixture strings remain in the compiled JavaScript because the mock modules are statically imported. Both production mock flags are disabled, so the fixtures are not selected by the production runtime configuration.
+- `PATCH /api/users/me` exists on the Devine integration branch but was not available on the validated shared backend branch.
+- `PATCH /api/users/me/password` was not found on the inspected backend branches.
+- The frontend expects authenticated `GET /api/bookings/me`, but the validated mounted backend exposes a browser-controlled user-ID history route instead.
+- The booking availability endpoint is implemented and matches the frontend `car_id`, `date`, `availableSlots`, and `allSlots` contract.
+- Persistent booking creation, final conflict rejection, and confirmation-email dispatch remain split across different backend controllers.
+- The active frontend booking-submission helper remains a placeholder until one authenticated backend endpoint combines persistence, double-booking rejection, and notification triggering.
+- `test:booking-interceptor` remains blocked until the authoritative booking-submission contract is available. A synthetic release pass was intentionally not added.
+- Confirmation-message validation passes, but live email delivery requires deployment-managed provider credentials and a live integration drill.
+- Browser console, browser network, authenticated mobile viewport, real database, and live email behavior remain deployment-environment checks.
+
+### Sprint 6 Deployment Exit Checklist
+
+- [ ] Merge the secured profile update endpoint into the shared backend branch.
+- [ ] Implement and merge the secured password-change endpoint.
+- [ ] Mount authenticated booking creation and history routes.
+- [ ] Return HTTP 409 when a selected slot is already reserved.
+- [ ] Trigger confirmation email only after successful persistent booking creation.
+- [ ] Connect the frontend booking submission adapter to the authoritative secured endpoint.
+- [ ] Add and pass `test:booking-interceptor`.
+- [ ] Configure the approved production API origin.
+- [ ] Keep both frontend mock-mode flags disabled.
+- [ ] Configure backend database, JWT, CORS, and email values through the deployment secret store.
+- [ ] Run the authenticated browser console, network, mobile viewport, booking, and email drill.
+- [ ] Confirm the pull request has no merge conflicts before administrator review.
