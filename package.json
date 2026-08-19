@@ -14,7 +14,10 @@
     "test:auth-persistence": "tsx src/tests/authPersistence.manual.ts",
     "test:api-config": "tsx src/tests/apiConfig.manual.ts",
     "test:vehicle-filters": "tsx src/tests/vehicleFilterQuery.manual.ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:profile-validation": "tsx src/tests/profileValidation.manual.ts",
+    "test:profile-service": "tsx src/tests/profileService.manual.ts",
+    "test:profile": "npm run test:profile-validation && npm run test:profile-service"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

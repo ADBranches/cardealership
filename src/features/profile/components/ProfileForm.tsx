@@ -4,22 +4,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CustomerProfile, ProfileFormValues } from "../types";
+import { useProfileUpdate } from "../hooks/useProfileUpdate";
 import { hasProfileValidationErrors, validateProfile, type ProfileValidationErrors } from "../utils/profileValidation";
+import "./ProfileForm.css";
 
 type ProfileFormProps = { profile: CustomerProfile };
 
 export function ProfileForm({ profile }: ProfileFormProps) {
   const [values, setValues] = useState<ProfileFormValues>({ name: profile.name, email: profile.email });
   const [errors, setErrors] = useState<ProfileValidationErrors>({});
-  const [message, setMessage] = useState<string | null>(null);
+  const { isSubmitting, result, submitProfile } = useProfileUpdate();
 
   useEffect(() => { setValues({ name: profile.name, email: profile.email }); }, [profile]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validateProfile(values);
     setErrors(nextErrors);
-    setMessage(hasProfileValidationErrors(nextErrors) ? null : "Profile update is ready, but saving remains disabled until the secured API contract is available.");
+    if (hasProfileValidationErrors(nextErrors)) return;
+    await submitProfile(values);
   }
 
   return (
@@ -40,8 +43,18 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             <Input id="profile-email" type="email" value={values.email} onChange={(event) => setValues((current) => ({ ...current, email: event.target.value }))} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "profile-email-error" : undefined} />
             {errors.email && <p id="profile-email-error" className="text-sm text-red-700">{errors.email}</p>}
           </div>
-          {message && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{message}</p>}
-          <Button type="submit">Validate changes</Button>
+          {result && (
+            <p
+              role={result.success ? "status" : "alert"}
+              className={result.success ? "profile-form-message profile-form-success" : "profile-form-message profile-form-error"}
+            >
+              {result.message}
+              {result.success && result.mock ? " Synthetic development data was used." : ""}
+            </p>
+          )}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : "Save changes"}
+          </Button>
         </form>
       </CardContent>
     </Card>

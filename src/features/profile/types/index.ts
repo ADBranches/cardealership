@@ -37,3 +37,22 @@ export function profileFromAuthUser(user: AuthUser): CustomerProfile {
     role: user.role,
   };
 }
+
+export type ProfileUpdateErrorCode =
+  | "VALIDATION_FAILED"
+  | "UNAUTHORIZED"
+  | "EMAIL_CONFLICT"
+  | "PROFILE_UPDATE_FAILED";
+
+export type ProfileUpdateResult =
+  | {
+      success: true;
+      message: string;
+      user: AuthUser;
+      mock: boolean;
+    }
+  | {
+      success: false;
+      code: ProfileUpdateErrorCode;
+      message: string;
+    };
