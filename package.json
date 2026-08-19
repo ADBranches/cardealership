@@ -17,7 +17,10 @@
     "preview": "vite preview",
     "test:profile-validation": "tsx src/tests/profileValidation.manual.ts",
     "test:profile-service": "tsx src/tests/profileService.manual.ts",
-    "test:profile": "npm run test:profile-validation && npm run test:profile-service"
+    "test:profile": "npm run test:profile-validation && npm run test:profile-service",
+    "test:password-validation": "tsx src/tests/passwordValidation.manual.ts",
+    "test:password-change": "tsx src/tests/passwordChange.manual.ts",
+    "test:password": "npm run test:password-validation && npm run test:password-change"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

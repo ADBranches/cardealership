@@ -15,7 +15,6 @@ type AuthContextValue = AuthState & {
   login: (session: AuthSession) => void;
   logout: () => void;
   updateUser: (user: AuthUser) => void;
-  updateUser: (user: AuthUser) => void;
   restoreSession: () => Promise<void>;
 };
 
