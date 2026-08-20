@@ -202,6 +202,23 @@ const Admin: React.FC = () => {
                 View and manage test drive bookings
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => navigate('/Admin/chat')}
+              style={{
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: '16px',
+                cursor: 'pointer',
+                backgroundColor: 'white',
+                textAlign: 'left'
+              }}
+            >
+              <h4 style={{ fontWeight: 'bold', fontSize: '18px' }}>Customer Inbox</h4>
+              <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>
+                Review customer vehicle inquiries
+              </p>
+            </button>
             <div style={{
               border: '1px solid #e5e7eb',
               borderRadius: '8px',
