@@ -6,7 +6,10 @@ import {
   useReducer,
   useRef,
   type ReactNode,
+  type DependencyList,
 } from "react";
+import { useAuth } from "../../auth/hooks";
+import { useChatSocket } from "../hooks/useChatSocket";
 import {
   adminChatConversations,
   adminChatMessagesByInquiry,
@@ -92,6 +95,7 @@ function createFixtureState(): AdminChatState {
 }
 
 export function AdminChatProvider({ children }: { children: ReactNode }) {
+  const { accessToken } = useAuth();
   const [state, dispatch] = useReducer(
     adminChatReducer,
     undefined,
@@ -123,9 +127,38 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setConnectionStatus = useCallback((status: ChatConnectionStatus) => {
+    dispatch({ type: "connection/set", status });
+  }, []);
   const receiveMessage = useCallback((message: ChatMessage) => {
     dispatch({ type: "message/receive", message });
   }, []);
+
+  const receiveTyping = useCallback((event: ChatTypingEvent) => {
+    dispatch({ type: "typing/set", event });
+  }, []);
+
+  const acknowledgeMessage = useCallback(
+    (acknowledgement: import("../types").ChatAcknowledgement) => {
+      dispatch({ type: "message/acknowledge", acknowledgement });
+    },
+    [],
+  );
+
+  const receiveTransportError = useCallback((error: ChatError) => {
+    dispatch({ type: "error/set", error });
+  }, []);
+
+  const { sendReply: sendSocketReply, sendTyping: sendSocketTyping } =
+    useChatSocket({
+      accessToken,
+      activeInquiryId: state.activeInquiryId,
+      onConnectionStatus: setConnectionStatus,
+      onMessage: receiveMessage,
+      onTyping: receiveTyping,
+      onAcknowledgement: acknowledgeMessage,
+      onError: receiveTransportError,
+    });
 
   const sendMessage = useCallback(
     (input: SendAdminChatMessageInput) => {
@@ -147,8 +180,14 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
       };
 
       dispatch({ type: "message/receive", message });
+      sendSocketReply({
+        inquiryId,
+        message: messageText,
+        clientMessageId,
+        sentAt: message.createdAt,
+      });
     },
-    [state.activeInquiryId],
+    [sendSocketReply, state.activeInquiryId],
   );
 
   const markConversationRead = useCallback((inquiryId: string) => {
@@ -162,6 +201,7 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
   const setTyping = useCallback(
     (event: ChatTypingEvent) => {
       dispatch({ type: "typing/set", event });
+      sendSocketTyping(event);
       if (!event.isTyping) return;
 
       schedule(() => {
@@ -172,12 +212,9 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
         });
       }, 5000);
     },
-    [schedule],
+    [schedule, sendSocketTyping],
   );
 
-  const setConnectionStatus = useCallback((status: ChatConnectionStatus) => {
-    dispatch({ type: "connection/set", status });
-  }, []);
 
 
   const loadConversations = useCallback(() => {

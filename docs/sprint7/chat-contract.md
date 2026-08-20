@@ -165,3 +165,26 @@ Live integration remains blocked until:
 ## Phase 2 Decision
 
 Production event names and missing endpoints remain unset. The frontend types establish a safe provisional domain without claiming that pending backend or widget contracts already exist.
+
+## Phase 6 Transport Adapter Decision
+
+No production transport protocol has been confirmed by Devine.
+
+Phase 6 therefore implements a transport-neutral adapter and deterministic mock transport only. No Socket.IO client or other WebSocket package is installed.
+
+Public frontend configuration:
+
+- `VITE_CHAT_GATEWAY_URL` identifies the public gateway URL when approved.
+- `VITE_CHAT_TRANSPORT` is currently restricted to the mock adapter.
+- `VITE_CHAT_MOCK_MODE` enables deterministic frontend transport testing.
+
+The following remain unset until backend confirmation:
+
+- live transport implementation and compatible client version;
+- production event names;
+- authentication handshake shape;
+- inquiry room event names and payloads;
+- acknowledgement event and payload;
+- reconnect timing and replay policy.
+
+No backend secret may be exposed through a `VITE_` environment variable. Authentication tokens are supplied at runtime by the existing authenticated session and must never be logged or included in returned transport errors.
