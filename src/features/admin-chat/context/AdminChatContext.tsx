@@ -6,7 +6,6 @@ import {
   useReducer,
   useRef,
   type ReactNode,
-  type DependencyList,
 } from "react";
 import { useAuth } from "../../auth/hooks";
 import { useChatSocket } from "../hooks/useChatSocket";

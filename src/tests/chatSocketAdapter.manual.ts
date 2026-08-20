@@ -21,7 +21,7 @@ const errors: string[] = [];
 const unsubscribes = [
   socket.on("connection", (status) => connectionStates.push(status)),
   socket.on("message", (message) => messages.push(message)),
-  socket.on("acknowledgement", (ack) => acknowledgements.push(ack")),
+  socket.on("acknowledgement", (ack) => acknowledgements.push(ack)),
   socket.on("error", (error) => errors.push(error.message)),
 ];
 
