@@ -1,35 +1,14 @@
-import { useMemo, useState } from "react";
-import {
-  adminChatConversations,
-  adminChatMessagesByInquiry,
-  adminChatTypingFixture,
-} from "../data/adminChatFixtures";
-import { orderConversations, orderMessages } from "../state";
+import { useState } from "react";
+import { useAdminChat } from "../hooks";
 import { ConversationList } from "./ConversationList";
 import { ConversationThread } from "./ConversationThread";
 import "./AdminChatInbox.css";
 
 export function AdminChatInbox() {
-  const conversations = useMemo(
-    () => orderConversations(adminChatConversations),
-    [],
-  );
-  const [selectedInquiryId, setSelectedInquiryId] = useState<string | null>(
-    conversations[0]?.inquiry.id ?? null,
-  );
+  const { totalUnreadCount } = useAdminChat();
   const [isThreadVisibleOnMobile, setIsThreadVisibleOnMobile] = useState(false);
 
-  const selectedConversation =
-    conversations.find(
-      (conversation) => conversation.inquiry.id === selectedInquiryId,
-    ) ?? null;
-
-  const selectedMessages = selectedInquiryId
-    ? orderMessages(adminChatMessagesByInquiry[selectedInquiryId] ?? [])
-    : [];
-
-  function handleSelectConversation(inquiryId: string) {
-    setSelectedInquiryId(inquiryId);
+  function handleConversationOpened() {
     setIsThreadVisibleOnMobile(true);
   }
 
@@ -37,39 +16,38 @@ export function AdminChatInbox() {
     setIsThreadVisibleOnMobile(false);
   }
 
-  const customerIsTyping =
-    selectedInquiryId === adminChatTypingFixture.inquiryId &&
-    adminChatTypingFixture.isTyping;
-
   return (
     <main className="admin-chat-page-shell">
       <header className="admin-chat-page-header">
         <div>
-          <p className="admin-chat-eyebrow">Sprint 7 static preview</p>
+          <p className="admin-chat-eyebrow">Sprint 7 shared state preview</p>
           <h1>Admin inquiry inbox</h1>
           <p>
-            Review synthetic customer conversations before live transport integration.
+            Review synthetic customer conversations through one shared chat provider.
           </p>
         </div>
-        <span className="admin-chat-synthetic-label">
-          Synthetic development data
-        </span>
+        <div className="admin-chat-header-status">
+          <span
+            className="admin-chat-unread-summary"
+            aria-label={`${totalUnreadCount} total unread messages`}
+          >
+            {totalUnreadCount} unread
+          </span>
+          <span className="admin-chat-synthetic-label">
+            Synthetic development data
+          </span>
+        </div>
       </header>
 
       <div
-        className={`admin-chat-layout ${isThreadVisibleOnMobile ? "admin-chat-mobile-thread-visible" : ""}`}
+        className={`admin-chat-layout ${
+          isThreadVisibleOnMobile
+            ? "admin-chat-mobile-thread-visible"
+            : ""
+        }`}
       >
-        <ConversationList
-          conversations={conversations}
-          selectedInquiryId={selectedInquiryId}
-          onSelect={handleSelectConversation}
-        />
-        <ConversationThread
-          conversation={selectedConversation}
-          messages={selectedMessages}
-          isTyping={customerIsTyping}
-          onBack={handleBackToList}
-        />
+        <ConversationList onConversationOpened={handleConversationOpened} />
+        <ConversationThread onBack={handleBackToList} />
       </div>
     </main>
   );

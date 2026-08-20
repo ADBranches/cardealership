@@ -1,28 +1,38 @@
 import { Send } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { useAdminChat } from "../hooks";
 
-type MessageComposerProps = {
-  disabled?: boolean;
-  onSend?: (message: string) => void;
-};
-
-export function MessageComposer({
-  disabled = false,
-  onSend,
-}: MessageComposerProps) {
+export function MessageComposer() {
+  const {
+    activeInquiryId,
+    connectionStatus,
+    sendMessage,
+  } = useAdminChat();
   const [message, setMessage] = useState("");
+
+  const disabled =
+    !activeInquiryId ||
+    connectionStatus === "disconnected" ||
+    connectionStatus === "error";
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedMessage = message.trim();
     if (!trimmedMessage || disabled) return;
-    onSend?.(trimmedMessage);
+
+    sendMessage({
+      inquiryId: activeInquiryId,
+      message: trimmedMessage,
+    });
     setMessage("");
   }
 
   return (
     <form className="admin-chat-composer" onSubmit={handleSubmit}>
-      <label htmlFor="admin-chat-message">Reply to customer</label>
+      <label htmlFor="admin-chat-message">
+        Reply to customer
+      </label>
+
       <div className="admin-chat-composer-row">
         <textarea
           id="admin-chat-message"
@@ -32,13 +42,17 @@ export function MessageComposer({
           rows={2}
           disabled={disabled}
         />
-        <button type="submit" disabled={disabled || !message.trim()}>
+        <button
+          type="submit"
+          disabled={disabled || !message.trim()}
+        >
           <Send size={18} aria-hidden="true" />
           <span>Send</span>
         </button>
       </div>
+
       <p className="admin-chat-composer-note">
-        Static preview only. Replies are not transmitted in Phase 4.
+        Messages are stored optimistically in shared local state.
       </p>
     </form>
   );

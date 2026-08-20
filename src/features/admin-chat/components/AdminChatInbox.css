@@ -521,3 +521,58 @@
   outline: 3px solid rgba(37, 99, 235, 0.35);
   outline-offset: 2px;
 }
+
+.admin-chat-header-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.admin-chat-unread-summary {
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.admin-chat-list-error,
+.admin-chat-thread-error {
+  margin: 0.75rem 1.25rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.65rem;
+  padding: 0.75rem;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.admin-chat-list-error p,
+.admin-chat-thread-error p {
+  margin: 0 0 0.55rem;
+}
+
+.admin-chat-list-error button,
+.admin-chat-thread-error button {
+  border: 1px solid #dc2626;
+  border-radius: 0.45rem;
+  padding: 0.4rem 0.65rem;
+  background: #ffffff;
+  color: #b91c1c;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-chat-list-error button:focus-visible,
+.admin-chat-thread-error button:focus-visible {
+  outline: 3px solid rgba(220, 38, 38, 0.3);
+  outline-offset: 2px;
+}
+
+.admin-chat-history-status {
+  margin: auto;
+  color: #4b5563;
+  text-align: center;
+}
