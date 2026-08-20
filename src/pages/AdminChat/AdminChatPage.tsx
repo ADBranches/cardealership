@@ -1,9 +1,16 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { AdminChatInbox } from "../../features/admin-chat/components";
+import { useAdminChat } from "../../features/admin-chat/hooks";
 
 export function AdminChatPage() {
   const navigate = useNavigate();
+  const { loadConversations } = useAdminChat();
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
 
   return (
     <div>
