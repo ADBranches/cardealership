@@ -33,7 +33,8 @@
     "test:chat-persistence": "npm run test:chat-api && npm run test:chat-history-merge",
     "test:admin-reply-workflow": "tsx src/tests/adminReplyWorkflow.manual.ts",
     "test:typing-indicator": "tsx src/tests/typingIndicator.manual.ts",
-    "test:chat-interaction": "npm run test:admin-reply-workflow && npm run test:typing-indicator"
+    "test:chat-interaction": "npm run test:admin-reply-workflow && npm run test:typing-indicator",
+    "test:chat-security": "tsx src/tests/chatSecurity.manual.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

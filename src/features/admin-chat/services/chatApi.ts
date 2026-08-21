@@ -26,17 +26,27 @@ export type ChatHistoryResult = {
   mock: boolean;
 };
 
-export function isChatApiMockMode(value: string | undefined = import.meta.env.VITE_CHAT_API_MOCK_MODE): boolean {
-  return value !== "false";
+export function isChatApiMockMode(
+  value: string | undefined = import.meta.env.VITE_CHAT_API_MOCK_MODE,
+  isProduction: boolean = import.meta.env.PROD,
+): boolean {
+  return isProduction === false && value === "true";
+}
+
+function requireChatAccessToken(accessToken: string): void {
+  if (accessToken.trim().length === 0) {
+    throw new Error("Authenticated admin access is required.");
+  }
 }
 
 export async function getAdminConversations(accessToken: string, options: ChatApiOptions = {}): Promise<ChatConversationSummary[]> {
-  void accessToken;
+  requireChatAccessToken(accessToken);
   if (options.mockMode ?? isChatApiMockMode()) return adminChatConversations.map((conversation) => ({ ...conversation }));
   throw new Error("Admin conversation listing remains blocked until Ronald confirms the endpoint.");
 }
 
 export async function getConversationHistory(inquiryId: string, accessToken: string, pagination: ChatHistoryPagination = {}, options: ChatApiOptions = {}): Promise<ChatHistoryResult> {
+  requireChatAccessToken(accessToken);
   const normalizedId = inquiryId.trim();
   if (!normalizedId) throw new Error("An inquiry identifier is required.");
   if (options.mockMode ?? isChatApiMockMode()) {
@@ -57,7 +67,7 @@ export async function getConversationHistory(inquiryId: string, accessToken: str
 }
 
 export async function markConversationRead(inquiryId: string, accessToken: string, options: ChatApiOptions = {}): Promise<{ readAt: string; mock: boolean }> {
-  void accessToken;
+  requireChatAccessToken(accessToken);
   const normalizedId = inquiryId.trim();
   if (!normalizedId) throw new Error("An inquiry identifier is required.");
   if (options.mockMode ?? isChatApiMockMode()) return { readAt: new Date().toISOString(), mock: true };

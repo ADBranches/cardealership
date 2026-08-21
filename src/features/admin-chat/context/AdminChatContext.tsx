@@ -105,7 +105,9 @@ function createFixtureState(): AdminChatState {
 }
 
 export function AdminChatProvider({ children }: { children: ReactNode }) {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
+  const isAuthorizedAdmin = user?.role === "admin" && Boolean(accessToken?.trim());
+  const authorizedAccessToken = isAuthorizedAdmin ? accessToken : null;
   const [state, dispatch] = useReducer(
     adminChatReducer,
     undefined,
@@ -177,8 +179,8 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
 
   const { sendReply: sendSocketReply, sendTyping: sendSocketTyping } =
     useChatSocket({
-      accessToken,
-      activeInquiryId: state.activeInquiryId,
+      accessToken: authorizedAccessToken,
+      activeInquiryId: isAuthorizedAdmin ? state.activeInquiryId : null,
       onConnectionStatus: setConnectionStatus,
       onMessage: receiveMessage,
       onTyping: receiveTyping,
@@ -267,10 +269,11 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
 
   const markConversationRead = useCallback(
     async (inquiryId: string) => {
+      if (!isAuthorizedAdmin || !authorizedAccessToken) return;
       try {
         const result = await persistConversationRead(
           inquiryId,
-          accessToken ?? "",
+          authorizedAccessToken ?? "",
         );
         dispatch({
           type: "conversation/select",
@@ -288,7 +291,7 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [accessToken],
+    [authorizedAccessToken, isAuthorizedAdmin],
   );
 
   const setTyping = useCallback(
@@ -311,11 +314,12 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
 
 
   const loadConversations = useCallback(async () => {
+    if (!isAuthorizedAdmin || !authorizedAccessToken) return;
     dispatch({ type: "error/clear" });
     dispatch({ type: "loading/conversations", loading: true });
 
     try {
-      const conversations = await getAdminConversations(accessToken ?? "");
+      const conversations = await getAdminConversations(authorizedAccessToken ?? "");
       dispatch({ type: "conversations/hydrate", conversations });
     } catch {
       dispatch({
@@ -328,10 +332,11 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
     } finally {
       dispatch({ type: "loading/conversations", loading: false });
     }
-  }, [accessToken]);
+  }, [authorizedAccessToken, isAuthorizedAdmin]);
 
   const loadHistory = useCallback(
     async (inquiryId: string) => {
+      if (!isAuthorizedAdmin || !authorizedAccessToken) return;
       if (!state.conversations.some((item) => item.inquiry.id === inquiryId)) {
         dispatch({
           type: "error/set",
@@ -350,7 +355,7 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
       try {
         const history = await getConversationHistory(
           inquiryId,
-          accessToken ?? "",
+          authorizedAccessToken ?? "",
         );
 
         dispatch({
@@ -382,7 +387,7 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "loading/history", loading: false });
       }
     },
-    [accessToken, state.conversations],
+    [authorizedAccessToken, isAuthorizedAdmin, state.conversations],
   );
 
   const retry = useCallback(() => {

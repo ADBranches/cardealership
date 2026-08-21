@@ -133,9 +133,10 @@ assert.equal(navLinkSource.includes(
   `to="/Admin/chat"`,
 ), true);
 assert.equal(appSource.match(/<AdminChatProvider>/g)?.length, 1);
-assert.equal(appSource.includes(
-  `path="/Admin/chat" element={<ProtectedRoute><AdminChatPage /></ProtectedRoute>}`,
-), true);
+assert.equal(appSource.includes(`path="/Admin"`), true);
+assert.equal(appSource.includes(`<ProtectedRoute>`), true);
+assert.equal(appSource.includes(`<Route path="chat" element={<AdminChatPage />} />`), true);
+assert.equal(appSource.includes(`user?.role !== "admin"`), true);
 
 console.log(JSON.stringify({
   suite: "unreadChatBadge",

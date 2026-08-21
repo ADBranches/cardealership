@@ -433,3 +433,23 @@ Sprint 7 introduces Edwin's protected admin multi-chat inbox and real-time unrea
 Ronald's inspected branch confirms transcript saving through `POST /api/chat/messages` and oldest-to-newest history retrieval through `GET /api/chat/conversations/:conversationId/messages`. Conversation listing, read-state persistence, pagination, authorization, and deduplication constraints remain pending.
 
 Devine has not published the WebSocket transport, gateway URL, room events, typing events, acknowledgements, or reconnect contract. Edward has not published the customer-widget payload contract. Production socket integration remains blocked, while deterministic mock-driven frontend state and interface work is authorized.
+
+### Sprint 7 Chat Security
+
+The detailed frontend review and backend dependency register are documented in `docs/sprint7/chat-security-review.md`.
+
+Current frontend controls:
+
+- `/Admin/chat` requires an authenticated administrator;
+- the chat provider and transport do not initialize for non-admin users;
+- transcript API and socket operations require a non-empty access token;
+- production builds cannot select the provisional chat API or socket mocks;
+- incoming messages use strict allowlisted normalization;
+- message content is rendered as text and is not written to diagnostic logs;
+- chat transcripts are not persisted in unrestricted browser storage;
+- logout and provider teardown disconnect the socket;
+- user-facing chat errors remain sanitized.
+
+Run `npm run test:chat-security` before merging chat authorization, transport, persistence, or rendering changes.
+
+Production integration remains blocked until Devine confirms socket-handshake JWT and admin-room authorization, and Ronald confirms transcript authorization, ownership, retention, encryption, and rate-limit behavior.

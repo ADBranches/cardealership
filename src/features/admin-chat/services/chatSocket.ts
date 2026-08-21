@@ -1,16 +1,48 @@
 import type { ChatAcknowledgement, ChatMessage, ChatTypingEvent } from "../types";
 import type { AdminReplyPayload, ChatRoomPayload, ChatSocketAdapter, ChatSocketConfiguration, ChatSocketEventMap, ChatSocketEventName, ChatSocketListener, MockChatSocketInspection } from "./chatSocket.types";
 
-export function normalizeIncomingMessage(payload: ChatMessage): ChatMessage {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function requiredString(value: unknown, fieldName: string): string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`Invalid chat message ${fieldName}.`);
+  }
+  return value;
+}
+
+export function normalizeIncomingMessage(payload: unknown): ChatMessage {
+  if (!isRecord(payload)) {
+    throw new Error("Invalid chat message payload.");
+  }
+
+  const senderRole = payload.senderRole;
+  if (senderRole !== "customer" && senderRole !== "admin") {
+    throw new Error("Invalid chat message sender role.");
+  }
+
+  const deliveryStatus = payload.deliveryStatus;
+  const normalizedDeliveryStatus =
+    deliveryStatus === "pending" ||
+    deliveryStatus === "sent" ||
+    deliveryStatus === "delivered" ||
+    deliveryStatus === "failed"
+      ? deliveryStatus
+      : undefined;
+
   return {
-    id: String(payload.id),
-    inquiryId: String(payload.inquiryId),
-    senderId: String(payload.senderId),
-    senderRole: payload.senderRole,
-    message: String(payload.message),
-    createdAt: String(payload.createdAt),
-    deliveryStatus: payload.deliveryStatus,
-    clientMessageId: payload.clientMessageId,
+    id: requiredString(payload.id, "identifier"),
+    inquiryId: requiredString(payload.inquiryId, "inquiry identifier"),
+    senderId: requiredString(payload.senderId, "sender identifier"),
+    senderRole,
+    message: requiredString(payload.message, "text"),
+    createdAt: requiredString(payload.createdAt, "timestamp"),
+    deliveryStatus: normalizedDeliveryStatus,
+    clientMessageId:
+      typeof payload.clientMessageId === "string" && payload.clientMessageId.trim()
+        ? payload.clientMessageId
+        : undefined,
   };
 }
 
@@ -44,6 +76,13 @@ export class MockChatSocket implements ChatSocketAdapter {
   }
 
   connect(): void {
+    if (!this.accessTokenPresent) {
+      this.emit("error", {
+        code: "CONNECTION_FAILED",
+        message: "Authenticated admin access is required.",
+      });
+      return;
+    }
     if (this.connected || this.destroyed) return;
     this.connected = true;
     this.inspection.connectCount += 1;
@@ -168,6 +207,14 @@ export class MockChatSocket implements ChatSocketAdapter {
 }
 
 export function createChatSocket(configuration: ChatSocketConfiguration): ChatSocketAdapter {
+  if (configuration.authentication.accessToken.trim().length === 0) {
+    throw new Error("Authenticated admin access is required.");
+  }
+
+  if (import.meta.env.PROD && configuration.mockMode) {
+    throw new Error("Mock chat transport is disabled in production.");
+  }
+
   if (configuration.transport !== "mock" || !configuration.mockMode) {
     throw new Error("Live chat transport is unavailable until Devine confirms the protocol.");
   }
