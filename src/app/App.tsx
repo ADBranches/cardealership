@@ -15,15 +15,17 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/test" element={<TestTasks />} />
-          <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/Admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/Admin/chat" element={<ProtectedRoute><AdminChatProvider><AdminChatPage /></AdminChatProvider></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-          <Route path="/*" element={<HomePage />} />
-        </Routes>
+        <AdminChatProvider>
+          <Routes>
+            <Route path="/test" element={<TestTasks />} />
+            <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/Admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/Admin/chat" element={<ProtectedRoute><AdminChatPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/*" element={<HomePage />} />
+          </Routes>
+        </AdminChatProvider>
       </BrowserRouter>
     </AuthProvider>
   );

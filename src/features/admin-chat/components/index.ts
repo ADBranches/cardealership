@@ -7,3 +7,9 @@ export { ConversationThread } from "./ConversationThread";
 export { MessageBubble } from "./MessageBubble";
 export { MessageComposer } from "./MessageComposer";
 export { TypingIndicator } from "./TypingIndicator";
+export { AdminChatNavLink } from "./AdminChatNavLink";
+export {
+  UNREAD_CHAT_BADGE_MAXIMUM,
+  UnreadChatBadge,
+  formatUnreadChatCount,
+} from "./UnreadChatBadge";

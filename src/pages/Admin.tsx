@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks';
 import { authenticatedApiRequest } from '../api/client';
+import { AdminChatNavLink } from "../features/admin-chat/components";
 
 const Admin: React.FC = () => {
   const [stats, setStats] = useState({
@@ -202,23 +203,7 @@ const Admin: React.FC = () => {
                 View and manage test drive bookings
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/Admin/chat')}
-              style={{
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                padding: '16px',
-                cursor: 'pointer',
-                backgroundColor: 'white',
-                textAlign: 'left'
-              }}
-            >
-              <h4 style={{ fontWeight: 'bold', fontSize: '18px' }}>Customer Inbox</h4>
-              <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>
-                Review customer vehicle inquiries
-              </p>
-            </button>
+            <AdminChatNavLink />
             <div style={{
               border: '1px solid #e5e7eb',
               borderRadius: '8px',

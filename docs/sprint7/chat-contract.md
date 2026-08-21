@@ -236,3 +236,23 @@ The following provisional frontend rules are isolated until the transport owner 
 Production event names, payloads, queue behavior, acknowledgement failures, reconnect replay, and final message-length limits remain pending from Devine.
 
 The frontend fallback does not expose tokens, transport diagnostics, backend stack details, or raw failure payloads to administrators.
+
+## Phase 9 Real-Time Admin Notification Badge
+
+The admin dashboard and protected chat inbox now share one `AdminChatProvider` instance.
+
+Badge behavior:
+
+- derives its total directly from the centralized conversation unread state;
+- updates from incoming chat events without a page reload;
+- does not increment for messages received in the active conversation;
+- ignores duplicate message events through reducer-level message deduplication;
+- decreases when a conversation is selected and marked read;
+- links to the protected `/Admin/chat` inbox;
+- caps visual counts above 99 as `99+` while preserving the exact count for assistive technology;
+- contains no flashing, pulsing, or continuously repeating animation;
+- contains no local unread state, so remounting the badge does not reset the count.
+
+Ronalds upstream branch remained at commit `e570b16` during the Phase 9 inspection. Persisted unread state, the admin conversation-list endpoint, and the live mark-as-read endpoint remain pending.
+
+The current unread state therefore remains centralized within the frontend provider for the active application session. No cross-session persistence behavior is claimed.
