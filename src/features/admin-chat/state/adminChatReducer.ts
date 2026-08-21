@@ -23,6 +23,8 @@ export type AdminChatAction =
   | { type: "conversation/select"; inquiryId: string; readAt: string }
   | { type: "message/receive"; message: ChatMessage }
   | { type: "message/acknowledge"; acknowledgement: ChatAcknowledgement }
+  | { type: "message/fail"; inquiryId: string; clientMessageId: string }
+  | { type: "message/retry"; inquiryId: string; clientMessageId: string; createdAt: string }
   | { type: "typing/set"; event: ChatTypingEvent }
   | { type: "typing/expire"; now: string; maxAgeMilliseconds: number }
   | { type: "connection/set"; status: ChatConnectionStatus }
@@ -127,6 +129,38 @@ function acknowledgeMessage(
     messagesByInquiry: {
       ...state.messagesByInquiry,
       [acknowledgement.inquiryId]: deduplicateMessages(messages),
+    },
+  };
+}
+
+function updateMessageDeliveryState(
+  state: AdminChatState,
+  inquiryId: string,
+  clientMessageId: string,
+  deliveryStatus: "pending" | "failed",
+  createdAt?: string,
+): AdminChatState {
+  const currentMessages = state.messagesByInquiry[inquiryId];
+  if (!currentMessages) return state;
+
+  let matched = false;
+  const messages = currentMessages.map((message) => {
+    if (message.clientMessageId !== clientMessageId) return message;
+    matched = true;
+    return {
+      ...message,
+      deliveryStatus,
+      createdAt: createdAt ?? message.createdAt,
+    };
+  });
+
+  if (!matched) return state;
+
+  return {
+    ...state,
+    messagesByInquiry: {
+      ...state.messagesByInquiry,
+      [inquiryId]: deduplicateMessages(messages),
     },
   };
 }
@@ -240,6 +274,23 @@ export function adminChatReducer(
 
     case "message/acknowledge":
       return acknowledgeMessage(state, action.acknowledgement);
+
+    case "message/fail":
+      return updateMessageDeliveryState(
+        state,
+        action.inquiryId,
+        action.clientMessageId,
+        "failed",
+      );
+
+    case "message/retry":
+      return updateMessageDeliveryState(
+        state,
+        action.inquiryId,
+        action.clientMessageId,
+        "pending",
+        action.createdAt,
+      );
 
     case "typing/set":
       return setTypingEvent(state, action.event);

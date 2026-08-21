@@ -13,8 +13,13 @@ type ConversationThreadProps = {
 export function ConversationThread({
   onBack,
 }: ConversationThreadProps) {
-  const { connectionStatus, isLoadingHistory, error, retry } =
-    useAdminChat();
+  const {
+    connectionStatus,
+    isLoadingHistory,
+    error,
+    retry,
+    retryMessage,
+  } = useAdminChat();
   const { activeConversation, activeMessages, activeTypingEvents } =
     useConversationSelection();
 
@@ -67,7 +72,13 @@ export function ConversationThread({
         ) : activeMessages.length === 0 ? (
           <AdminChatEmptyState title="No messages yet" description="The conversation history is currently empty." />
         ) : (
-          activeMessages.map((message) => (<MessageBubble key={message.id} message={message} />))
+          activeMessages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              onRetry={retryMessage}
+            />
+          ))
         )}
 
         <TypingIndicator customerName={inquiry.customer.name} isTyping={customerIsTyping} />

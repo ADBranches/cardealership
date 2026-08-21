@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useAuth } from "../../auth/hooks";
 import { useChatSocket } from "../hooks/useChatSocket";
+import { validateAdminChatMessage } from "../utils/messageValidation";
 import {
   getAdminConversations,
   getConversationHistory,
@@ -40,6 +41,10 @@ export type SendAdminChatMessageInput = {
   inquiryId?: string;
 };
 
+export type SendAdminChatMessageResult =
+  | { ok: true; clientMessageId: string }
+  | { ok: false; error: string };
+
 export type AdminChatContextValue = {
   conversations: ChatConversationSummary[];
   activeInquiryId: string | null;
@@ -53,7 +58,8 @@ export type AdminChatContextValue = {
   error: ChatError | null;
   selectConversation: (inquiryId: string) => void;
   receiveMessage: (message: ChatMessage) => void;
-  sendMessage: (input: SendAdminChatMessageInput) => void;
+  sendMessage: (input: SendAdminChatMessageInput) => SendAdminChatMessageResult;
+  retryMessage: (inquiryId: string, clientMessageId: string) => boolean;
   markConversationRead: (inquiryId: string) => Promise<void>;
   setTyping: (event: ChatTypingEvent) => void;
   setConnectionStatus: (status: ChatConnectionStatus) => void;
@@ -150,7 +156,23 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
   );
 
   const receiveTransportError = useCallback((error: ChatError) => {
-    dispatch({ type: "error/set", error });
+    if (error.inquiryId && error.clientMessageId) {
+      dispatch({
+        type: "message/fail",
+        inquiryId: error.inquiryId,
+        clientMessageId: error.clientMessageId,
+      });
+    }
+
+    dispatch({
+      type: "error/set",
+      error: {
+        ...error,
+        message: error.clientMessageId
+          ? "The message could not be sent. Try again."
+          : error.message,
+      },
+    });
   }, []);
 
   const { sendReply: sendSocketReply, sendTyping: sendSocketTyping } =
@@ -165,10 +187,24 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
     });
 
   const sendMessage = useCallback(
-    (input: SendAdminChatMessageInput) => {
+    (input: SendAdminChatMessageInput): SendAdminChatMessageResult => {
       const inquiryId = input.inquiryId ?? state.activeInquiryId;
-      const messageText = input.message.trim();
-      if (!inquiryId || !messageText) return;
+      const validation = validateAdminChatMessage(input.message);
+
+      if (!inquiryId) {
+        return { ok: false, error: "Select a conversation before sending." };
+      }
+
+      if (!validation.valid) {
+        return { ok: false, error: validation.error };
+      }
+
+      if (state.connectionStatus !== "connected") {
+        return {
+          ok: false,
+          error: "Reconnect to chat before sending a message.",
+        };
+      }
 
       optimisticSequenceRef.current += 1;
       const clientMessageId = `admin-local-${optimisticSequenceRef.current}`;
@@ -177,7 +213,7 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
         inquiryId,
         senderId: "admin-local",
         senderRole: "admin",
-        message: messageText,
+        message: validation.message,
         createdAt: new Date().toISOString(),
         deliveryStatus: "pending",
         clientMessageId,
@@ -186,12 +222,47 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "message/receive", message });
       sendSocketReply({
         inquiryId,
-        message: messageText,
+        message: validation.message,
         clientMessageId,
         sentAt: message.createdAt,
       });
+
+      return { ok: true, clientMessageId };
     },
-    [sendSocketReply, state.activeInquiryId],
+    [sendSocketReply, state.activeInquiryId, state.connectionStatus],
+  );
+
+  const retryMessage = useCallback(
+    (inquiryId: string, clientMessageId: string): boolean => {
+      if (state.connectionStatus !== "connected") return false;
+
+      const message = (state.messagesByInquiry[inquiryId] ?? []).find(
+        (item) =>
+          item.clientMessageId === clientMessageId &&
+          item.deliveryStatus === "failed",
+      );
+
+      if (!message) return false;
+
+      const sentAt = new Date().toISOString();
+      dispatch({
+        type: "message/retry",
+        inquiryId,
+        clientMessageId,
+        createdAt: sentAt,
+      });
+      dispatch({ type: "error/clear" });
+
+      sendSocketReply({
+        inquiryId,
+        message: message.message,
+        clientMessageId,
+        sentAt,
+      });
+
+      return true;
+    },
+    [sendSocketReply, state.connectionStatus, state.messagesByInquiry],
   );
 
   const markConversationRead = useCallback(
@@ -345,6 +416,7 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
       selectConversation,
       receiveMessage,
       sendMessage,
+      retryMessage,
       markConversationRead,
       setTyping,
       setConnectionStatus,
@@ -359,6 +431,7 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
       selectConversation,
       receiveMessage,
       sendMessage,
+      retryMessage,
       markConversationRead,
       setTyping,
       setConnectionStatus,

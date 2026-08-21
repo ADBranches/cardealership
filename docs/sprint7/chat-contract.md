@@ -214,3 +214,25 @@ Pending backend dependencies:
 Conversation listing and read-state operations therefore use an injectable deterministic mock API. The confirmed history endpoint remains available when API mock mode is disabled.
 
 Mock behavior is controlled by `VITE_CHAT_API_MOCK_MODE=true`. No backend route, database table, or persistence behavior was added by the frontend implementation.
+
+## Phase 8 Admin Reply and Typing Workflow
+
+Upstream inspection on August 21, 2026 confirmed that `Devine-codes` at commit `bafc600` does not yet provide the production chat transport contract.
+
+The following provisional frontend rules are isolated until the transport owner confirms the live contract:
+
+- maximum admin reply length is 2,000 characters;
+- empty and whitespace-only replies are rejected;
+- messages cannot be sent while chat is disconnected;
+- no offline queue is claimed or simulated;
+- optimistic replies begin in the `pending` state;
+- acknowledgements transition matching replies to `sent`;
+- failed replies transition to `failed` and expose a sanitized retry action;
+- duplicate acknowledgements do not create duplicate messages;
+- typing-start events are throttled to one second;
+- typing-stop is sent after three seconds of inactivity;
+- typing-stop is sent when the composer is cleared, submitted, switched, or unmounted.
+
+Production event names, payloads, queue behavior, acknowledgement failures, reconnect replay, and final message-length limits remain pending from Devine.
+
+The frontend fallback does not expose tokens, transport diagnostics, backend stack details, or raw failure payloads to administrators.

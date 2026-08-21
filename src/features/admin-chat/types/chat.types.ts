@@ -92,8 +92,8 @@ export interface ChatError {
   code: ChatErrorCode;
   message: string;
   inquiryId?: string;
+  clientMessageId?: string;
 }
-
 export interface UnreadConversationState {
   inquiryId: string;
   unreadCount: number;

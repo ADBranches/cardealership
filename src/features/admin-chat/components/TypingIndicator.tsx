@@ -9,7 +9,7 @@ export function TypingIndicator({ customerName, isTyping }: TypingIndicatorProps
   return (
     <p className="admin-chat-typing" role="status" aria-live="polite">
       <span aria-hidden="true" className="admin-chat-typing-dots">•••</span>
-      {customerName} is typing
+      <span>{customerName} is typing</span>
     </p>
   );
 }

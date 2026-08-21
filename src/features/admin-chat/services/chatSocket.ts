@@ -79,7 +79,12 @@ export class MockChatSocket implements ChatSocketAdapter {
 
   sendReply(payload: AdminReplyPayload): void {
     if (!this.joinedRooms.has(payload.inquiryId)) {
-      this.emit("error", { code: "INVALID_PAYLOAD", message: "A reply cannot be sent outside the active inquiry room." });
+      this.emit("error", {
+        code: "INVALID_PAYLOAD",
+        message: "The message could not be sent.",
+        inquiryId: payload.inquiryId,
+        clientMessageId: payload.clientMessageId,
+      });
       return;
     }
     this.inspection.sentReplies.push({ ...payload });

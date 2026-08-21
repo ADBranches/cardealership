@@ -39,6 +39,8 @@ export type ChatSocketError = {
     | "CONNECTION_FAILED"
     | "INVALID_PAYLOAD";
   message: string;
+  inquiryId?: string;
+  clientMessageId?: string;
 };
 
 export type ChatSocketEventMap = {

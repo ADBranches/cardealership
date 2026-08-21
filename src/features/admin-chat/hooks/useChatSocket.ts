@@ -46,7 +46,16 @@ export function useChatSocket(options: UseChatSocketOptions) {
       adapter.on("typing", options.onTyping),
       adapter.on("acknowledgement", options.onAcknowledgement),
       adapter.on("error", (socketError) => {
-        options.onError({ code: "CONNECTION_FAILED", message: socketError.message });
+        options.onError({
+          code: socketError.clientMessageId
+            ? "MESSAGE_SEND_FAILED"
+            : "CONNECTION_FAILED",
+          message: socketError.clientMessageId
+            ? "The message could not be sent."
+            : "Chat connection is unavailable.",
+          inquiryId: socketError.inquiryId,
+          clientMessageId: socketError.clientMessageId,
+        });
       }),
     ];
 
