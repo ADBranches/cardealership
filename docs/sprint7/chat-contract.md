@@ -188,3 +188,29 @@ The following remain unset until backend confirmation:
 - reconnect timing and replay policy.
 
 No backend secret may be exposed through a `VITE_` environment variable. Authentication tokens are supplied at runtime by the existing authenticated session and must never be logged or included in returned transport errors.
+
+## Phase 7 Transcript API Integration Status
+
+Upstream inspection on August 20, 2026 confirmed Ronalds `Search-Engine-Feeds-&-Chat-Archiving` branch at commit `e570b16`.
+
+Confirmed live capability:
+
+- `GET /api/chat/conversations/:conversationId/messages`
+- PostgreSQL transcript persistence through `chat_messages`
+- chronological ordering by `created_at` and `id`
+
+Pending backend dependencies:
+
+- admin conversation-list endpoint;
+- mark-as-read endpoint;
+- persisted unread state;
+- history pagination contract;
+- customer and vehicle summary metadata;
+- client-message identifier support;
+- duplicate-message constraints;
+- route authorization contract;
+- transcript retention policy.
+
+Conversation listing and read-state operations therefore use an injectable deterministic mock API. The confirmed history endpoint remains available when API mock mode is disabled.
+
+Mock behavior is controlled by `VITE_CHAT_API_MOCK_MODE=true`. No backend route, database table, or persistence behavior was added by the frontend implementation.

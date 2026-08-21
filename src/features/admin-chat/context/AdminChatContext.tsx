@@ -10,6 +10,11 @@ import {
 import { useAuth } from "../../auth/hooks";
 import { useChatSocket } from "../hooks/useChatSocket";
 import {
+  getAdminConversations,
+  getConversationHistory,
+  markConversationRead as persistConversationRead,
+} from "../services";
+import {
   adminChatConversations,
   adminChatMessagesByInquiry,
   adminChatTypingFixture,
@@ -49,11 +54,11 @@ export type AdminChatContextValue = {
   selectConversation: (inquiryId: string) => void;
   receiveMessage: (message: ChatMessage) => void;
   sendMessage: (input: SendAdminChatMessageInput) => void;
-  markConversationRead: (inquiryId: string) => void;
+  markConversationRead: (inquiryId: string) => Promise<void>;
   setTyping: (event: ChatTypingEvent) => void;
   setConnectionStatus: (status: ChatConnectionStatus) => void;
-  loadConversations: () => void;
-  loadHistory: (inquiryId: string) => void;
+  loadConversations: () => Promise<void>;
+  loadHistory: (inquiryId: string) => Promise<void>;
   retry: () => void;
 };
 
@@ -189,13 +194,31 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
     [sendSocketReply, state.activeInquiryId],
   );
 
-  const markConversationRead = useCallback((inquiryId: string) => {
-    dispatch({
-      type: "conversation/select",
-      inquiryId,
-      readAt: new Date().toISOString(),
-    });
-  }, []);
+  const markConversationRead = useCallback(
+    async (inquiryId: string) => {
+      try {
+        const result = await persistConversationRead(
+          inquiryId,
+          accessToken ?? "",
+        );
+        dispatch({
+          type: "conversation/select",
+          inquiryId,
+          readAt: result.readAt,
+        });
+      } catch {
+        dispatch({
+          type: "error/set",
+          error: {
+            code: "UNKNOWN_CHAT_ERROR",
+            message: "The conversation read state could not be updated.",
+            inquiryId,
+          },
+        });
+      }
+    },
+    [accessToken],
+  );
 
   const setTyping = useCallback(
     (event: ChatTypingEvent) => {
@@ -216,16 +239,28 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
 
 
 
-  const loadConversations = useCallback(() => {
+  const loadConversations = useCallback(async () => {
     dispatch({ type: "error/clear" });
     dispatch({ type: "loading/conversations", loading: true });
-    schedule(() => {
+
+    try {
+      const conversations = await getAdminConversations(accessToken ?? "");
+      dispatch({ type: "conversations/hydrate", conversations });
+    } catch {
+      dispatch({
+        type: "error/set",
+        error: {
+          code: "UNKNOWN_CHAT_ERROR",
+          message: "Conversations could not be loaded. Please try again.",
+        },
+      });
+    } finally {
       dispatch({ type: "loading/conversations", loading: false });
-    }, 150);
-  }, [schedule]);
+    }
+  }, [accessToken]);
 
   const loadHistory = useCallback(
-    (inquiryId: string) => {
+    async (inquiryId: string) => {
       if (!state.conversations.some((item) => item.inquiry.id === inquiryId)) {
         dispatch({
           type: "error/set",
@@ -240,11 +275,43 @@ export function AdminChatProvider({ children }: { children: ReactNode }) {
 
       dispatch({ type: "error/clear" });
       dispatch({ type: "loading/history", loading: true });
-      schedule(() => {
+
+      try {
+        const history = await getConversationHistory(
+          inquiryId,
+          accessToken ?? "",
+        );
+
+        dispatch({
+          type: "history/merge",
+          inquiryId,
+          messages: history.messages,
+        });
+
+        if (history.issues.length > 0) {
+          dispatch({
+            type: "error/set",
+            error: {
+              code: "HISTORY_LOAD_FAILED",
+              message: "Some conversation records could not be loaded safely.",
+              inquiryId,
+            },
+          });
+        }
+      } catch {
+        dispatch({
+          type: "error/set",
+          error: {
+            code: "HISTORY_LOAD_FAILED",
+            message: "Conversation history could not be loaded. Please try again.",
+            inquiryId,
+          },
+        });
+      } finally {
         dispatch({ type: "loading/history", loading: false });
-      }, 150);
+      }
     },
-    [schedule, state.conversations],
+    [accessToken, state.conversations],
   );
 
   const retry = useCallback(() => {

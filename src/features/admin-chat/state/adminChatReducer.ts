@@ -8,6 +8,7 @@ import type {
   ChatTypingEvent,
 } from "../types";
 import { deduplicateMessages, orderConversations } from "./messageOrdering";
+import { mergeChatHistory } from "../services/chatNormalization";
 import {
   createUnreadConversationState,
   markConversationRead,
@@ -16,7 +17,9 @@ import {
 } from "./unreadRules";
 
 export type AdminChatAction =
+  | { type: "conversations/hydrate"; conversations: ChatConversationSummary[] }
   | { type: "conversation/upsert"; conversation: ChatConversationSummary }
+  | { type: "history/merge"; inquiryId: string; messages: ChatMessage[] }
   | { type: "conversation/select"; inquiryId: string; readAt: string }
   | { type: "message/receive"; message: ChatMessage }
   | { type: "message/acknowledge"; acknowledgement: ChatAcknowledgement }
@@ -175,6 +178,41 @@ export function adminChatReducer(
   action: AdminChatAction,
 ): AdminChatState {
   switch (action.type) {
+    case "conversations/hydrate": {
+      const conversations = orderConversations(action.conversations);
+      const activeInquiryId = state.activeInquiryId && conversations.some(
+        (conversation) => conversation.inquiry.id === state.activeInquiryId,
+      )
+        ? state.activeInquiryId
+        : conversations[0]?.inquiry.id ?? null;
+
+      return {
+        ...state,
+        conversations,
+        activeInquiryId,
+        unreadByInquiry: Object.fromEntries(
+          conversations.map((conversation) => [
+            conversation.inquiry.id,
+            createUnreadConversationState(
+              conversation.inquiry.id,
+              conversation.unreadCount,
+              conversation.lastReadAt ?? null,
+            ),
+          ]),
+        ),
+      };
+    }
+    case "history/merge":
+      return {
+        ...state,
+        messagesByInquiry: {
+          ...state.messagesByInquiry,
+          [action.inquiryId]: mergeChatHistory(
+            action.messages,
+            state.messagesByInquiry[action.inquiryId] ?? [],
+          ),
+        },
+      };
     case "conversation/upsert":
       return {
         ...state,
