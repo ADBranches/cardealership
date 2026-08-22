@@ -481,3 +481,17 @@ The authoritative drill record is maintained in `docs/sprint7/live-inquiry-drill
 The walkthrough must use one shared environment containing Edward's customer widget, Devine's gateway, Edwin's admin inbox, and Ronald's transcript persistence and history implementation. No access tokens or transcript contents may be committed.
 
 The drill remains blocked until the required collaborator implementations and compatible contracts are available. Existing frontend mocks must be removed or disabled only after those implementations are inspected and verified.
+
+## Sprint 7 Admin Chat Deployment and Rollback
+
+Deployment ownership, environment requirements, administrator integration notes, pending contracts, and release checks are documented in `docs/sprint7/admin-chat-deployment-handoff.md`.
+
+Release-blocking regression handling, containment, data-safety rules, verification, ownership, and recovery guidance are documented in `docs/sprint7/admin-chat-rollback-plan.md`.
+
+Run the complete review validation with:
+
+```bash
+npm run test:sprint7-release
+```
+
+Chat mock modes are disabled by default. Synthetic chat requires explicit local opt-in and cannot be selected in a production build. Live gateway integration remains unavailable until the transport owner publishes the approved protocol.

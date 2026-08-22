@@ -81,8 +81,8 @@ export function resolveChatEnvironment(
 
   return {
     gatewayUrl,
-    transport: "mock",
-    mockMode: true,
+    transport: requestedTransport,
+    mockMode,
   };
 }
 

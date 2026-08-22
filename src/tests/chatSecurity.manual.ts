@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { resolveChatEnvironment } from "../config/env";
 import { getSafeRedirectPath } from "../app/components/auth/routeAccess";
 import {
   createChatSocket,
@@ -39,6 +40,18 @@ assert.throws(() => createChatSocket({
 }));
 assert.equal(isChatApiMockMode("true", true), false);
 assert.equal(isChatApiMockMode("true", false), true);
+const disabledChatEnvironment = resolveChatEnvironment({
+  VITE_CHAT_TRANSPORT: "mock",
+  VITE_CHAT_MOCK_MODE: "false",
+});
+assert.equal(disabledChatEnvironment.transport, "mock");
+assert.equal(disabledChatEnvironment.mockMode, false);
+const enabledDevelopmentChatEnvironment = resolveChatEnvironment({
+  VITE_CHAT_GATEWAY_URL: "mock://approved-chat-gateway",
+  VITE_CHAT_TRANSPORT: "mock",
+  VITE_CHAT_MOCK_MODE: "true",
+});
+assert.equal(enabledDevelopmentChatEnvironment.mockMode, true);
 
 const normalized = normalizeIncomingMessage({
   id: "security-message-001",
