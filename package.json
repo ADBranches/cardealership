@@ -26,7 +26,7 @@
     "test:availability-selection": "tsx src/tests/availabilitySelection.manual.ts",
     "test:admin-chat-state": "tsx src/tests/adminChatState.manual.ts",
     "test:unread-chat-badge": "tsx src/tests/unreadChatBadge.manual.ts",
-    "test:admin-chat": "npm run test:admin-chat-state && npm run test:unread-chat-badge",
+    "test:admin-chat": "npm run test:admin-chat-state && npm run test:admin-chat-socket && npm run test:admin-chat-api && npm run test:admin-chat-badge && npm run test:admin-chat-security && npm run test:admin-chat-accessibility && npm run test:chat-interaction && npm run test:chat-persistence",
     "test:chat-socket": "tsx src/tests/chatSocketAdapter.manual.ts",
     "test:chat-api": "tsx src/tests/chatApi.manual.ts",
     "test:chat-history-merge": "tsx src/tests/chatHistoryMerge.manual.ts",
@@ -34,7 +34,14 @@
     "test:admin-reply-workflow": "tsx src/tests/adminReplyWorkflow.manual.ts",
     "test:typing-indicator": "tsx src/tests/typingIndicator.manual.ts",
     "test:chat-interaction": "npm run test:admin-reply-workflow && npm run test:typing-indicator",
-    "test:chat-security": "tsx src/tests/chatSecurity.manual.ts"
+    "test:chat-security": "tsx src/tests/chatSecurity.manual.ts",
+    "test:admin-chat-socket": "npm run test:chat-socket",
+    "test:admin-chat-api": "npm run test:chat-api",
+    "test:admin-chat-badge": "npm run test:unread-chat-badge",
+    "test:admin-chat-security": "npm run test:chat-security",
+    "test:admin-chat-accessibility": "tsx src/tests/adminChatAccessibility.manual.ts",
+    "test:regression": "npm run test:auth && npm run test:protected-route && npm run test:auth-persistence && npm run test:profile && npm run test:password && npm run test:booking-history && npm run test:booking-availability && npm run test:availability-selection && npm run test:vehicle-filters && npm run test:api-config",
+    "test:sprint7": "npm run test:admin-chat && npm run test:regression"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

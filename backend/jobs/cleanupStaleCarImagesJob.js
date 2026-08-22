@@ -33,5 +33,5 @@ export async function runCleanupStaleCarImagesJob(overrides = {}) {
 export async function startCleanupStaleCarImagesJob() {
   const config = getCleanupJobConfig();
   if (!config.enabled) return { started: false, ...buildSkippedJobReport(config, "Cleanup cron job is disabled by default.") };
-  return { started: false, ...buildSkippedJobReport(config, "Automatic in-process cron scheduling is not enabled in Phase 7. Use deployment scheduler or manual script until team approval.") };
+  return { started: false, ...buildSkippedJobReport(config, "Automatic in-process cron scheduling is not enabled. Use the deployment scheduler or manual script until team approval.") };
 }

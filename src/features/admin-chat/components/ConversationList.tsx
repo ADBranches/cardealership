@@ -22,9 +22,21 @@ export function ConversationList({
 
   if (isLoadingConversations) {
     return (
-      <div className="admin-chat-list-status" role="status" aria-live="polite">
-        Loading conversations...
-      </div>
+      <section
+        className="admin-chat-list-panel"
+        aria-labelledby="admin-chat-loading-title"
+        aria-busy="true"
+      >
+        <div
+          className="admin-chat-list-status"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <h2 id="admin-chat-loading-title">Conversations</h2>
+          <p>Loading conversations...</p>
+        </div>
+      </section>
     );
   }
 
@@ -53,7 +65,12 @@ export function ConversationList({
       {conversations.length === 0 ? (
         <AdminChatEmptyState title="No conversations" description="New customer inquiries will appear here." />
       ) : (
-        <ul className="admin-chat-conversation-list" aria-label="Customer conversations">
+        <ul
+          id="admin-chat-conversation-list"
+          className="admin-chat-conversation-list"
+          aria-label="Customer conversations"
+          tabIndex={-1}
+        >
           {conversations.map((conversation) => (
             <ConversationListItem
               key={conversation.inquiry.id}

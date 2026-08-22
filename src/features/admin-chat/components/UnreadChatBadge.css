@@ -79,3 +79,20 @@
   white-space: nowrap;
   border: 0;
 }
+
+.admin-chat-nav-badge {
+  max-width: 4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .admin-chat-nav-link {
+    padding: 12px;
+  }
+
+  .admin-chat-nav-link-description {
+    overflow-wrap: anywhere;
+  }
+}

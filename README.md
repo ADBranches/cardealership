@@ -453,3 +453,31 @@ Current frontend controls:
 Run `npm run test:chat-security` before merging chat authorization, transport, persistence, or rendering changes.
 
 Production integration remains blocked until Devine confirms socket-handshake JWT and admin-room authorization, and Ronald confirms transcript authorization, ownership, retention, encryption, and rate-limit behavior.
+
+## Sprint 7 Full Frontend Validation
+
+Run the complete Sprint 7 admin-chat and frontend regression validation with:
+
+```bash
+npm run test:sprint7
+```
+
+The aggregate validation covers admin chat state, socket behavior, API behavior, unread badges, security, accessibility, reply interaction, transcript merging, authentication, protected routing, session persistence, profile management, password changes, booking history, booking availability, availability selection, vehicle filters, and API configuration.
+
+Run the production build with every mock mode explicitly disabled:
+
+```bash
+VITE_API_BASE_URL=https://approved-production-api.example.com VITE_PROFILE_MOCK_MODE=false VITE_AVAILABILITY_MOCK_MODE=false VITE_CHAT_GATEWAY_URL=https://approved-chat-gateway.example.com VITE_CHAT_TRANSPORT=websocket VITE_CHAT_MOCK_MODE=false VITE_CHAT_API_MOCK_MODE=false npm run build
+```
+
+The example origins must be replaced by deployment-owner-approved HTTPS origins for a real release. Generated build assets must be inspected for source maps, local origins, private configuration names, and accidentally enabled chat fixtures, then restored so only intended source changes remain.
+
+Cross-team live inquiry validation remains blocked until the customer widget, gateway, transcript persistence, and history contracts are available together in one shared environment.
+
+## Sprint 7 Cross-Team Live Inquiry Drill
+
+The authoritative drill record is maintained in `docs/sprint7/live-inquiry-drill.md`.
+
+The walkthrough must use one shared environment containing Edward's customer widget, Devine's gateway, Edwin's admin inbox, and Ronald's transcript persistence and history implementation. No access tokens or transcript contents may be committed.
+
+The drill remains blocked until the required collaborator implementations and compatible contracts are available. Existing frontend mocks must be removed or disabled only after those implementations are inspected and verified.

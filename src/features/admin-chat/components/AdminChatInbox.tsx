@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAdminChat } from "../hooks";
 import { ConversationList } from "./ConversationList";
 import { ConversationThread } from "./ConversationThread";
@@ -7,12 +7,26 @@ import "./AdminChatInbox.css";
 export function AdminChatInbox() {
   const { totalUnreadCount } = useAdminChat();
   const [isThreadVisibleOnMobile, setIsThreadVisibleOnMobile] = useState(false);
+  const pendingFocusTargetRef = useRef<"list" | "thread" | null>(null);
+
+  useEffect(() => {
+    const target = pendingFocusTargetRef.current;
+    if (target === null) return;
+
+    const targetId = target === "thread"
+      ? "admin-chat-thread-title"
+      : "admin-chat-conversation-list";
+    document.getElementById(targetId)?.focus();
+    pendingFocusTargetRef.current = null;
+  }, [isThreadVisibleOnMobile]);
 
   function handleConversationOpened() {
+    pendingFocusTargetRef.current = "thread";
     setIsThreadVisibleOnMobile(true);
   }
 
   function handleBackToList() {
+    pendingFocusTargetRef.current = "list";
     setIsThreadVisibleOnMobile(false);
   }
 

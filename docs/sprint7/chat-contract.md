@@ -162,15 +162,15 @@ Live integration remains blocked until:
 - Edward owns the customer-widget payload and inquiry creation.
 - Edwin owns frontend domain types, normalization, admin inbox presentation, and unread badge behavior.
 
-## Phase 2 Decision
+## Shared Contract Decision
 
 Production event names and missing endpoints remain unset. The frontend types establish a safe provisional domain without claiming that pending backend or widget contracts already exist.
 
-## Phase 6 Transport Adapter Decision
+## Transport Adapter Decision
 
 No production transport protocol has been confirmed by Devine.
 
-Phase 6 therefore implements a transport-neutral adapter and deterministic mock transport only. No Socket.IO client or other WebSocket package is installed.
+The frontend therefore implements a transport-neutral adapter and deterministic mock transport only. No Socket.IO client or other WebSocket package is installed.
 
 Public frontend configuration:
 
@@ -189,7 +189,7 @@ The following remain unset until backend confirmation:
 
 No backend secret may be exposed through a `VITE_` environment variable. Authentication tokens are supplied at runtime by the existing authenticated session and must never be logged or included in returned transport errors.
 
-## Phase 7 Transcript API Integration Status
+## Transcript API Integration Status
 
 Upstream inspection on August 20, 2026 confirmed Ronalds `Search-Engine-Feeds-&-Chat-Archiving` branch at commit `e570b16`.
 
@@ -215,7 +215,7 @@ Conversation listing and read-state operations therefore use an injectable deter
 
 Mock behavior is controlled by `VITE_CHAT_API_MOCK_MODE=true`. No backend route, database table, or persistence behavior was added by the frontend implementation.
 
-## Phase 8 Admin Reply and Typing Workflow
+## Admin Reply and Typing Workflow
 
 Upstream inspection on August 21, 2026 confirmed that `Devine-codes` at commit `bafc600` does not yet provide the production chat transport contract.
 
@@ -237,7 +237,7 @@ Production event names, payloads, queue behavior, acknowledgement failures, reco
 
 The frontend fallback does not expose tokens, transport diagnostics, backend stack details, or raw failure payloads to administrators.
 
-## Phase 9 Real-Time Admin Notification Badge
+## Real-Time Admin Notification Badge
 
 The admin dashboard and protected chat inbox now share one `AdminChatProvider` instance.
 
@@ -253,6 +253,6 @@ Badge behavior:
 - contains no flashing, pulsing, or continuously repeating animation;
 - contains no local unread state, so remounting the badge does not reset the count.
 
-Ronalds upstream branch remained at commit `e570b16` during the Phase 9 inspection. Persisted unread state, the admin conversation-list endpoint, and the live mark-as-read endpoint remain pending.
+Ronalds upstream branch remained at commit `e570b16` during the notification-badge dependency inspection. Persisted unread state, the admin conversation-list endpoint, and the live mark-as-read endpoint remain pending.
 
 The current unread state therefore remains centralized within the frontend provider for the active application session. No cross-session persistence behavior is claimed.

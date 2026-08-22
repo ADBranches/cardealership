@@ -100,7 +100,13 @@ export function MessageComposer() {
           <span>Send</span>
         </button>
       </div>
-      <div className="admin-chat-composer-meta" id="admin-chat-composer-help">
+      <div
+        className="admin-chat-composer-meta"
+        id="admin-chat-composer-help"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         <span>
           {disabled
             ? "Reconnect to chat before sending."

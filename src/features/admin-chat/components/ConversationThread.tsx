@@ -45,7 +45,9 @@ export function ConversationThread({
 
         <div className="admin-chat-thread-identity">
           <p className="admin-chat-eyebrow">Active inquiry</p>
-          <h2 id="admin-chat-thread-title">{inquiry.customer.name}</h2>
+          <h2 id="admin-chat-thread-title" tabIndex={-1}>
+            {inquiry.customer.name}
+          </h2>
           <p>{inquiry.vehicle?.label || `Inquiry ${inquiry.id}`}</p>
         </div>
 
@@ -55,11 +57,14 @@ export function ConversationThread({
         />
       </header>
 
-      <div className="admin-chat-message-history" aria-label="Conversation message history">
-        <div className="admin-chat-live-region" aria-live="polite" aria-atomic="false">
-          {activeMessages.length > 0 ? `${activeMessages.length} messages loaded` : "No messages loaded"}
-        </div>
-
+      <div
+        className="admin-chat-message-history"
+        role="log"
+        aria-label={"Message history with " + inquiry.customer.name}
+        aria-live="polite"
+        aria-relevant="additions"
+        aria-busy={isLoadingHistory}
+      >
         {error?.inquiryId === inquiry.id ? (
           <div className="admin-chat-thread-error" role="alert">
             <p>{error.message}</p>
@@ -68,7 +73,9 @@ export function ConversationThread({
         ) : null}
 
         {isLoadingHistory ? (
-          <p className="admin-chat-history-status" role="status">Loading message history...</p>
+          <p className="admin-chat-history-status" role="status" aria-live="polite">
+            Loading message history...
+          </p>
         ) : activeMessages.length === 0 ? (
           <AdminChatEmptyState title="No messages yet" description="The conversation history is currently empty." />
         ) : (
