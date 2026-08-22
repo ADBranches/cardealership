@@ -1,9 +1,40 @@
-############################################
-# AUTH ROUTES
-############################################
+############################################################
+# PANDA MOTORS BACKEND API TESTS
+# STANDARD BACKEND PORT: 5500
+############################################################
 
-### REGISTER USER
-POST http://localhost:5500/api/auth/register
+@baseUrl = http://localhost:5500
+
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBjYXJzLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NzQwMzc5OCwiZXhwIjoxNzg4MDA4NTk4fQ.nyFUU1ePa0Ac5F2nkE5ml8Dxxj3Hq6VHLqpFANadjrw
+
+@customerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwiZW1haWwiOiJjdXN0b21lcjFAY2Fycy5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc4NzQwMzg0NCwiZXhwIjoxNzg4MDA4NjQ0fQ.quiHvGlMGWAH3tyIKpktraHPoVNl2gB56oEz19uOXnI
+
+
+############################################################
+# TEST IDENTITIES
+############################################################
+#
+# Admin:
+# id = 1
+#
+# Customer:
+# id = 2
+#
+# Test vehicle:
+# id = 1
+#
+# Approved test conversation:
+# customer-2-car-1
+#
+############################################################
+
+
+############################################################
+# AUTH ROUTES
+############################################################
+
+### REGISTER ADMIN USER
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 
 {
@@ -14,8 +45,8 @@ Content-Type: application/json
 }
 
 
-### LOGIN USER
-POST http://localhost:5500/api/auth/login
+### LOGIN ADMIN USER
+POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
 {
@@ -24,42 +55,84 @@ Content-Type: application/json
 }
 
 
-############################################
+### REGISTER CUSTOMER USER
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Customer One",
+  "email": "customer1@cars.com",
+  "password": "customer",
+  "role": "user"
+}
+
+
+### LOGIN CUSTOMER USER
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "customer1@cars.com",
+  "password": "customer"
+}
+
+
+############################################################
 # CAR ROUTES - PUBLIC
-############################################
+############################################################
 
 ### GET ALL CARS
-GET http://localhost:5500/api/cars
+GET {{baseUrl}}/api/cars
 
 
 ### GET SINGLE CAR
-GET http://localhost:5500/api/cars/1
+GET {{baseUrl}}/api/cars/1
 
 
 ### FILTER BY MAKE
-GET http://localhost:5500/api/cars?make=Toyota
+GET {{baseUrl}}/api/cars?make=Toyota
 
 
 ### FILTER BY MODEL
-GET http://localhost:5500/api/cars?model=Harrier
+GET {{baseUrl}}/api/cars?model=Harrier
 
 
 ### FILTER BY YEAR
-GET http://localhost:5500/api/cars?year=2022
+GET {{baseUrl}}/api/cars?year=2022
 
 
 ### FILTER BY PRICE RANGE
-GET http://localhost:5500/api/cars?minPrice=20000000&maxPrice=50000000
+GET {{baseUrl}}/api/cars?minPrice=20000000&maxPrice=50000000
 
 
-############################################
-# CAR ROUTES - PROTECTED (ADMIN ONLY)
-############################################
+############################################################
+# SORTING TESTS
+############################################################
+
+### PRICE - LOW TO HIGH
+GET {{baseUrl}}/api/cars?sortBy=price_asc
+
+
+### PRICE - HIGH TO LOW
+GET {{baseUrl}}/api/cars?sortBy=price_desc
+
+
+### NEWEST VEHICLES BY YEAR
+GET {{baseUrl}}/api/cars?sortBy=newest
+
+
+### FILTER + SORT TOGETHER
+GET {{baseUrl}}/api/cars?make=Toyota&minPrice=100000000&maxPrice=400000000&sortBy=price_asc
+
+
+############################################################
+# CAR ROUTES - PROTECTED ADMIN ONLY
+############################################################
 
 ### CREATE CAR
-POST http://localhost:5500/api/cars
+POST {{baseUrl}}/api/cars
 Content-Type: application/json
-Authorization: Bearer YOUR_TOKEN_HERE
+Authorization: Bearer {{adminToken}}
 
 {
   "vin": "123ABC",
@@ -71,19 +144,20 @@ Authorization: Bearer YOUR_TOKEN_HERE
 }
 
 
-############################################
-# IMAGE UPLOAD TEST (MULTER)
-############################################
+############################################################
+# IMAGE UPLOAD / OPTIMIZATION
+############################################################
 
 ### TEST IMAGE UPLOAD
-POST http://localhost:5500/api/cars/test-upload
+POST {{baseUrl}}/api/cars/test-upload
 Content-Type: multipart/form-data
 
-image: @C:/Users/YOURNAME/Pictures/test.jpg
+image: @C:/Users/admin/Downloads/toyota-vehicle.jpg
+
 
 ### UPLOAD AND OPTIMIZE CAR IMAGE
-POST http://localhost:5500/api/cars/upload
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkBjYXJzLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NTg1NjM4MSwiZXhwIjoxNzg2NDYxMTgxfQ.5aDnYxkKEiCMWbDCNkqY0jGp-SKTdk0mYAxQNhRztoQ
+POST {{baseUrl}}/api/cars/upload
+Authorization: Bearer {{adminToken}}
 Content-Type: multipart/form-data; boundary=CarImageBoundary
 
 --CarImageBoundary
@@ -101,43 +175,475 @@ Content-Type: image/jpeg
 < C:/Users/admin/Downloads/toyota-vehicle.jpg
 --CarImageBoundary--
 
+
 ############################################################
-# TASK 1 — SEARCH ENGINE FEEDS
+# SEARCH ENGINE FEEDS
 ############################################################
 
-### DYNAMIC SITEMAP
-GET http://localhost:5000/sitemap.xml
+### DYNAMIC XML SITEMAP
+GET {{baseUrl}}/sitemap.xml
 
 
 ### DYNAMIC RSS FEED
-GET http://localhost:5000/rss.xml
+GET {{baseUrl}}/rss.xml
 
 
 ############################################################
-# TASK 2 — CHAT TRANSCRIPT STORAGE
+# CHAT TRANSCRIPT STORAGE
+#
+# CUSTOMER = 2
+# CAR      = 1
+#
+# Therefore:
+#
+# conversationId = customer-2-car-1
+#
 ############################################################
 
-### SAVE CUSTOMER MESSAGE
-POST http://localhost:5000/api/chat/messages
+
+############################################################
+# 1. SAVE CUSTOMER MESSAGE 1
+#
+# EXPECTED:
+# HTTP 201
+# duplicate = false
+# customer_id = 2
+# car_id = 1
+# is_read = false
+############################################################
+
+### SAVE CUSTOMER MESSAGE 1
+POST {{baseUrl}}/api/chat/messages
+Authorization: Bearer {{customerToken}}
 Content-Type: application/json
 
 {
-  "conversationId": "customer-1-admin",
+  "conversationId": "customer-2-car-1",
+  "clientMessageId": "customer-msg-001",
+  "customerId": 2,
+  "carId": 1,
   "sender": "customer",
   "message": "Hello, is the Toyota Land Cruiser still available?"
 }
 
 
-### SAVE ADMIN MESSAGE
-POST http://localhost:5000/api/chat/messages
+############################################################
+# 2. SAVE CUSTOMER MESSAGE 2
+#
+# EXPECTED:
+# HTTP 201
+# duplicate = false
+#
+# We now expect TWO unread customer messages.
+############################################################
+
+### SAVE CUSTOMER MESSAGE 2
+POST {{baseUrl}}/api/chat/messages
+Authorization: Bearer {{customerToken}}
 Content-Type: application/json
 
 {
-  "conversationId": "customer-1-admin",
-  "sender": "admin",
-  "message": "Yes, it is currently available."
+  "conversationId": "customer-2-car-1",
+  "clientMessageId": "customer-msg-002",
+  "customerId": 2,
+  "carId": 1,
+  "sender": "customer",
+  "message": "Can I arrange a test drive?"
 }
 
 
-### FETCH PREVIOUS CONVERSATION
-GET http://localhost:5000/api/chat/conversations/customer-1-admin/messages
+############################################################
+# 3. CLIENT MESSAGE ID / DUPLICATE RECONCILIATION
+#
+# This repeats customer-msg-002.
+#
+# EXPECTED:
+# HTTP 200
+# duplicate = true
+#
+# The database MUST NOT create message number 3 from this retry.
+############################################################
+
+### RETRY SAME CUSTOMER MESSAGE
+POST {{baseUrl}}/api/chat/messages
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "conversationId": "customer-2-car-1",
+  "clientMessageId": "customer-msg-002",
+  "customerId": 2,
+  "carId": 1,
+  "sender": "customer",
+  "message": "Can I arrange a test drive?"
+}
+
+
+############################################################
+# 4. CUSTOMER FETCH CHAT HISTORY
+#
+# PROVES:
+# authenticated history retrieval
+# ownership authorization
+# pagination contract
+#
+# EXPECTED:
+# HTTP 200
+# total = 2
+############################################################
+
+### CUSTOMER FETCH CHAT HISTORY
+GET {{baseUrl}}/api/chat/conversations/customer-2-car-1/messages?page=1&limit=30
+Authorization: Bearer {{customerToken}}
+
+
+############################################################
+# 5. ADMIN FETCH CHAT HISTORY
+#
+# Admin can access any conversation.
+############################################################
+
+### ADMIN FETCH CHAT HISTORY
+GET {{baseUrl}}/api/chat/conversations/customer-2-car-1/messages?page=1&limit=30
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# 6. HISTORY PAGINATION
+#
+# limit=1 makes pagination easy to prove.
+############################################################
+
+### HISTORY PAGE 1 - LIMIT 1
+GET {{baseUrl}}/api/chat/conversations/customer-2-car-1/messages?page=1&limit=1
+Authorization: Bearer {{adminToken}}
+
+
+### HISTORY PAGE 2 - LIMIT 1
+GET {{baseUrl}}/api/chat/conversations/customer-2-car-1/messages?page=2&limit=1
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# 7. ADMIN CONVERSATION LIST BEFORE ADMIN REPLY
+#
+# PROVES:
+# admin conversation-list endpoint
+# customer metadata
+# vehicle metadata
+# unread count
+# pagination
+#
+# EXPECTED conversation:
+#
+# conversationId = customer-2-car-1
+# messageCount   = 2
+# unreadCount    = 2
+#
+# customer.id    = 2
+# vehicle.id     = 1
+############################################################
+
+### GET ADMIN CONVERSATIONS BEFORE REPLY
+GET {{baseUrl}}/api/admin/chat/conversations?page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# 8. SAVE ADMIN REPLY
+#
+# IMPORTANT:
+# customerId remains 2.
+#
+# Admin's own ID is 1, but customerId identifies the CUSTOMER
+# associated with this conversation.
+############################################################
+
+### SAVE ADMIN MESSAGE
+POST {{baseUrl}}/api/chat/messages
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "conversationId": "customer-2-car-1",
+  "clientMessageId": "admin-msg-001",
+  "customerId": 2,
+  "carId": 1,
+  "sender": "admin",
+  "message": "Yes, the Land Cruiser is available and we can arrange a test drive."
+}
+
+
+############################################################
+# 9. ADMIN CONVERSATION LIST AFTER ADMIN REPLY
+#
+# EXPECTED:
+# messageCount = 3
+# unreadCount  = 2
+#
+# Admin's outgoing message itself is already read.
+############################################################
+
+### ADMIN CONVERSATION LIST AFTER REPLY
+GET {{baseUrl}}/api/admin/chat/conversations?page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# 10. ADMIN CONVERSATION LIST PAGINATION
+############################################################
+
+### ADMIN CONVERSATIONS PAGE 1
+GET {{baseUrl}}/api/admin/chat/conversations?page=1&limit=10
+Authorization: Bearer {{adminToken}}
+
+
+### ADMIN CONVERSATIONS PAGE 2
+GET {{baseUrl}}/api/admin/chat/conversations?page=2&limit=10
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# 11. PERSISTED UNREAD STATE
+#
+# Run BEFORE mark-as-read.
+#
+# EXPECTED for customer-2-car-1:
+#
+# unreadCount = 2
+############################################################
+
+### CHECK UNREAD STATE
+GET {{baseUrl}}/api/admin/chat/conversations?page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# 12. MARK CONVERSATION AS READ
+#
+# EXPECTED first call:
+#
+# HTTP 200
+# updatedCount = 2
+# unreadCount = 0
+############################################################
+
+### MARK CONVERSATION AS READ
+PATCH {{baseUrl}}/api/admin/chat/conversations/customer-2-car-1/read
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# 13. MARK-AS-READ IDEMPOTENCY
+#
+# Call exactly the same endpoint again.
+#
+# EXPECTED:
+#
+# HTTP 200
+# updatedCount = 0
+# unreadCount = 0
+#
+# This proves idempotency.
+############################################################
+
+### MARK SAME CONVERSATION AS READ AGAIN
+PATCH {{baseUrl}}/api/admin/chat/conversations/customer-2-car-1/read
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# 14. VERIFY PERSISTED UNREAD STATE
+#
+# EXPECTED:
+# unreadCount remains 0
+############################################################
+
+### CHECK AFTER MARK-AS-READ
+GET {{baseUrl}}/api/admin/chat/conversations?page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# 15. TRANSCRIPT RETENTION POLICY
+#
+# EXPECTED:
+#
+# retentionDays = 365
+# basis = message_created_at
+# automaticDeletion = false
+############################################################
+
+### GET RETENTION POLICY
+GET {{baseUrl}}/api/admin/chat/retention-policy
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# AUTHENTICATION TESTS
+############################################################
+
+### 16. ADMIN CONVERSATIONS WITHOUT TOKEN
+# EXPECTED: HTTP 401
+GET {{baseUrl}}/api/admin/chat/conversations
+
+
+### 17. CHAT HISTORY WITHOUT TOKEN
+# EXPECTED: HTTP 401
+GET {{baseUrl}}/api/chat/conversations/customer-2-car-1/messages
+
+
+############################################################
+# ADMIN AUTHORIZATION TESTS
+############################################################
+
+### 18. CUSTOMER TRIES ADMIN CONVERSATION LIST
+# EXPECTED: HTTP 403
+GET {{baseUrl}}/api/admin/chat/conversations
+Authorization: Bearer {{customerToken}}
+
+
+### 19. CUSTOMER TRIES MARK-AS-READ
+# EXPECTED: HTTP 403
+PATCH {{baseUrl}}/api/admin/chat/conversations/customer-2-car-1/read
+Authorization: Bearer {{customerToken}}
+
+
+### 20. CUSTOMER TRIES RETENTION POLICY
+# EXPECTED: HTTP 403
+GET {{baseUrl}}/api/admin/chat/retention-policy
+Authorization: Bearer {{customerToken}}
+
+
+############################################################
+# CUSTOMER OWNERSHIP AUTHORIZATION
+############################################################
+#
+# Logged-in customer 2 tries pretending to be customer 1.
+#
+# EXPECTED:
+# HTTP 403
+# code = CHAT_ACCESS_DENIED
+#
+# This is similar to the 403 you already successfully produced.
+############################################################
+
+### 21. CUSTOMER TRIES TO SEND FOR ANOTHER CUSTOMER
+POST {{baseUrl}}/api/chat/messages
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "conversationId": "customer-1-car-1",
+  "clientMessageId": "forbidden-msg-001",
+  "customerId": 1,
+  "carId": 1,
+  "sender": "customer",
+  "message": "I should not be allowed to send this as customer 1."
+}
+
+
+############################################################
+# ERROR RESPONSE CONTRACT
+############################################################
+
+### 22. EMPTY MESSAGE
+# EXPECTED:
+# HTTP 400
+# code = INVALID_MESSAGE
+POST {{baseUrl}}/api/chat/messages
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "conversationId": "customer-2-car-1",
+  "clientMessageId": "invalid-msg-001",
+  "customerId": 2,
+  "carId": 1,
+  "sender": "customer",
+  "message": ""
+}
+
+
+### 23. MISSING CLIENT MESSAGE ID
+# EXPECTED:
+# HTTP 400
+# code = CLIENT_MESSAGE_ID_REQUIRED
+POST {{baseUrl}}/api/chat/messages
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "conversationId": "customer-2-car-1",
+  "customerId": 2,
+  "carId": 1,
+  "sender": "customer",
+  "message": "This request has no client message ID."
+}
+
+
+### 24. INVALID VEHICLE
+# EXPECTED:
+# HTTP 404
+# code = CAR_NOT_FOUND
+POST {{baseUrl}}/api/chat/messages
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "conversationId": "customer-2-car-99999",
+  "clientMessageId": "invalid-car-msg-001",
+  "customerId": 2,
+  "carId": 99999,
+  "sender": "customer",
+  "message": "Is this vehicle available?"
+}
+
+
+### 25. UNKNOWN CONVERSATION MARK-AS-READ
+# EXPECTED:
+# HTTP 404
+# code = CONVERSATION_NOT_FOUND
+PATCH {{baseUrl}}/api/admin/chat/conversations/does-not-exist/read
+Authorization: Bearer {{adminToken}}
+
+
+############################################################
+# WINSTON ERROR LOGGING
+############################################################
+
+### 26. FORCE INTENTIONAL 500 ERROR
+#
+# DEVELOPMENT ONLY
+#
+# EXPECTED:
+# HTTP 500
+#
+# Then:
+#
+# Get-Content logs\error.log -Tail 20
+############################################################
+
+GET {{baseUrl}}/api/test-error
+
+
+############################################################
+# HEALTH CHECK
+############################################################
+
+### 27. BACKEND HEALTH
+GET {{baseUrl}}/api/health
+
+
+############################################################
+# FINAL CHAT VERIFICATION
+############################################################
+
+### 28. FINAL CONVERSATION HISTORY
+GET {{baseUrl}}/api/chat/conversations/customer-2-car-1/messages?page=1&limit=30
+Authorization: Bearer {{adminToken}}
+
+
+### 29. FINAL ADMIN CONVERSATION SUMMARY
+GET {{baseUrl}}/api/admin/chat/conversations?page=1&limit=20
+Authorization: Bearer {{adminToken}}

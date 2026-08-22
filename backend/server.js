@@ -8,37 +8,47 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import authRoutes from "./routes/authRoutes.js";
+import carsRoutes from "./routes/carsRoutes.js";
+
 import bookingRoutes from "./routes/bookingRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import optimizedRoutes from "./routes/optimizedRoutes.js";
 import adminMetricsRoutes from "./routes/adminMetricsRoutes.js";
 
+import { protect, adminOnly } from "./middleware/authMiddleware.js";
+
 import { performanceMiddleware } from "./middleware/performanceMiddleware.js";
+
 import db from "./config/db.js";
 
 const __filename = fileURLToPath(import.meta.url);
+
 const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
 const app = express();
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5500;
+
+const SITE_URL = process.env.SITE_URL || "http://localhost:5173";
 
 /*
 |--------------------------------------------------------------------------
-| PUBLIC WEBSITE URL
+| CHAT CONFIGURATION
 |--------------------------------------------------------------------------
-|
-| Used when generating sitemap and RSS URLs.
-|
-| Later, when deployed:
-|
-| SITE_URL=https://yourdomain.com
-|
 */
 
-const SITE_URL = process.env.SITE_URL || "http://localhost:5173";
+const CHAT_RETENTION_DAYS = Number(process.env.CHAT_RETENTION_DAYS || 365);
+
+const CHAT_DEFAULT_PAGE_SIZE = 30;
+
+const CHAT_MAX_PAGE_SIZE = 100;
+
+const ADMIN_CONVERSATION_DEFAULT_PAGE_SIZE = 20;
+
+const ADMIN_CONVERSATION_MAX_PAGE_SIZE = 100;
 
 /*
 |--------------------------------------------------------------------------
@@ -128,7 +138,9 @@ app.use((req, res, next) => {
     if (res.statusCode >= 500) {
       logger.error("HTTP request returned server error", {
         method: req.method,
+
         url: req.originalUrl,
+
         statusCode: res.statusCode,
 
         durationMs: Date.now() - startedAt,
@@ -145,31 +157,105 @@ app.use((req, res, next) => {
 
 /*
 |--------------------------------------------------------------------------
-| EXISTING ROUTES
+| STANDARD CHAT ERROR RESPONSE
 |--------------------------------------------------------------------------
 */
 
-app.use("/api/bookings", bookingRoutes);
+function sendChatError(res, status, code, message, details = null) {
+  return res.status(status).json({
+    success: false,
 
-app.use("/api/admin", adminRoutes);
+    error: {
+      code,
+      message,
+      status,
+      details,
+    },
+  });
+}
 
-app.use("/api/optimized", optimizedRoutes);
+/*
+|--------------------------------------------------------------------------
+| PAGINATION HELPER
+|--------------------------------------------------------------------------
+*/
 
-app.use("/api/admin/metrics", adminMetricsRoutes);
+function parsePagination(query, { defaultLimit, maxLimit }) {
+  const requestedPage = Number(query.page);
+
+  const requestedLimit = Number(query.limit);
+
+  const page =
+    Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+
+  const limit =
+    Number.isInteger(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, maxLimit)
+      : defaultLimit;
+
+  const offset = (page - 1) * limit;
+
+  return {
+    page,
+    limit,
+    offset,
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| CONVERSATION ACCESS HELPER
+|--------------------------------------------------------------------------
+*/
+
+async function ensureConversationAccess(req, res, conversationId) {
+  if (req.user?.role === "admin") {
+    return true;
+  }
+
+  const result = await db.query(
+    `
+        SELECT customer_id
+        FROM chat_messages
+        WHERE
+          conversation_id = $1
+          AND customer_id IS NOT NULL
+        LIMIT 1;
+      `,
+    [conversationId],
+  );
+
+  if (result.rows.length === 0) {
+    sendChatError(
+      res,
+      404,
+      "CONVERSATION_NOT_FOUND",
+      "Conversation was not found.",
+    );
+
+    return false;
+  }
+
+  const customerId = Number(result.rows[0].customer_id);
+
+  if (customerId !== Number(req.user?.id)) {
+    sendChatError(
+      res,
+      403,
+      "CHAT_ACCESS_DENIED",
+      "You do not have permission to access this conversation.",
+    );
+
+    return false;
+  }
+
+  return true;
+}
 
 /*
 |--------------------------------------------------------------------------
 | XML HELPER
 |--------------------------------------------------------------------------
-|
-| Protect XML output when database text contains characters such as:
-|
-| &
-| <
-| >
-| "
-| '
-|
 */
 
 function escapeXml(value = "") {
@@ -183,41 +269,32 @@ function escapeXml(value = "") {
 
 /*
 |--------------------------------------------------------------------------
-| TASK 1A
 | DYNAMIC XML SITEMAP
 |--------------------------------------------------------------------------
-|
-| GET /sitemap.xml
-|
-| This queries PostgreSQL EVERY TIME the sitemap is requested.
-|
-| Therefore:
-|
-| New car inserted + is_available = true
-|       ↓
-| Automatically appears
-|
-| Car sold + is_available = false
-|       ↓
-| Automatically disappears
-|
 */
 
 app.get("/sitemap.xml", async (req, res, next) => {
   try {
     const result = await db.query(`
-        SELECT
-          id,
-          name,
-          brand,
-          created_at,
-          updated_at
-        FROM cars
-        WHERE COALESCE(is_available, TRUE) = TRUE
-        ORDER BY
-          COALESCE(updated_at, created_at) DESC,
-          id DESC;
-      `);
+          SELECT
+            id,
+            name,
+            brand,
+            created_at,
+            updated_at
+          FROM cars
+          WHERE
+            COALESCE(
+              is_available,
+              TRUE
+            ) = TRUE
+          ORDER BY
+            COALESCE(
+              updated_at,
+              created_at
+            ) DESC,
+            id DESC;
+        `);
 
     const vehicleUrls = result.rows
       .map((car) => {
@@ -258,11 +335,6 @@ ${vehicleUrls}
 
     res.set("Content-Type", "application/xml; charset=utf-8");
 
-    /*
-      Sitemap stays dynamic.
-      Search engines may cache it briefly.
-      */
-
     res.set("Cache-Control", "public, max-age=300");
 
     return res.status(200).send(sitemap);
@@ -273,35 +345,36 @@ ${vehicleUrls}
 
 /*
 |--------------------------------------------------------------------------
-| TASK 1B
 | DYNAMIC RSS FEED
 |--------------------------------------------------------------------------
-|
-| GET /rss.xml
-|
-| Uses the same live PostgreSQL inventory.
-|
 */
 
 app.get("/rss.xml", async (req, res, next) => {
   try {
     const result = await db.query(`
-        SELECT
-          id,
-          name,
-          brand,
-          year,
-          price,
-          description,
-          created_at,
-          updated_at
-        FROM cars
-        WHERE COALESCE(is_available, TRUE) = TRUE
-        ORDER BY
-          COALESCE(created_at, updated_at) DESC,
-          id DESC
-        LIMIT 50;
-      `);
+          SELECT
+            id,
+            name,
+            brand,
+            year,
+            price,
+            description,
+            created_at,
+            updated_at
+          FROM cars
+          WHERE
+            COALESCE(
+              is_available,
+              TRUE
+            ) = TRUE
+          ORDER BY
+            COALESCE(
+              created_at,
+              updated_at
+            ) DESC,
+            id DESC
+          LIMIT 50;
+        `);
 
     const items = result.rows
       .map((car) => {
@@ -370,125 +443,640 @@ ${items}
 
 /*
 |--------------------------------------------------------------------------
-| TASK 2A
-| SAVE CHAT MESSAGE
+| CHAT — SAVE MESSAGE
 |--------------------------------------------------------------------------
-|
-| POST /api/chat/messages
-|
-| BODY:
-|
-| {
-|   "conversationId": "customer-1-admin",
-|   "sender": "customer",
-|   "message": "Is the Land Cruiser still available?"
-| }
-|
-| Timestamp is generated by PostgreSQL automatically.
-|
 */
 
-app.post("/api/chat/messages", async (req, res, next) => {
-  try {
-    const { conversationId, sender, message } = req.body;
+app.post(
+  "/api/chat/messages",
 
-    if (!conversationId || typeof conversationId !== "string") {
-      return res.status(400).json({
-        success: false,
+  protect,
 
-        message: "conversationId is required.",
-      });
-    }
+  async (req, res, next) => {
+    try {
+      const {
+        conversationId,
+        clientMessageId,
+        customerId,
+        carId,
+        sender,
+        message,
+      } = req.body;
 
-    if (!sender || typeof sender !== "string") {
-      return res.status(400).json({
-        success: false,
+      if (!conversationId || typeof conversationId !== "string") {
+        return sendChatError(
+          res,
+          400,
+          "INVALID_CONVERSATION_ID",
+          "conversationId is required.",
+        );
+      }
 
-        message: "sender is required.",
-      });
-    }
+      if (!clientMessageId || typeof clientMessageId !== "string") {
+        return sendChatError(
+          res,
+          400,
+          "CLIENT_MESSAGE_ID_REQUIRED",
+          "clientMessageId is required.",
+        );
+      }
 
-    if (!message || typeof message !== "string" || !message.trim()) {
-      return res.status(400).json({
-        success: false,
+      if (!message || typeof message !== "string" || !message.trim()) {
+        return sendChatError(
+          res,
+          400,
+          "INVALID_MESSAGE",
+          "message is required.",
+        );
+      }
 
-        message: "message is required.",
-      });
-    }
+      const parsedCustomerId = Number(customerId);
 
-    const result = await db.query(
-      `
+      const parsedCarId = Number(carId);
+
+      if (!Number.isInteger(parsedCustomerId) || parsedCustomerId <= 0) {
+        return sendChatError(
+          res,
+          400,
+          "INVALID_CUSTOMER_ID",
+          "A valid customerId is required.",
+        );
+      }
+
+      if (!Number.isInteger(parsedCarId) || parsedCarId <= 0) {
+        return sendChatError(
+          res,
+          400,
+          "INVALID_CAR_ID",
+          "A valid carId is required.",
+        );
+      }
+
+      const authenticatedIsAdmin = req.user?.role === "admin";
+
+      const expectedSender = authenticatedIsAdmin ? "admin" : "customer";
+
+      if (sender !== expectedSender) {
+        return sendChatError(
+          res,
+          403,
+          "INVALID_CHAT_SENDER",
+          `Authenticated user must send messages as '${expectedSender}'.`,
+        );
+      }
+
+      if (!authenticatedIsAdmin && Number(req.user?.id) !== parsedCustomerId) {
+        return sendChatError(
+          res,
+          403,
+          "CHAT_ACCESS_DENIED",
+          "You cannot send messages for another customer.",
+        );
+      }
+
+      const carResult = await db.query(
+        `
+            SELECT id
+            FROM cars
+            WHERE id = $1
+            LIMIT 1;
+          `,
+        [parsedCarId],
+      );
+
+      if (carResult.rows.length === 0) {
+        return sendChatError(
+          res,
+          404,
+          "CAR_NOT_FOUND",
+          "Vehicle was not found.",
+        );
+      }
+
+      const insertResult = await db.query(
+        `
             INSERT INTO chat_messages (
               conversation_id,
+              client_message_id,
+              customer_id,
+              car_id,
               sender,
-              message
+              message,
+              is_read,
+              read_at,
+              retention_expires_at
             )
 
             VALUES (
               $1,
               $2,
-              $3
+              $3,
+              $4,
+              $5,
+              $6,
+              $7,
+              $8,
+              NOW() + ($9::int * INTERVAL '1 day')
             )
+
+            ON CONFLICT (
+              conversation_id,
+              client_message_id
+            )
+            DO NOTHING
 
             RETURNING
               id,
               conversation_id,
+              client_message_id,
+              customer_id,
+              car_id,
               sender,
               message,
-              created_at;
+              is_read,
+              read_at,
+              created_at,
+              retention_expires_at;
           `,
 
-      [conversationId.trim(), sender.trim(), message.trim()],
-    );
+        [
+          conversationId.trim(),
 
-    return res.status(201).json({
-      success: true,
+          clientMessageId.trim(),
 
-      message: "Chat message saved successfully.",
+          parsedCustomerId,
 
-      chatMessage: result.rows[0],
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+          parsedCarId,
 
-/*
-|--------------------------------------------------------------------------
-| TASK 2B
-| FETCH PREVIOUS CHAT HISTORY
-|--------------------------------------------------------------------------
-|
-| GET /api/chat/conversations/:conversationId/messages
-|
-| Example:
-|
-| GET /api/chat/conversations/customer-1-admin/messages
-|
-| Messages are returned oldest → newest so the frontend can rebuild
-| the conversation bubbles in the correct order.
-|
-*/
+          sender,
 
-app.get(
-  "/api/chat/conversations/:conversationId/messages",
-  async (req, res, next) => {
-    try {
-      const { conversationId } = req.params;
+          message.trim(),
 
-      const result = await db.query(
+          sender === "admin",
+
+          sender === "admin" ? new Date() : null,
+
+          CHAT_RETENTION_DAYS,
+        ],
+      );
+
+      if (insertResult.rows.length > 0) {
+        return res.status(201).json({
+          success: true,
+
+          duplicate: false,
+
+          message: insertResult.rows[0],
+        });
+      }
+
+      const duplicateResult = await db.query(
         `
             SELECT
               id,
               conversation_id,
+              client_message_id,
+              customer_id,
+              car_id,
               sender,
               message,
-              created_at
+              is_read,
+              read_at,
+              created_at,
+              retention_expires_at
             FROM chat_messages
-            WHERE conversation_id = $1
+            WHERE
+              conversation_id = $1
+              AND client_message_id = $2
+            LIMIT 1;
+          `,
+
+        [conversationId.trim(), clientMessageId.trim()],
+      );
+
+      if (duplicateResult.rows.length === 0) {
+        return sendChatError(
+          res,
+          409,
+          "MESSAGE_ID_CONFLICT",
+          "Unable to reconcile duplicate message.",
+        );
+      }
+
+      return res.status(200).json({
+        success: true,
+
+        duplicate: true,
+
+        message: duplicateResult.rows[0],
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| CHAT — PAGINATED HISTORY
+|--------------------------------------------------------------------------
+*/
+
+app.get(
+  "/api/chat/conversations/:conversationId/messages",
+
+  protect,
+
+  async (req, res, next) => {
+    try {
+      const { conversationId } = req.params;
+
+      const accessAllowed = await ensureConversationAccess(
+        req,
+        res,
+        conversationId,
+      );
+
+      if (!accessAllowed) {
+        return;
+      }
+
+      const { page, limit, offset } = parsePagination(req.query, {
+        defaultLimit: CHAT_DEFAULT_PAGE_SIZE,
+
+        maxLimit: CHAT_MAX_PAGE_SIZE,
+      });
+
+      const countResult = await db.query(
+        `
+            SELECT
+              COUNT(*)::int AS total
+            FROM chat_messages
+            WHERE
+              conversation_id = $1;
+          `,
+
+        [conversationId],
+      );
+
+      const total = countResult.rows[0]?.total || 0;
+
+      const historyResult = await db.query(
+        `
+            SELECT
+              id,
+              conversation_id,
+              client_message_id,
+              customer_id,
+              car_id,
+              sender,
+              message,
+              is_read,
+              read_at,
+              created_at,
+              retention_expires_at
+
+            FROM chat_messages
+
+            WHERE
+              conversation_id = $1
+
             ORDER BY
-              created_at ASC,
-              id ASC;
+              created_at DESC,
+              id DESC
+
+            LIMIT $2
+            OFFSET $3;
+          `,
+
+        [conversationId, limit, offset],
+      );
+
+      const messages = historyResult.rows.reverse();
+
+      const totalPages = Math.ceil(total / limit);
+
+      return res.status(200).json({
+        success: true,
+
+        conversationId,
+
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+
+          hasNextPage: page < totalPages,
+
+          hasPreviousPage: page > 1,
+        },
+
+        messages,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN CHAT — CONVERSATION LIST
+|--------------------------------------------------------------------------
+*/
+
+app.get(
+  "/api/admin/chat/conversations",
+
+  protect,
+  adminOnly,
+
+  async (req, res, next) => {
+    try {
+      const { page, limit, offset } = parsePagination(req.query, {
+        defaultLimit: ADMIN_CONVERSATION_DEFAULT_PAGE_SIZE,
+
+        maxLimit: ADMIN_CONVERSATION_MAX_PAGE_SIZE,
+      });
+
+      const countResult = await db.query(`
+          SELECT
+            COUNT(
+              DISTINCT conversation_id
+            )::int AS total
+          FROM chat_messages;
+        `);
+
+      const total = countResult.rows[0]?.total || 0;
+
+      const result = await db.query(
+        `
+            WITH conversation_summary AS (
+              SELECT
+                conversation_id,
+
+                MAX(customer_id)
+                  AS customer_id,
+
+                MAX(car_id)
+                  AS car_id,
+
+                COUNT(*)::int
+                  AS message_count,
+
+                COUNT(*) FILTER (
+                  WHERE
+                    sender = 'customer'
+                    AND is_read = FALSE
+                )::int
+                  AS unread_count,
+
+                MIN(created_at)
+                  AS first_message_at,
+
+                MAX(created_at)
+                  AS last_message_at
+
+              FROM chat_messages
+
+              GROUP BY
+                conversation_id
+            )
+
+            SELECT
+              summary.conversation_id,
+              summary.message_count,
+              summary.unread_count,
+              summary.first_message_at,
+              summary.last_message_at,
+
+              customer.id
+                AS customer_id,
+
+              customer.name
+                AS customer_name,
+
+              customer.email
+                AS customer_email,
+
+              car.id
+                AS car_id,
+
+              car.name
+                AS car_name,
+
+              car.brand
+                AS car_brand,
+
+              car.year
+                AS car_year,
+
+              car.price
+                AS car_price,
+
+              latest.id
+                AS last_message_id,
+
+              latest.sender
+                AS last_sender,
+
+              latest.message
+                AS last_message,
+
+              latest.created_at
+                AS last_message_created_at
+
+            FROM conversation_summary summary
+
+            LEFT JOIN users customer
+              ON customer.id =
+                summary.customer_id
+
+            LEFT JOIN cars car
+              ON car.id =
+                summary.car_id
+
+            JOIN LATERAL (
+              SELECT
+                id,
+                sender,
+                message,
+                created_at
+
+              FROM chat_messages
+
+              WHERE
+                conversation_id =
+                  summary.conversation_id
+
+              ORDER BY
+                created_at DESC,
+                id DESC
+
+              LIMIT 1
+            ) latest
+              ON TRUE
+
+            ORDER BY
+              summary.last_message_at DESC
+
+            LIMIT $1
+            OFFSET $2;
+          `,
+
+        [limit, offset],
+      );
+
+      const conversations = result.rows.map((row) => ({
+        conversationId: row.conversation_id,
+
+        messageCount: row.message_count,
+
+        unreadCount: row.unread_count,
+
+        firstMessageAt: row.first_message_at,
+
+        lastMessageAt: row.last_message_at,
+
+        customer: row.customer_id
+          ? {
+              id: row.customer_id,
+
+              name: row.customer_name,
+
+              email: row.customer_email,
+            }
+          : null,
+
+        vehicle: row.car_id
+          ? {
+              id: row.car_id,
+
+              name: row.car_name,
+
+              brand: row.car_brand,
+
+              year: row.car_year,
+
+              price: row.car_price,
+            }
+          : null,
+
+        lastMessage: {
+          id: row.last_message_id,
+
+          sender: row.last_sender,
+
+          message: row.last_message,
+
+          createdAt: row.last_message_created_at,
+        },
+      }));
+
+      const totalPages = Math.ceil(total / limit);
+
+      return res.status(200).json({
+        success: true,
+
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+
+          hasNextPage: page < totalPages,
+
+          hasPreviousPage: page > 1,
+        },
+
+        conversations,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN CHAT — MARK AS READ
+|--------------------------------------------------------------------------
+*/
+
+app.patch(
+  "/api/admin/chat/conversations/:conversationId/read",
+
+  protect,
+  adminOnly,
+
+  async (req, res, next) => {
+    try {
+      const { conversationId } = req.params;
+
+      const conversationResult = await db.query(
+        `
+            SELECT 1
+            FROM chat_messages
+            WHERE
+              conversation_id = $1
+            LIMIT 1;
+          `,
+
+        [conversationId],
+      );
+
+      if (conversationResult.rows.length === 0) {
+        return sendChatError(
+          res,
+          404,
+          "CONVERSATION_NOT_FOUND",
+          "Conversation was not found.",
+        );
+      }
+
+      const updateResult = await db.query(
+        `
+            UPDATE chat_messages
+
+            SET
+              is_read = TRUE,
+
+              read_at =
+                COALESCE(
+                  read_at,
+                  NOW()
+                )
+
+            WHERE
+              conversation_id = $1
+
+              AND sender = 'customer'
+
+              AND is_read = FALSE
+
+            RETURNING id;
+          `,
+
+        [conversationId],
+      );
+
+      const unreadResult = await db.query(
+        `
+            SELECT
+              COUNT(*)::int
+                AS unread_count
+
+            FROM chat_messages
+
+            WHERE
+              conversation_id = $1
+
+              AND sender =
+                'customer'
+
+              AND is_read =
+                FALSE;
           `,
 
         [conversationId],
@@ -499,15 +1087,111 @@ app.get(
 
         conversationId,
 
-        count: result.rows.length,
+        updatedCount: updateResult.rowCount,
 
-        messages: result.rows,
+        unreadCount: unreadResult.rows[0]?.unread_count || 0,
       });
     } catch (error) {
       next(error);
     }
   },
 );
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN CHAT — RETENTION POLICY
+|--------------------------------------------------------------------------
+*/
+
+app.get(
+  "/api/admin/chat/retention-policy",
+
+  protect,
+  adminOnly,
+
+  (req, res) => {
+    return res.status(200).json({
+      success: true,
+
+      retentionPolicy: {
+        retentionDays: CHAT_RETENTION_DAYS,
+
+        basis: "message_created_at",
+
+        actionAfterExpiry: "eligible_for_archival_or_deletion",
+
+        automaticDeletion: false,
+
+        description: `Chat messages are retained for ${CHAT_RETENTION_DAYS} days from creation. Expired records are marked by retention_expires_at and become eligible for archival or deletion.`,
+      },
+    });
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| EXISTING APPLICATION ROUTES
+|--------------------------------------------------------------------------
+|
+| Restored:
+|
+| /api/auth
+| /api/cars
+|
+| Existing team routes remain mounted.
+|
+*/
+
+/*
+|--------------------------------------------------------------------------
+| AUTH
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/auth", authRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| CARS
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/cars", carsRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| BOOKINGS
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/bookings", bookingRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN METRICS
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/admin/metrics", adminMetricsRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| OPTIMIZED QUERIES
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/optimized", optimizedRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| GENERAL ADMIN ROUTER
+|--------------------------------------------------------------------------
+|
+| Keep this after the dedicated /api/admin/chat routes.
+|
+*/
+
+app.use("/api/admin", adminRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -626,9 +1310,13 @@ app.post("/api/finance/calculate", (req, res, next) => {
 
       inputs: {
         carPrice: price,
+
         downPayment: down,
+
         loanAmount,
+
         interestRate: rate,
+
         loanTermMonths: term,
       },
 
@@ -871,13 +1559,28 @@ app.get("/api/health", (req, res) => {
 
     message: "Panda Motors API is running!",
 
-    version: "2.1.0",
+    version: "2.3.1",
 
-    newEndpoints: [
-      "GET /sitemap.xml",
-      "GET /rss.xml",
+    routes: {
+      auth: "/api/auth",
+
+      cars: "/api/cars",
+
+      chat: "/api/chat",
+
+      adminChat: "/api/admin/chat",
+    },
+
+    chatEndpoints: [
       "POST /api/chat/messages",
-      "GET /api/chat/conversations/:conversationId/messages",
+
+      "GET /api/chat/conversations/:conversationId/messages?page=1&limit=30",
+
+      "GET /api/admin/chat/conversations?page=1&limit=20",
+
+      "PATCH /api/admin/chat/conversations/:conversationId/read",
+
+      "GET /api/admin/chat/retention-policy",
     ],
   });
 });
@@ -939,31 +1642,30 @@ app.use((error, req, res, next) => {
     return next(error);
   }
 
-  return res.status(statusCode).json({
-    success: false,
+  return sendChatError(
+    res,
 
-    message: statusCode >= 500 ? "Internal server error" : error.message,
+    statusCode,
 
-    error: process.env.NODE_ENV === "development" ? error.message : undefined,
-  });
+    error.code || "INTERNAL_SERVER_ERROR",
+
+    statusCode >= 500 ? "Internal server error." : error.message,
+
+    process.env.NODE_ENV === "development"
+      ? {
+          reason: error.message,
+        }
+      : null,
+  );
 });
 
 /*
 |--------------------------------------------------------------------------
 | DATABASE INITIALIZATION
 |--------------------------------------------------------------------------
-|
-| Creates chat storage automatically.
-|
 */
 
 async function initializeDatabase() {
-  /*
-  |--------------------------------------------------------------------------
-  | CHAT TRANSCRIPTS TABLE
-  |--------------------------------------------------------------------------
-  */
-
   await db.query(`
     CREATE TABLE IF NOT EXISTS chat_messages (
 
@@ -985,14 +1687,125 @@ async function initializeDatabase() {
     );
   `);
 
-  /*
-  |--------------------------------------------------------------------------
-  | CHAT HISTORY LOOKUP INDEX
-  |--------------------------------------------------------------------------
-  |
-  | Makes reopening long conversations faster.
-  |
-  */
+  await db.query(`
+    ALTER TABLE chat_messages
+
+    ADD COLUMN IF NOT EXISTS
+      client_message_id VARCHAR(160),
+
+    ADD COLUMN IF NOT EXISTS
+      customer_id INTEGER,
+
+    ADD COLUMN IF NOT EXISTS
+      car_id INTEGER,
+
+    ADD COLUMN IF NOT EXISTS
+      is_read BOOLEAN
+      NOT NULL
+      DEFAULT FALSE,
+
+    ADD COLUMN IF NOT EXISTS
+      read_at TIMESTAMPTZ,
+
+    ADD COLUMN IF NOT EXISTS
+      retention_expires_at TIMESTAMPTZ;
+  `);
+
+  await db.query(`
+    UPDATE chat_messages
+
+    SET
+      is_read = TRUE,
+
+      read_at =
+        COALESCE(
+          read_at,
+          created_at
+        )
+
+    WHERE
+      sender = 'admin'
+      AND is_read = FALSE;
+  `);
+
+  await db.query(
+    `
+      UPDATE chat_messages
+
+      SET
+        retention_expires_at =
+          created_at +
+          ($1::int * INTERVAL '1 day')
+
+      WHERE
+        retention_expires_at
+          IS NULL;
+    `,
+
+    [CHAT_RETENTION_DAYS],
+  );
+
+  await db.query(`
+    DO $$
+    BEGIN
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE
+          conname =
+            'fk_chat_messages_customer'
+      ) THEN
+
+        ALTER TABLE chat_messages
+
+        ADD CONSTRAINT
+          fk_chat_messages_customer
+
+        FOREIGN KEY (
+          customer_id
+        )
+
+        REFERENCES users(id)
+
+        ON DELETE SET NULL;
+
+      END IF;
+
+    END
+    $$;
+  `);
+
+  await db.query(`
+    DO $$
+    BEGIN
+
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE
+          conname =
+            'fk_chat_messages_car'
+      ) THEN
+
+        ALTER TABLE chat_messages
+
+        ADD CONSTRAINT
+          fk_chat_messages_car
+
+        FOREIGN KEY (
+          car_id
+        )
+
+        REFERENCES cars(id)
+
+        ON DELETE SET NULL;
+
+      END IF;
+
+    END
+    $$;
+  `);
 
   await db.query(`
     CREATE INDEX IF NOT EXISTS
@@ -1004,9 +1817,56 @@ async function initializeDatabase() {
     );
   `);
 
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS
+      idx_chat_messages_unread
+
+    ON chat_messages (
+      conversation_id,
+      is_read
+    );
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS
+      idx_chat_messages_customer
+
+    ON chat_messages (
+      customer_id
+    );
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS
+      idx_chat_messages_car
+
+    ON chat_messages (
+      car_id
+    );
+  `);
+
+  await db.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS
+      idx_chat_messages_client_message_unique
+
+    ON chat_messages (
+      conversation_id,
+      client_message_id
+    );
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS
+      idx_chat_messages_retention
+
+    ON chat_messages (
+      retention_expires_at
+    );
+  `);
+
   logger.info("Database initialization complete");
 
-  logger.info("Chat transcript storage ready");
+  logger.info("Chat admin module storage ready");
 }
 
 /*
@@ -1053,7 +1913,7 @@ app.listen(PORT, async () => {
 
     console.log("✅ PostgreSQL initialization complete");
 
-    console.log("💬 Chat transcript storage ready");
+    console.log("💬 Chat admin storage ready");
   } catch (error) {
     logger.error("Database initialization failed", {
       message: error.message,
@@ -1064,18 +1924,42 @@ app.listen(PORT, async () => {
     console.error("❌ Database initialization failed:", error.message);
   }
 
+  console.log("\n🔐 Authentication:");
+
+  console.log(`   POST http://localhost:${PORT}/api/auth/register`);
+
+  console.log(`   POST http://localhost:${PORT}/api/auth/login`);
+
+  console.log("\n🚗 Cars:");
+
+  console.log(`   GET  http://localhost:${PORT}/api/cars`);
+
   console.log("\n🔎 Search Engine Feeds:");
 
-  console.log(`   GET http://localhost:${PORT}/sitemap.xml`);
+  console.log(`   GET  http://localhost:${PORT}/sitemap.xml`);
 
-  console.log(`   GET http://localhost:${PORT}/rss.xml`);
+  console.log(`   GET  http://localhost:${PORT}/rss.xml`);
 
-  console.log("\n💬 Chat History:");
+  console.log("\n💬 Chat:");
 
   console.log(`   POST http://localhost:${PORT}/api/chat/messages`);
 
   console.log(
-    `   GET  http://localhost:${PORT}/api/chat/conversations/:conversationId/messages`,
+    `   GET  http://localhost:${PORT}/api/chat/conversations/:conversationId/messages?page=1&limit=30`,
+  );
+
+  console.log("\n🛠️ Admin Chat:");
+
+  console.log(
+    `   GET   http://localhost:${PORT}/api/admin/chat/conversations?page=1&limit=20`,
+  );
+
+  console.log(
+    `   PATCH http://localhost:${PORT}/api/admin/chat/conversations/:conversationId/read`,
+  );
+
+  console.log(
+    `   GET   http://localhost:${PORT}/api/admin/chat/retention-policy`,
   );
 
   console.log("\n📝 Winston:");
