@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/search', async (req, res) => {
     try {
         const { make, model, minPrice, maxPrice, year, condition, transmission, fuelType, limit = 20, offset = 0 } = req.query;
-        
+
         let query = {};
         if (make) query.make = { $regex: make, $options: 'i' };
         if (model) query.model = { $regex: model, $options: 'i' };
@@ -20,15 +20,15 @@ router.get('/search', async (req, res) => {
             if (minPrice) query.price.$gte = parseInt(minPrice);
             if (maxPrice) query.price.$lte = parseInt(maxPrice);
         }
-        
+
         const results = await db.collection('cars')
             .find(query)
             .limit(parseInt(limit))
             .skip(parseInt(offset))
             .toArray();
-            
+
         const total = await db.collection('cars').count(query);
-        
+
         res.json({
             success: true,
             data: results,
@@ -52,21 +52,21 @@ router.get('/search', async (req, res) => {
 router.get('/availability', async (req, res) => {
     try {
         const { carId, date, timeSlot } = req.query;
-        
+
         if (!carId || !date || !timeSlot) {
             return res.status(400).json({
                 success: false,
                 error: 'Missing required parameters: carId, date, timeSlot'
             });
         }
-        
+
         const existingBooking = await db.collection('bookings').findOne({
             carId: parseInt(carId),
             date: date,
             timeSlot: timeSlot,
             status: { $ne: 'cancelled' }
         });
-        
+
         res.json({
             success: true,
             data: {
@@ -87,7 +87,7 @@ router.get('/availability', async (req, res) => {
 router.get('/stats', async (req, res) => {
     try {
         const cars = await db.collection('cars').find({}).toArray();
-        
+
         const stats = {
             totalCars: cars.length,
             totalValue: cars.reduce((sum, car) => sum + car.price, 0),
@@ -96,7 +96,7 @@ router.get('/stats', async (req, res) => {
             maxPrice: cars.length > 0 ? Math.max(...cars.map(c => c.price)) : 0,
             byMake: {}
         };
-        
+
         cars.forEach(car => {
             if (!stats.byMake[car.make]) {
                 stats.byMake[car.make] = { count: 0, totalValue: 0 };
@@ -104,7 +104,7 @@ router.get('/stats', async (req, res) => {
             stats.byMake[car.make].count++;
             stats.byMake[car.make].totalValue += car.price;
         });
-        
+
         res.json({
             success: true,
             data: stats
@@ -122,16 +122,16 @@ router.get('/stats', async (req, res) => {
 router.get('/most-searched', async (req, res) => {
     try {
         const cars = await db.collection('cars').find({}).toArray();
-        
+
         const makeCount = {};
         cars.forEach(car => {
             makeCount[car.make] = (makeCount[car.make] || 0) + 1;
         });
-        
+
         const sorted = Object.entries(makeCount)
             .map(([make, count]) => ({ make, count }))
             .sort((a, b) => b.count - a.count);
-        
+
         res.json({
             success: true,
             data: sorted

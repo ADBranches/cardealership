@@ -5,8 +5,8 @@
   "type": "module",
   "main": "server.cjs",
   "scripts": {
-    "start": "node server.cjs",
-    "dev": "node server.cjs",
+    "start": "node server.js",
+    "dev": "node server.js",
     "build": "vite build",
     "cleanup:car-images": "node scripts/cleanupStaleCarImages.js --dry-run",
     "cleanup:car-images:execute": "node scripts/cleanupStaleCarImages.js --execute",
@@ -16,6 +16,7 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.10.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

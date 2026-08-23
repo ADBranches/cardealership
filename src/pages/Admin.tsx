@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks';
 import { authenticatedApiRequest } from '../api/client';
+import { AdminChatNavLink } from "../features/admin-chat/components";
 
 const Admin: React.FC = () => {
   const [stats, setStats] = useState({
@@ -202,6 +203,7 @@ const Admin: React.FC = () => {
                 View and manage test drive bookings
               </p>
             </div>
+            <AdminChatNavLink />
             <div style={{
               border: '1px solid #e5e7eb',
               borderRadius: '8px',

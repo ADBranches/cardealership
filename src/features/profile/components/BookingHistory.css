@@ -1,0 +1,30 @@
+.booking-loading, .booking-list {
+  display: grid;
+  gap: 1rem;
+}
+.booking-loading { padding-top: 1.5rem; }
+.booking-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1.5rem;
+}
+.booking-item p {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+.booking-state {
+  display: flex;
+  min-height: 8rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+.booking-error { color: rgb(185 28 28); }
+.booking-mock { color: rgb(146 64 14); font-size: 0.875rem; }
+.booking-upcoming { background: rgb(219 234 254); color: rgb(30 64 175); }
+.booking-completed { background: rgb(220 252 231); color: rgb(22 101 52); }
+.booking-cancelled { background: rgb(254 226 226); color: rgb(153 27 27); }

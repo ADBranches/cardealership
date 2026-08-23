@@ -8,7 +8,9 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 
-dotenv.config();
+export const authenticateToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
 
 const JWT_SECRET = process.env.JWT_SECRET || "panda_motors_secret_key_2026";
 

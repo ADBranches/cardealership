@@ -9,7 +9,7 @@
  * - nodemailer
  * - sendgrid
  *
- * Provider transport is intentionally not connected in this phase.
+ * Provider transport is intentionally not connected until the email delivery configuration is approved.
  */
 
 export const SUPPORTED_EMAIL_PROVIDERS = ["pending", "nodemailer", "sendgrid"];

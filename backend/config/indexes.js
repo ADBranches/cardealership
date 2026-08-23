@@ -1,7 +1,7 @@
 // Database indexes for optimal performance
 export const createIndexes = async (db) => {
     console.log('?? Creating database indexes...');
-    
+
     try {
         // For in-memory database, we just log
         console.log('? Using in-memory database - indexes created virtually');

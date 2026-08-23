@@ -58,7 +58,7 @@ export const isTokenValid = () => {
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join('')
     );
-    
+
     const decoded = JSON.parse(jsonPayload);
     const currentTime = Date.now() / 1000;
 
