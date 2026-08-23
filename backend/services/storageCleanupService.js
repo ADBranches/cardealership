@@ -109,7 +109,7 @@ export async function deleteMediaObject(mediaItem, options = {}) {
   return buildSkippedStorageResult({
     mediaItem,
     provider,
-    reason: "Real storage deletion is intentionally not implemented in Phase 3.",
+    reason: "Real storage deletion remains intentionally disabled until the storage provider and deletion policy are approved.",
   });
 }
 

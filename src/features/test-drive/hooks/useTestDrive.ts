@@ -1,11 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/features/auth/hooks";
-import {
-  AVAILABLE_TEST_DRIVE_TIMES,
-  submitTestDriveBooking,
-} from "../services";
+import { submitTestDriveBooking } from "../services";
 import type { TestDriveBookingPayload, TestDriveVehicleOption } from "../types";
+import { useBookingAvailability } from "./useBookingAvailability";
+import { canSubmitWithAvailability, shouldClearSelectedTime } from "../utils/availabilitySelection";
 
 function getTodayDateInputValue() {
   return new Date().toISOString().split("T")[0];
@@ -15,10 +14,7 @@ export function useTestDrive(vehicles: TestDriveVehicleOption[]) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const today = useMemo(() => getTodayDateInputValue(), []);
-
-  const [selectedVehicleId, setSelectedVehicleId] = useState(
-    vehicles[0]?.id?.toString() ?? ""
-  );
+  const [selectedVehicleId, setSelectedVehicleId] = useState(vehicles[0]?.id?.toString() ?? "");
   const [date, setDate] = useState(today);
   const [time, setTime] = useState("");
   const [phone, setPhone] = useState("");
@@ -27,25 +23,40 @@ export function useTestDrive(vehicles: TestDriveVehicleOption[]) {
   const [authMessage, setAuthMessage] = useState("");
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const availability = useBookingAvailability(selectedVehicleId, date);
+  const selectedVehicle = vehicles.find((vehicle) => vehicle.id.toString() === selectedVehicleId);
 
-  const selectedVehicle = vehicles.find(
-    (vehicle) => vehicle.id.toString() === selectedVehicleId
-  );
+  useEffect(() => {
+    if (shouldClearSelectedTime(time, availability.result)) {
+      setTime("");
+    }
+  }, [time, availability.result]);
+
+  function handleVehicleChange(vehicleId: string) {
+    setSelectedVehicleId(vehicleId);
+    setTime("");
+    setError("");
+  }
+
+  function handleDateChange(nextDate: string) {
+    setDate(nextDate);
+    setTime("");
+    setError("");
+  }
 
   const resetSuccess = () => setSuccess(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     setError("");
     setAuthMessage("");
     setSuccess(false);
 
+    if (submitting || availability.status === "loading") return;
+
     if (!isAuthenticated) {
       setAuthMessage("Please sign in first so we can reserve your test drive securely.");
-      setTimeout(() => {
-        navigate(`/login?redirect=${encodeURIComponent("/#test-drive")}`);
-      }, 1200);
+      setTimeout(() => navigate(`/login?redirect=${encodeURIComponent("/#test-drive")}`), 1200);
       return;
     }
 
@@ -59,8 +70,8 @@ export function useTestDrive(vehicles: TestDriveVehicleOption[]) {
       return;
     }
 
-    if (!time || !AVAILABLE_TEST_DRIVE_TIMES.includes(time as (typeof AVAILABLE_TEST_DRIVE_TIMES)[number])) {
-      setError("Please choose a valid test drive time.");
+    if (!canSubmitWithAvailability(availability.status, time, availability.result)) {
+      setError(availability.status === "loading" ? "Availability is still being checked." : "Please choose an available test drive time.");
       return;
     }
 
@@ -91,23 +102,6 @@ export function useTestDrive(vehicles: TestDriveVehicleOption[]) {
   };
 
   return {
-    today,
-    selectedVehicleId,
-    setSelectedVehicleId,
-    date,
-    setDate,
-    time,
-    setTime,
-    phone,
-    setPhone,
-    notes,
-    setNotes,
-    error,
-    authMessage,
-    success,
-    submitting,
-    selectedVehicle,
-    resetSuccess,
-    handleSubmit,
+    today, selectedVehicleId, setSelectedVehicleId: handleVehicleChange, date, setDate: handleDateChange, time, setTime, phone, setPhone, notes, setNotes, error, authMessage, success, submitting, selectedVehicle, availability, resetSuccess, handleSubmit,
   };
 }

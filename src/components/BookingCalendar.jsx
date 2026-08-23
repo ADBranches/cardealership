@@ -59,20 +59,20 @@ const BookingCalendar = () => {
 
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
-  
+
   const formatDate = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
-  
+
   const isPastDate = (date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return date < today;
   };
-  
+
   const isWeekend = (date) => date.getDay() === 0 || date.getDay() === 6;
   const isDateDisabled = (date) => isPastDate(date) || isWeekend(date);
 
@@ -179,17 +179,17 @@ const BookingCalendar = () => {
     const daysInMonth = getDaysInMonth(year, month);
     const firstDay = getFirstDayOfMonth(year, month);
     const days = [];
-    
+
     for (let i = 0; i < firstDay; i++) {
       days.push(<div key={`empty-${i}`} className="calendar-empty"></div>);
     }
-    
+
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
       const disabled = isDateDisabled(date);
       const isToday = formatDate(date) === formatDate(new Date());
       const isSelected = selectedDate === formatDate(date);
-      
+
       days.push(
         <div
           key={day}
@@ -280,7 +280,7 @@ const BookingCalendar = () => {
         <h2>?? Book Your Test Drive</h2>
         <p className="subtitle">Select your preferred date and time for a test drive at Panda Motors</p>
       </div>
-      
+
       {error && (
         <div className="alert alert-error" role="alert">
           <span className="alert-icon">??</span>
@@ -288,7 +288,7 @@ const BookingCalendar = () => {
           <button className="alert-close" onClick={() => setError(null)}>×</button>
         </div>
       )}
-      
+
       {success && (
         <div className="alert alert-success" role="alert">
           <span className="alert-icon">?</span>
@@ -296,7 +296,7 @@ const BookingCalendar = () => {
           <button className="alert-close" onClick={() => setSuccess(null)}>×</button>
         </div>
       )}
-      
+
       <div className="booking-grid">
         <div className="calendar-section">
           <div className="calendar-header">
@@ -316,7 +316,7 @@ const BookingCalendar = () => {
             <div className="legend-item"><span className="legend-dot disabled"></span>Unavailable</div>
           </div>
         </div>
-        
+
         <div className="booking-section">
           {selectedDate ? (
             <>

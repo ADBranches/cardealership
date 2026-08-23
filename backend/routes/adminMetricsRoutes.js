@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
         const bookings = await db.collection('bookings').find({}).toArray();
         const sales = await db.collection('sales').find({}).toArray();
         const users = await db.collection('users').find({}).toArray();
-        
+
         // Inventory metrics
         const inventoryMetrics = {
             totalCars: cars.length,
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
             averagePrice: cars.length > 0 ? cars.reduce((sum, car) => sum + car.price, 0) / cars.length : 0,
             byMake: {}
         };
-        
+
         cars.forEach(car => {
             if (!inventoryMetrics.byMake[car.make]) {
                 inventoryMetrics.byMake[car.make] = { count: 0, totalValue: 0 };
@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
             inventoryMetrics.byMake[car.make].count++;
             inventoryMetrics.byMake[car.make].totalValue += car.price;
         });
-        
+
         // Booking metrics
         const bookingMetrics = {
             total: bookings.length,
@@ -34,25 +34,25 @@ router.get('/', async (req, res) => {
             cancelled: bookings.filter(b => b.status === 'cancelled').length,
             thisMonth: bookings.filter(b => b.date && b.date.startsWith('2026-08')).length
         };
-        
+
         // Revenue metrics
         const revenueMetrics = {
             totalRevenue: sales.reduce((sum, sale) => sum + sale.amount, 0),
             totalSales: sales.length,
             averageSale: sales.length > 0 ? sales.reduce((sum, sale) => sum + sale.amount, 0) / sales.length : 0
         };
-        
+
         // User metrics
         const userMetrics = {
             totalUsers: users.length,
             byRole: {}
         };
-        
+
         users.forEach(user => {
             const role = user.role || 'user';
             userMetrics.byRole[role] = (userMetrics.byRole[role] || 0) + 1;
         });
-        
+
         res.json({
             success: true,
             data: {
@@ -76,14 +76,14 @@ router.get('/', async (req, res) => {
 router.get('/inventory', async (req, res) => {
     try {
         const cars = await db.collection('cars').find({}).toArray();
-        
+
         const metrics = {
             totalCars: cars.length,
             totalValue: cars.reduce((sum, car) => sum + car.price, 0),
             averagePrice: cars.length > 0 ? cars.reduce((sum, car) => sum + car.price, 0) / cars.length : 0,
             byMake: {}
         };
-        
+
         cars.forEach(car => {
             if (!metrics.byMake[car.make]) {
                 metrics.byMake[car.make] = { count: 0, totalValue: 0 };
@@ -91,7 +91,7 @@ router.get('/inventory', async (req, res) => {
             metrics.byMake[car.make].count++;
             metrics.byMake[car.make].totalValue += car.price;
         });
-        
+
         res.json({
             success: true,
             data: metrics,
@@ -110,7 +110,7 @@ router.get('/inventory', async (req, res) => {
 router.get('/bookings', async (req, res) => {
     try {
         const bookings = await db.collection('bookings').find({}).toArray();
-        
+
         const metrics = {
             total: bookings.length,
             confirmed: bookings.filter(b => b.status === 'confirmed').length,
@@ -118,7 +118,7 @@ router.get('/bookings', async (req, res) => {
             thisMonth: bookings.filter(b => b.date && b.date.startsWith('2026-08')).length,
             byCar: {}
         };
-        
+
         bookings.forEach(booking => {
             const model = booking.carModel || 'Unknown';
             if (!metrics.byCar[model]) {
@@ -126,7 +126,7 @@ router.get('/bookings', async (req, res) => {
             }
             metrics.byCar[model]++;
         });
-        
+
         res.json({
             success: true,
             data: metrics,

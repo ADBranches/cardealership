@@ -29,7 +29,7 @@ class InMemoryDatabase {
             sales: [],
             search_logs: []
         };
-        
+
         // Initialize with sample data if empty
         this.initializeSampleData();
     }
@@ -79,12 +79,12 @@ class InMemoryDatabase {
     collection(name) {
         // Return the collection object with query methods
         const collectionData = this.collections[name] || [];
-        
+
         return {
             // Find with filter
             find: (filter = {}) => {
                 let results = collectionData;
-                
+
                 // Apply filters
                 if (filter) {
                     results = results.filter(item => {
@@ -108,7 +108,7 @@ class InMemoryDatabase {
                         return true;
                     });
                 }
-                
+
                 return {
                     sort: (sortObj) => {
                         for (const key in sortObj) {
@@ -137,11 +137,11 @@ class InMemoryDatabase {
                     })
                 };
             },
-            
+
             // Find one with filter
             findOne: (filter = {}, options = {}) => {
                 let results = collectionData;
-                
+
                 // Apply filters
                 if (filter) {
                     results = results.filter(item => {
@@ -155,7 +155,7 @@ class InMemoryDatabase {
                         return true;
                     });
                 }
-                
+
                 // Apply projection if specified
                 if (options.projection) {
                     results = results.map(item => {
@@ -168,10 +168,10 @@ class InMemoryDatabase {
                         return projected;
                     });
                 }
-                
+
                 return Promise.resolve(results[0] || null);
             },
-            
+
             // Insert one
             insertOne: (data) => {
                 const newItem = {
@@ -183,7 +183,7 @@ class InMemoryDatabase {
                 collectionData.push(newItem);
                 return Promise.resolve({ insertedId: newItem.id });
             },
-            
+
             // Insert many
             insertMany: (dataArray) => {
                 const inserted = [];
@@ -199,7 +199,7 @@ class InMemoryDatabase {
                 });
                 return Promise.resolve({ insertedIds: inserted });
             },
-            
+
             // Update one
             updateOne: (filter, update) => {
                 const index = collectionData.findIndex(item => {
@@ -208,7 +208,7 @@ class InMemoryDatabase {
                     }
                     return true;
                 });
-                
+
                 if (index !== -1) {
                     if (update.$set) {
                         collectionData[index] = { ...collectionData[index], ...update.$set };
@@ -219,7 +219,7 @@ class InMemoryDatabase {
                 }
                 return Promise.resolve({ modifiedCount: 0 });
             },
-            
+
             // Update many
             updateMany: (filter, update) => {
                 let count = 0;
@@ -242,7 +242,7 @@ class InMemoryDatabase {
                 });
                 return Promise.resolve({ modifiedCount: count });
             },
-            
+
             // Delete one
             deleteOne: (filter) => {
                 const index = collectionData.findIndex(item => {
@@ -251,18 +251,18 @@ class InMemoryDatabase {
                     }
                     return true;
                 });
-                
+
                 if (index !== -1) {
                     collectionData.splice(index, 1);
                     return Promise.resolve({ deletedCount: 1 });
                 }
                 return Promise.resolve({ deletedCount: 0 });
             },
-            
+
             // Aggregate
             aggregate: (pipeline) => {
                 let results = collectionData;
-                
+
                 for (const stage of pipeline) {
                     if (stage.$match) {
                         results = results.filter(item => {
@@ -327,10 +327,10 @@ class InMemoryDatabase {
                         return Promise.resolve([facets]);
                     }
                 }
-                
+
                 return { toArray: () => Promise.resolve(results) };
             },
-            
+
             // Count documents
             count: (filter = {}) => {
                 let count = collectionData.length;
@@ -344,7 +344,7 @@ class InMemoryDatabase {
                 }
                 return Promise.resolve(count);
             },
-            
+
             // Create index (mock)
             createIndex: () => Promise.resolve('index_created')
         };
