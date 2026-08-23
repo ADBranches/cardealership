@@ -1,130 +1,263 @@
 // backend/middleware/authMiddleware.js
 
+// ============================================
+// AUTHENTICATION MIDDLEWARE
+// ============================================
+// This middleware handles JWT authentication for protected routes
+
 import jwt from "jsonwebtoken";
-import pool from "../config/db.js";
+import dotenv from "dotenv";
 
 export const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required",
-      });
-    }
+const JWT_SECRET = process.env.JWT_SECRET || "panda_motors_secret_key_2026";
 
-    const token = authHeader.split(" ")[1];
+// ============================================
+// Middleware: Authenticate Token
+// ============================================
+// Verifies the JWT token from the Authorization header
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication token is missing",
-      });
-    }
+export const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
 
-    if (!process.env.JWT_SECRET) {
-      console.error("JWT_SECRET is not configured.");
+  const token = authHeader && authHeader.split(" ")[1];
 
-      return res.status(500).json({
-        success: false,
-        message: "Authentication configuration is missing",
-      });
-    }
+  if (!token) {
+    return res.status(401).json({
+      success: false,
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      error: {
+        code: "AUTHENTICATION_REQUIRED",
+        message: "Access denied. No token provided.",
+        status: 401,
+        details: null,
+      },
+    });
+  }
 
-    const result = await pool.query(
-      `
-        SELECT
-          id,
-          name,
-          email,
-          role
-        FROM users
-        WHERE id = $1
-        LIMIT 1
-      `,
-      [decoded.id],
-    );
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
 
-    if (result.rows.length === 0) {
-      return res.status(401).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    req.user = result.rows[0];
+    req.user = decoded;
 
     return next();
   } catch (error) {
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid token",
-      });
-    }
-
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
         success: false,
-        message: "Token expired",
+
+        error: {
+          code: "TOKEN_EXPIRED",
+          message: "Token has expired. Please login again.",
+          status: 401,
+          details: null,
+        },
       });
     }
 
-    console.error("Authentication error:", error);
-
-    return res.status(500).json({
+    return res.status(401).json({
       success: false,
-      message: "Authentication server error",
+
+      error: {
+        code: "INVALID_TOKEN",
+        message: "Invalid token. Access denied.",
+        status: 401,
+        details: null,
+      },
     });
   }
 };
 
-export const isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
-    return next();
+// ============================================
+// Middleware: Check User Role
+// ============================================
+// Verifies the user has one of the allowed roles
+
+export const checkRole = (allowedRoles) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+
+      error: {
+        code: "AUTHENTICATION_REQUIRED",
+
+        message: "Authentication required.",
+
+        status: 401,
+
+        details: null,
+      },
+    });
   }
 
-  return res.status(403).json({
-    success: false,
-    message: "Admin access required",
+  const userRole = req.user.role || "user";
+
+  if (!allowedRoles.includes(userRole)) {
+    return res.status(403).json({
+      success: false,
+
+      error: {
+        code: "ADMIN_ACCESS_REQUIRED",
+
+        message: "Access denied. Insufficient permissions.",
+
+        status: 403,
+
+        details: {
+          requiredRoles: allowedRoles,
+
+          yourRole: userRole,
+        },
+      },
+    });
+  }
+
+  return next();
+};
+
+// ============================================
+// Middleware: Optional Authentication
+// ============================================
+// Tries to authenticate but does not require it
+
+export const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+
+      req.user = decoded;
+    } catch (error) {
+      req.user = null;
+    }
+  } else {
+    req.user = null;
+  }
+
+  return next();
+};
+
+// ============================================
+// Helper: Generate JWT Token
+// ============================================
+
+export const generateToken = (user) => {
+  const payload = {
+    id: user.id || user._id,
+
+    email: user.email,
+
+    role: user.role || "user",
+
+    name: user.name || user.user_name,
+  };
+
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: "7d",
   });
 };
 
-/*
-|--------------------------------------------------------------------------
-| ROUTE-FRIENDLY ALIASES
-|--------------------------------------------------------------------------
-|
-| Your carsRoutes.js imports:
-|
-| protect
-| adminOnly
-|
-| These aliases allow that route file to work without changing its imports.
-|
-*/
+// ============================================
+// Helper: Verify Token
+// ============================================
+
+export const verifyToken = (token) => {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (error) {
+    return null;
+  }
+};
+
+// ============================================
+// Helper: Decode Token
+// ============================================
+
+export const decodeToken = (token) => {
+  try {
+    return jwt.decode(token);
+  } catch (error) {
+    return null;
+  }
+};
+
+// ============================================
+// Middleware: Rate Limiting for Auth Routes
+// ============================================
+
+const loginAttempts = new Map();
+
+export const rateLimitLogin = (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress;
+
+  const now = Date.now();
+
+  if (!loginAttempts.has(ip)) {
+    loginAttempts.set(ip, []);
+  }
+
+  const attempts = loginAttempts.get(ip);
+
+  const recentAttempts = attempts.filter((time) => now - time < 15 * 60 * 1000);
+
+  if (recentAttempts.length >= 5) {
+    return res.status(429).json({
+      success: false,
+
+      error: {
+        code: "TOO_MANY_LOGIN_ATTEMPTS",
+
+        message: "Too many login attempts. Please try again in 15 minutes.",
+
+        status: 429,
+
+        details: null,
+      },
+    });
+  }
+
+  recentAttempts.push(now);
+
+  loginAttempts.set(ip, recentAttempts);
+
+  return next();
+};
+
+// ============================================
+// ROUTE-FRIENDLY ALIASES
+// ============================================
+//
+// server.js expects:
+//
+// protect
+// adminOnly
+//
+// protect = authenticateToken
+//
+// adminOnly = role checker restricted to admin
+//
 
 export const protect = authenticateToken;
 
-export const adminOnly = isAdmin;
+export const adminOnly = checkRole(["admin"]);
 
-export const checkRole = (allowedRoles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required",
-      });
-    }
-    if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied. Insufficient permissions.",
-      });
-    }
-    return next();
-  };
+// ============================================
+// Export all middleware
+// ============================================
+
+export default {
+  authenticateToken,
+  protect,
+  checkRole,
+  adminOnly,
+  optionalAuth,
+  generateToken,
+  verifyToken,
+  decodeToken,
+  rateLimitLogin,
 };
