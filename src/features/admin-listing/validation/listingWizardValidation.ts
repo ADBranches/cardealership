@@ -23,11 +23,11 @@ export function validateListingImage(
   image: SelectedListingImage,
 ): string | null {
   if (!image.file.type.startsWith("image/")) {
-    return "Selected file must be an image."; 
+    return "Selected file must be an image.";
   }
 
   if (image.file.size > LISTING_IMAGE_MAX_BYTES) {
-    return "Each image must be 5 MB or smaller."; 
+    return "Each image must be 5 MB or smaller.";
   }
 
   return null;
@@ -40,19 +40,19 @@ function validateCoreDetails(
   const currentYear = new Date().getFullYear() + 1;
   const year = Number(normalizeNumericField(draft.year));
 
-  if (!draft.make.trim()) errors.make = "Make is required."; 
-  if (!draft.model.trim()) errors.model = "Model is required."; 
-  if (!draft.name.trim()) errors.name = "Listing name is required."; 
-  if (!draft.type.trim()) errors.type = "Vehicle type is required."; 
+  if (!draft.make.trim()) errors.make = "Make is required.";
+  if (!draft.model.trim()) errors.model = "Model is required.";
+  if (!draft.name.trim()) errors.name = "Listing name is required.";
+  if (!draft.type.trim()) errors.type = "Vehicle type is required.";
 
   if (!draft.year.trim()) {
-    errors.year = "Year is required."; 
+    errors.year = "Year is required.";
   } else if (
     !Number.isInteger(year) ||
     year < 1900 ||
     year > currentYear
   ) {
-    errors.year = "Enter a valid vehicle year."; 
+    errors.year = "Enter a valid vehicle year.";
   }
 
   return errors;
@@ -66,20 +66,20 @@ function validateSpecifications(
   const mileage = Number(normalizeNumericField(draft.mileage));
 
   if (!draft.price.trim()) {
-    errors.price = "Price is required."; 
+    errors.price = "Price is required.";
   } else if (!Number.isFinite(price) || price <= 0) {
-    errors.price = "Price must be greater than zero."; 
+    errors.price = "Price must be greater than zero.";
   }
 
   if (!draft.mileage.trim()) {
-    errors.mileage = "Mileage is required."; 
+    errors.mileage = "Mileage is required.";
   } else if (!Number.isFinite(mileage) || mileage < 0) {
-    errors.mileage = "Mileage cannot be negative."; 
+    errors.mileage = "Mileage cannot be negative.";
   }
 
-  if (!draft.color.trim()) errors.color = "Color is required."; 
-  if (!draft.power.trim()) errors.power = "Power is required."; 
-  if (!draft.engine.trim()) errors.engine = "Engine is required."; 
+  if (!draft.color.trim()) errors.color = "Color is required.";
+  if (!draft.power.trim()) errors.power = "Power is required.";
+  if (!draft.engine.trim()) errors.engine = "Engine is required.";
 
   return errors;
 }
