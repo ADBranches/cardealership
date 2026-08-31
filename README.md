@@ -467,7 +467,7 @@ The aggregate validation covers admin chat state, socket behavior, API behavior,
 Run the production build with every mock mode explicitly disabled:
 
 ```bash
-VITE_API_BASE_URL=https://approved-production-api.example.com VITE_PROFILE_MOCK_MODE=false VITE_AVAILABILITY_MOCK_MODE=false VITE_CHAT_GATEWAY_URL=https://approved-chat-gateway.example.com VITE_CHAT_TRANSPORT=websocket VITE_CHAT_MOCK_MODE=false VITE_CHAT_API_MOCK_MODE=false npm run build
+VITE_API_BASE_URL=https://approved-production-api.example.com VITE_PROFILE_MOCK_MODE=false VITE_AVAILABILITY_MOCK_MODE=false VITE_CHAT_GATEWAY_URL= VITE_CHAT_TRANSPORT=mock VITE_CHAT_MOCK_MODE=false VITE_CHAT_API_MOCK_MODE=false npm run build
 ```
 
 The example origins must be replaced by deployment-owner-approved HTTPS origins for a real release. Generated build assets must be inspected for source maps, local origins, private configuration names, and accidentally enabled chat fixtures, then restored so only intended source changes remain.

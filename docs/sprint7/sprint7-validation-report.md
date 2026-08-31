@@ -11,7 +11,7 @@ Full Sprint 7 admin-chat validation and existing frontend regression suites were
 - Chat API: 15 passed, 0 failed.
 - Unread chat badge: 18 passed, 0 failed.
 - Chat security: 20 passed, 0 failed.
-- Chat accessibility: 24 passed, 0 failed.
+- Chat accessibility: 36 passed, 0 failed.
 - Admin reply workflow: 15 passed, 0 failed.
 - Typing indicator: 9 passed, 0 failed.
 - Chat history merge: 8 passed, 0 failed.
@@ -38,9 +38,9 @@ Full Sprint 7 admin-chat validation and existing frontend regression suites were
 - Build tool: Vite 6.4.3.
 - Modules transformed: 1800.
 - HTML: 0.51 kB, gzip 0.32 kB.
-- CSS: 116.42 kB, gzip 19.07 kB.
-- JavaScript: 379.22 kB, gzip 116.47 kB.
-- Build duration: 4.31 seconds.
+- CSS: 118.44 kB, gzip 19.34 kB.
+- JavaScript: 383.21 kB, gzip 117.52 kB.
+- Build duration: 3.59 seconds.
 - Production source maps: none generated.
 - Chat, profile, and availability mock flags were explicitly disabled.
 - Generated dist/index.html was restored after validation.
@@ -51,7 +51,8 @@ Full Sprint 7 admin-chat validation and existing frontend regression suites were
 - No application-owned local API or socket origin was identified.
 - The localhost string reported by the broad scan belongs to React Router URL-construction internals.
 - No backend secret name or private-key marker was reported.
-- No mock chat gateway URL was reported.
+- No prohibited test gateway, synthetic token, active mock flag, local application origin, source map, or secret marker was detected.
+- The generic `mock://admin-chat` fallback may remain statically bundled, but production mock selection is blocked by runtime guards and the security suite.
 - Synthetic fixture presentation text may remain bundled because fixture modules are statically imported, but production mock selection is blocked and validated by the security suite.
 
 ## Working-tree policy
