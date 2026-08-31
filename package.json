@@ -42,7 +42,10 @@
     "test:admin-chat-accessibility": "tsx src/tests/adminChatAccessibility.manual.ts",
     "test:regression": "npm run test:auth && npm run test:protected-route && npm run test:auth-persistence && npm run test:profile && npm run test:password && npm run test:booking-history && npm run test:booking-availability && npm run test:availability-selection && npm run test:vehicle-filters && npm run test:api-config",
     "test:sprint7": "npm run test:admin-chat && npm run test:regression",
-    "test:sprint7-release": "npm run test:sprint7 && VITE_API_BASE_URL=https://approved-production-api.example.com VITE_PROFILE_MOCK_MODE=false VITE_AVAILABILITY_MOCK_MODE=false VITE_CHAT_GATEWAY_URL= VITE_CHAT_TRANSPORT=mock VITE_CHAT_MOCK_MODE=false VITE_CHAT_API_MOCK_MODE=false npm run build"
+    "test:sprint7-release": "npm run test:sprint7 && VITE_API_BASE_URL=https://approved-production-api.example.com VITE_PROFILE_MOCK_MODE=false VITE_AVAILABILITY_MOCK_MODE=false VITE_CHAT_GATEWAY_URL= VITE_CHAT_TRANSPORT=mock VITE_CHAT_MOCK_MODE=false VITE_CHAT_API_MOCK_MODE=false npm run build",
+    "test:listing-wizard-state": "tsx src/tests/listingWizardState.manual.ts",
+    "test:listing-wizard-validation": "tsx src/tests/listingWizardValidation.manual.ts",
+    "test:listing-wizard": "npm run test:listing-wizard-state && npm run test:listing-wizard-validation"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",
