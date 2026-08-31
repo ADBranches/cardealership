@@ -96,3 +96,31 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* Phase 11 badge containment */
+.admin-chat-nav-link {
+  min-width: 0;
+}
+
+.admin-chat-nav-link-copy,
+.admin-chat-nav-link-title,
+.admin-chat-nav-link-description {
+  min-width: 0;
+}
+
+.admin-chat-nav-link-title,
+.admin-chat-nav-link-description {
+  overflow-wrap: anywhere;
+}
+
+.admin-chat-nav-badge {
+  flex-shrink: 0;
+  max-width: 4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-chat-nav-link,
+  .admin-chat-nav-badge {
+    transition: none;
+  }
+}

@@ -618,31 +618,6 @@
   outline-offset: 2px;
 }
 
-.admin-chat-delivery-pending {
-  opacity: 0.8;
-}
-
-.admin-chat-delivery-failed {
-  color: #fee2e2;
-  font-weight: 700;
-}
-
-.admin-chat-message-retry {
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  border-radius: 0.35rem;
-  padding: 0.15rem 0.4rem;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.admin-chat-message-retry:focus-visible {
-  outline: 3px solid rgba(255, 255, 255, 0.55);
-  outline-offset: 2px;
-}
-
 @media (max-width: 1024px) and (min-width: 761px) {
   .admin-chat-page-shell {
     padding: 1rem;
@@ -718,5 +693,105 @@
 @media (prefers-reduced-motion: reduce) {
   .admin-chat-conversation-item {
     transition: none;
+  }
+}
+
+/* Phase 11 responsive and accessibility hardening */
+.admin-chat-back-button,
+.admin-chat-composer button,
+.admin-chat-list-error button,
+.admin-chat-thread-error button,
+.admin-chat-message-retry {
+  min-height: 44px;
+}
+
+.admin-chat-back-button {
+  min-width: 44px;
+}
+
+.admin-chat-message-retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.65rem;
+}
+
+.admin-chat-list-count,
+.admin-chat-unread-badge,
+.admin-chat-unread-summary {
+  max-width: 5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-chat-thread-identity,
+.admin-chat-thread-identity h2,
+.admin-chat-thread-identity p,
+.admin-chat-message,
+.admin-chat-message p,
+.admin-chat-connection {
+  min-width: 0;
+}
+
+.admin-chat-message p,
+.admin-chat-thread-identity h2,
+.admin-chat-thread-identity p,
+.admin-chat-connection span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+#admin-chat-conversation-list:focus-visible,
+#admin-chat-thread-title:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .admin-chat-layout {
+    min-height: calc(100dvh - 9rem);
+  }
+
+  .admin-chat-list-panel,
+  .admin-chat-thread-panel {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .admin-chat-message-history {
+    min-height: 12rem;
+    overscroll-behavior: contain;
+  }
+
+  .admin-chat-composer textarea {
+    min-height: 88px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-chat-page-header,
+  .admin-chat-list-header,
+  .admin-chat-thread-header,
+  .admin-chat-message-history,
+  .admin-chat-composer {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .admin-chat-header-status {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-chat-conversation-item,
+  .admin-chat-message-retry,
+  .admin-chat-back-button,
+  .admin-chat-composer button {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
   }
 }
