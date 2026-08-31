@@ -17,7 +17,7 @@ import {
 
 const validDraft: ListingDraft = {
   ...EMPTY_LISTING_DRAFT,
-  vin: "SYNTHETIC-VIN-001",
+  vin: "1HGCM82633A004352",
   make: "Toyota",
   model: "Land Cruiser",
   name: "Toyota Land Cruiser",
@@ -64,6 +64,33 @@ assert.equal(emptyCoreErrors.model, "Model is required.");
 assert.equal(emptyCoreErrors.name, "Listing name is required.");
 assert.equal(emptyCoreErrors.type, "Vehicle type is required.");
 assert.equal(emptyCoreErrors.year, "Year is required.");
+
+const missingVinErrors = validateListingWizardStep(
+  "core-details",
+  { ...validDraft, vin: "" },
+  [],
+);
+
+assert.equal(missingVinErrors.vin, "VIN is required.");
+
+const invalidVinErrors = validateListingWizardStep(
+  "core-details",
+  { ...validDraft, vin: "INVALIDVIN" },
+  [],
+);
+
+assert.equal(
+  invalidVinErrors.vin,
+  "VIN must contain 17 valid characters without I, O, or Q.",
+);
+
+const validVinErrors = validateListingWizardStep(
+  "core-details",
+  { ...validDraft, vin: "1HGCM82633A004352" },
+  [],
+);
+
+assert.equal(validVinErrors.vin, undefined);
 
 const invalidYearErrors = validateListingWizardStep(
   "core-details",

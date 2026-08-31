@@ -40,6 +40,14 @@ function validateCoreDetails(
   const currentYear = new Date().getFullYear() + 1;
   const year = Number(normalizeNumericField(draft.year));
 
+  const vin = draft.vin.trim().toUpperCase();
+
+  if (!vin) {
+    errors.vin = "VIN is required.";
+  } else if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+    errors.vin = "VIN must contain 17 valid characters without I, O, or Q.";
+  }
+
   if (!draft.make.trim()) errors.make = "Make is required.";
   if (!draft.model.trim()) errors.model = "Model is required.";
   if (!draft.name.trim()) errors.name = "Listing name is required.";
