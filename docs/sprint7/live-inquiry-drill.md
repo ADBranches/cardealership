@@ -72,7 +72,7 @@ Reminder emails have already been sent to the responsible collaborators. The fro
 
 - Edward customer-widget contract and live implementation require confirmation.
 - Devine gateway URL, transport, room routing, typing, acknowledgement, failure, and reconnect contracts require confirmation.
-- Ronald transcript authorization, persistence, and history restoration require confirmation.
+- Ronald implementation is available but requires deployment and live validation in the shared environment.
 - One shared environment with compatible commits has not been confirmed.
 
 ## Exit criteria
@@ -88,6 +88,55 @@ Reminder emails have already been sent to the responsible collaborators. The fro
 ## Follow-up rule
 
 When the collaborator implementations are pushed, inspect all affected branches and contracts in one consolidated dependency review. Replace frontend mocks only after confirming the complete customer-widget, gateway, persistence, and history structures.
+
+## Latest readiness decision
+
+- Reinspected at: 2026-08-31T15:45:00+03:00.
+- Reserved test marker: `SPRINT7-20260831T132250Z`.
+- The marker was not transmitted because the live drill did not start.
+- Edwin frontend commit: `36923df7a7964ddfb0a95f7a9338055d8ff23c44`.
+- Edward branch commit: `92e3fa88b6a8277f3c08812e5da9d6f06a809d64`.
+- Devine branch commit: `bafc6009d1409a39b4c83478c7515a72c2497d99`.
+- Ronald branch commit: `49c0e09db85761b4e57a0f072c5250722d21800c`.
+- Environment: not provided.
+- Inquiry ID: not created.
+- HTTP results: not executed against a shared environment.
+- Socket results: not executed because no live gateway contract exists.
+- Unread-count result: not tested live.
+- Persistence result: implementation inspected, live storage not tested.
+- Reopen and history result: implementation inspected, live restoration not tested.
+- Final status: BLOCKED.
+
+### Readiness graph
+
+- Edward customer widget: BLOCKED. No inquiry creation, joining, messaging, reply-receipt, typing, or socket implementation was found.
+- Devine gateway: BLOCKED. No live chat gateway, handshake contract, room routing, bidirectional delivery, typing, acknowledgement, or reconnect implementation was found.
+- Edwin admin inbox: FRONTEND VALIDATED, LIVE INTEGRATION BLOCKED. The adapter intentionally rejects unconfirmed live transport.
+- Ronald persistence: IMPLEMENTATION READY FOR SHARED-ENVIRONMENT VALIDATION. Protected message storage, ownership-aware history access, admin-only conversation listing, admin-only mark-as-read, pagination, duplicate reconciliation, unread aggregation, and retention metadata are present.
+- Shared environment: BLOCKED. Compatible deployed origins and credentials were not supplied.
+- Live walkthrough: NOT STARTED.
+
+### Outstanding owners and follow-up dates
+
+- Edward: publish the customer widget and inquiry contract by 2026-09-04.
+- Devine: publish the authenticated gateway and event contract by 2026-09-04.
+- Edwin: integrate the confirmed live gateway contract after Devine publishes it; target reinspection date 2026-09-05.
+- Ronald: deploy commit `49c0e09` in the shared environment and provide sanitized endpoint-validation evidence by 2026-09-04.
+- Project integration owner: publish the shared environment details and schedule all participants by 2026-09-04.
+- Cross-team drill retry target: 2026-09-05, subject to all dependencies being available.
+
+### Ronald implementation evidence
+
+- `POST /api/chat/messages` requires authentication and enforces the authenticated sender identity.
+- Customer writes cannot impersonate another customer.
+- Duplicate messages are reconciled by conversation ID and client message ID.
+- `GET /api/chat/conversations/:conversationId/messages` requires authentication and checks admin or customer ownership.
+- `GET /api/admin/chat/conversations` requires authentication and administrator authorization.
+- `PATCH /api/admin/chat/conversations/:conversationId/read` requires authentication and administrator authorization.
+- History and conversation listing provide bounded pagination.
+- Customer unread totals are derived from persisted unread messages.
+- Transcript records carry retention-expiry metadata based on the configured retention period.
+- Live database behavior remains unverified until deployment in the shared environment.
 
 ## Dependency reinspection
 

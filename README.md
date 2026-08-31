@@ -480,7 +480,7 @@ The authoritative drill record is maintained in `docs/sprint7/live-inquiry-drill
 
 The walkthrough must use one shared environment containing Edward's customer widget, Devine's gateway, Edwin's admin inbox, and Ronald's transcript persistence and history implementation. No access tokens or transcript contents may be committed.
 
-The drill remains blocked until the required collaborator implementations and compatible contracts are available. Existing frontend mocks must be removed or disabled only after those implementations are inspected and verified.
+The drill remains blocked because Edward has not published the customer inquiry widget, Devine has not published the live gateway contract, and no compatible shared environment is available. Ronald's commit `49c0e09` now provides protected transcript persistence, history, admin conversation listing, mark-as-read, pagination, deduplication, unread aggregation, and retention handling, but it still requires deployment and live validation. Existing frontend mocks must be replaced only after the customer widget, gateway, persistence service, and shared environment are inspected together.
 
 ## Sprint 7 Admin Chat Deployment and Rollback
 
