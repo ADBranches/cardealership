@@ -59,7 +59,11 @@
     "test:listing-accessibility": "tsx src/tests/listingWizardAccessibility.manual.ts",
     "test:dispatch-accessibility": "tsx src/tests/dispatchAccessibility.manual.ts",
     "test:sprint8-security": "tsx src/tests/sprint8Security.manual.ts",
-    "test:sprint8-validation": "npm run test:listing-accessibility && npm run test:dispatch-accessibility && npm run test:sprint8-security"
+    "test:sprint8-validation": "npm run test:listing-accessibility && npm run test:dispatch-accessibility && npm run test:sprint8-security",
+    "test:sprint8-targeted": "npm run test:listing-wizard-state && npm run test:listing-wizard-validation && npm run test:listing-image-selection && npm run test:listing-upload-adapter && npm run test:listing-submission && npm run test:dispatch-state && npm run test:booking-transitions && npm run test:dispatch-api && npm run test:dispatch-synchronization && npm run test:listing-accessibility && npm run test:dispatch-accessibility && npm run test:sprint8-security",
+    "test:sprint8-regression": "npm run test:regression && node backend/tests/carPayloadValidation.manual.js && npm run test:image-optimization-contract && npm --prefix backend run test:car-image-cleanup",
+    "test:sprint8-full": "npm run test:sprint8-targeted && npm run test:sprint8-regression",
+    "test:image-optimization-contract": "node backend/tests/imageOptimizationContract.manual.js"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

@@ -495,3 +495,7 @@ npm run test:sprint7-release
 ```
 
 Chat mock modes are disabled by default. Synthetic chat requires explicit local opt-in and cannot be selected in a production build. Live gateway integration remains unavailable until the transport owner publishes the approved protocol.
+
+## Sprint 8 Validation
+
+Run `npm run test:sprint8-full` for the complete Sprint 8 targeted and affected regression suites. Production builds must disable every mock mode, use the approved HTTPS API origin, and restore generated `dist` assets after inspection. Detailed evidence is available in `docs/sprint8/sprint8-validation-report.md`.
