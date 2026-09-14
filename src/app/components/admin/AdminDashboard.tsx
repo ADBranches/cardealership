@@ -4,6 +4,7 @@ import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AdminListingsTable } from "./AdminListingsTable";
 import { AddNewCarForm } from "./AddNewCarForm";
+import { DispatchBoard } from "../../../features/admin-dispatch/components";
 
 type AdminVehicle = {
   id: number;
@@ -134,13 +135,14 @@ export function AdminDashboard({ vehicles }: AdminDashboardProps) {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-8 h-12">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3 mb-8 h-12">
             <TabsTrigger value="add-vehicle" className="font-semibold">
               Add Vehicle
             </TabsTrigger>
             <TabsTrigger value="manage-inventory" className="font-semibold">
               Manage Inventory
             </TabsTrigger>
+            <TabsTrigger value="dispatch" className="font-semibold">Dispatch Board</TabsTrigger>
           </TabsList>
 
           <TabsContent value="add-vehicle">
@@ -149,6 +151,9 @@ export function AdminDashboard({ vehicles }: AdminDashboardProps) {
 
           <TabsContent value="manage-inventory">
             <AdminListingsTable vehicles={vehicles} />
+          </TabsContent>
+          <TabsContent value="dispatch">
+            <DispatchBoard />
           </TabsContent>
         </Tabs>
       </div>

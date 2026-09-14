@@ -51,7 +51,8 @@
     "test:listing-submission": "tsx src/tests/listingSubmission.manual.ts",
     "test:dispatch-state": "tsx src/tests/dispatchState.manual.ts",
     "test:booking-transitions": "tsx src/tests/bookingTransitions.manual.ts",
-    "test:dispatch-domain": "npm run test:booking-transitions && npm run test:dispatch-state"
+    "test:dispatch-domain": "npm run test:booking-transitions && npm run test:dispatch-state",
+    "test:dispatch-interface": "tsx src/tests/dispatchInterface.manual.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

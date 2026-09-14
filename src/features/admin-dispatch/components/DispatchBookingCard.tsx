@@ -1,0 +1,7 @@
+import { Calendar, Clock, UserRound, Car } from "lucide-react";
+import { Badge } from "../../../app/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../app/components/ui/card";
+import type { BookingStatus, DispatchBooking } from "../types";
+import { DispatchActionMenu } from "./DispatchActionMenu";
+const LABELS: Record<BookingStatus,string>={pending:"Pending Approval",confirmed:"Confirmed",completed:"Completed",cancelled:"Canceled"};
+export function DispatchBookingCard({ booking, pending, onAction }: { booking: DispatchBooking; pending: boolean; onAction: (status: BookingStatus) => void }) { return <Card className="dispatch-card"><CardHeader><div className="dispatch-card-heading"><CardTitle className="dispatch-card-title">{booking.vehicleName}</CardTitle><Badge variant="outline">{LABELS[booking.status]}</Badge></div></CardHeader><CardContent className="dispatch-card-body"><p><UserRound aria-hidden="true"/ ><span>{booking.customerName}</span></p><p><Car aria-hidden="true"/><span>Vehicle ID: {booking.vehicleId}</span></p><p><Calendar aria-hidden="true"/><time dateTime={booking.bookingDate}>{booking.bookingDate}</time></p><p><Clock aria-hidden="true"/><span>{booking.timeSlot}</span></p>{booking.customerEmail&&<p className="dispatch-email">{booking.customerEmail}</p>}<DispatchActionMenu status={booking.status} disabled={pending} onAction={onAction}/>{pending&&<span role="status" aria-live="polite" className="dispatch-pending">Updating booking...</span>}</CardContent></Card> }
