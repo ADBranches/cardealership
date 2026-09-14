@@ -81,3 +81,13 @@ This register records verified contracts and unresolved integration boundaries f
 - Do not add successful MFA behavior before the backend challenge contract exists.
 - Do not submit the current frontend payload directly without an approved field mapping.
 - Do not represent isolated mock validation as live integration.
+
+## Phase 13 shared-environment integration status
+
+- Frontend evidence commit: `f00dee57db00caa92d3e8bad1912d7ceae212937`
+- Listing creation adapter: locally validated, live shared-environment walkthrough blocked
+- Listing upload adapter: locally validated, live batch ordering walkthrough blocked
+- Dispatch list contract: locally implemented, live shared-environment walkthrough blocked
+- Dispatch mutation contract: locally implemented, live persistence walkthrough blocked
+- Synchronization contract: manual refresh, cross-view shared-environment walkthrough blocked
+- Contract status: BLOCKED pending deployed environment and integration administrator account

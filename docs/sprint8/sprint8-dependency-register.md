@@ -72,3 +72,13 @@
 ## Integration rule
 
 Frontend implementation may proceed through typed local state and isolated adapters. Live integration remains blocked until each corresponding upstream contract is published, inspected, and validated.
+
+## Phase 13 external integration blockers
+
+- Shared HTTPS frontend URL: BLOCKED, owner deployment team, target date unconfirmed
+- Shared HTTPS API URL: BLOCKED, owner backend or deployment team, target date unconfirmed
+- Dedicated integration administrator email: BLOCKED, owner authentication administrator, target date unconfirmed
+- Dedicated integration administrator password: BLOCKED, owner authentication administrator, target date unconfirmed
+- Deployed compatible backend commit: BLOCKED, owner backend team, target date unconfirmed
+- Cross-view synchronization environment: BLOCKED, owner integration team, target date unconfirmed
+- Real customer data must not be used; only synthetic records are permitted after dependencies are supplied
