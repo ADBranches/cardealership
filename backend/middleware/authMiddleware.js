@@ -1,23 +1,22 @@
 // backend/middleware/authMiddleware.js
-
 // ============================================
 // AUTHENTICATION MIDDLEWARE
 // ============================================
-// This middleware handles JWT authentication for protected routes
 
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 
-export const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
+dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || "panda_motors_secret_key_2026";
+function getJwtSecret() {
+  const jwtSecret = process.env.JWT_SECRET?.trim();
 
-// ============================================
-// Middleware: Authenticate Token
-// ============================================
-// Verifies the JWT token from the Authorization header
+  if (!jwtSecret) {
+    throw new Error("JWT_SECRET is required.");
+  }
+
+  return jwtSecret;
+}
 
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -38,7 +37,7 @@ export const authenticateToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
 
     req.user = decoded;
 
@@ -129,7 +128,7 @@ export const optionalAuth = (req, res, next) => {
 
   if (token) {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, getJwtSecret());
 
       req.user = decoded;
     } catch (error) {
@@ -157,7 +156,7 @@ export const generateToken = (user) => {
     name: user.name || user.user_name,
   };
 
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: "7d",
   });
 };
@@ -168,7 +167,7 @@ export const generateToken = (user) => {
 
 export const verifyToken = (token) => {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(token, getJwtSecret());
   } catch (error) {
     return null;
   }

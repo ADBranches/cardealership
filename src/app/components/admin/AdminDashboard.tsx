@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { isAdminUser, isAuthenticated } from "../../lib/auth";
+import { useAuth } from "../../../features/auth/hooks";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AdminListingsTable } from "./AdminListingsTable";
@@ -46,71 +46,39 @@ export function AdminDashboard({ vehicles }: AdminDashboardProps) {
   const [loginNotice, setLoginNotice] = useState("");
   const [activeTab, setActiveTab] = useState("add-vehicle");
 
-  const authenticated = isAuthenticated();
-  const admin = isAdminUser();
+  const {
+    user,
+    isAuthenticated,
+    isAuthReady,
+  } = useAuth();
 
-  if (!authenticated) {
+  if (!isAuthReady) {
     return (
-      <section className="min-h-screen py-24 px-6 lg:px-8 bg-background flex items-center">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-primary text-sm font-bold tracking-[0.3em] mb-4 uppercase">
-            Admin Access Required
-          </p>
-
-          <h3 className="text-4xl md:text-6xl font-bold mb-4">
-            PLEASE SIGN IN
-          </h3>
-
-          <p className="text-muted-foreground text-lg mb-8">
-            You need to sign in with an administrator account before accessing
-            the inventory control panel.
-          </p>
-
-          {loginNotice && (
-            <div className="mb-6 rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm text-foreground">
-              {loginNotice}
-            </div>
-          )}
-
-          <Button
-            className="bg-primary text-white hover:bg-primary/90"
-            onClick={() =>
-              setLoginNotice(
-                "The login page is not available yet. This admin dashboard is already protected, and final login routing will be connected once the team confirms the auth flow."
-              )
-            }
-          >
-            Sign In Guidance
-          </Button>
-        </div>
+      <section
+        className="min-h-screen py-24 px-6 lg:px-8 bg-background"
+        aria-busy="true"
+        aria-label="Verifying administrator access"
+      >
+        <p role="status" aria-live="polite">
+          Verifying administrator access...
+        </p>
       </section>
     );
   }
 
-  if (!admin) {
+  if (!isAuthenticated || user?.role !== "admin") {
     return (
-      <section className="min-h-screen py-24 px-6 lg:px-8 bg-background flex items-center">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-primary text-sm font-bold tracking-[0.3em] mb-4 uppercase">
-            Unauthorized
+      <section className="min-h-screen py-24 px-6 lg:px-8 bg-background">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-primary">
+            Administrator access required
           </p>
-
-          <h3 className="text-4xl md:text-6xl font-bold mb-4">
-            ADMIN PERMISSION NEEDED
+          <h3 className="mb-4 text-4xl font-bold md:text-6xl">
+            ACCESS UNAVAILABLE
           </h3>
-
-          <p className="text-muted-foreground text-lg mb-8">
-            Your account is signed in, but it does not currently have permission
-            to access dealership management tools.
+          <p className="text-lg text-muted-foreground">
+            A verified administrator session is required.
           </p>
-
-          <Button
-            variant="outline"
-            className="border-primary text-primary hover:bg-primary hover:text-white"
-            onClick={() => window.history.pushState(null, "", "/")}
-          >
-            Back To Home
-          </Button>
         </div>
       </section>
     );

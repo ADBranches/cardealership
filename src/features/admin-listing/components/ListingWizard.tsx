@@ -20,7 +20,7 @@ export function ListingWizard({ maximumImages, onPublishSuccess }: ListingWizard
   const { state, updateField, setImages, next, back, goToStep, setServerErrors, beginSubmission, finishSubmission, reset } = useListingWizard();
   const [submissionResult, setSubmissionResult] = useState<ListingSubmissionResult | null>(null);
   const checkpointRef = useRef<ListingSubmissionCheckpoint>(createEmptySubmissionCheckpoint());
-  const coordinatorRef = useRef(createListingSubmissionCoordinator({ listingService: createListingService({ mockMode: true, isProduction: false }), uploadService: createListingUploadService({ mockMode: true, isProduction: false }) }));
+  const coordinatorRef = useRef(createListingSubmissionCoordinator({ listingService: createListingService(), uploadService: createListingUploadService() }));
   const combinedErrors: ListingFieldErrors = { ...state.serverErrors, ...state.clientErrors };
   const isFirstStep = state.currentStep === "core-details";
   const canContinue = state.currentStep !== "review";

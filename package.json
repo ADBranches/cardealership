@@ -55,7 +55,11 @@
     "test:dispatch-interface": "tsx src/tests/dispatchInterface.manual.ts",
     "test:dispatch-api": "tsx src/tests/dispatchApi.manual.ts",
     "test:dispatch-synchronization": "tsx src/tests/dispatchSynchronization.manual.ts",
-    "test:dispatch-live": "npm run test:dispatch-api && npm run test:dispatch-synchronization && npm run test:dispatch-domain && npm run test:dispatch-interface"
+    "test:dispatch-live": "npm run test:dispatch-api && npm run test:dispatch-synchronization && npm run test:dispatch-domain && npm run test:dispatch-interface",
+    "test:listing-accessibility": "tsx src/tests/listingWizardAccessibility.manual.ts",
+    "test:dispatch-accessibility": "tsx src/tests/dispatchAccessibility.manual.ts",
+    "test:sprint8-security": "tsx src/tests/sprint8Security.manual.ts",
+    "test:sprint8-validation": "npm run test:listing-accessibility && npm run test:dispatch-accessibility && npm run test:sprint8-security"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",
