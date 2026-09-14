@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { useAuth } from "../../auth/hooks";
 import { createDispatchService } from "../services/dispatchApi";
+import { createManualDispatchSynchronization } from "../services/dispatchSynchronization";
 import { createDispatchInitialState, dispatchReducer } from "../state";
 import type { BookingStatus, DispatchService } from "../types";
 import { canTransitionBooking } from "../validation/bookingTransitions";
@@ -26,14 +27,30 @@ export function useDispatchBoard(options: UseDispatchBoardOptions = {}) {
     return result;
   }, [accessToken, logout]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    const synchronization =
+      createManualDispatchSynchronization(refresh);
+
+    void synchronization.refresh();
+
+    return () => {
+      loadSequenceRef.current += 1;
+      synchronization.cleanup();
+    };
+  }, [refresh]);
 
   const moveBooking = useCallback(async (bookingId: string, targetStatus: BookingStatus) => {
     const booking = state.bookings.find((item) => item.id === bookingId);
     if (!booking || state.pendingByBooking[bookingId] || !canTransitionBooking(booking.status, targetStatus)) return false;
     const mutationId = ++mutationSequenceRef.current;
     dispatch({ type: "mutation/start", bookingId, targetStatus, mutationId });
-    const result = await serviceRef.current.updateBookingStatus(accessToken ?? "", bookingId, targetStatus);
+    const result =
+      await serviceRef.current.updateBookingStatus(
+        accessToken ?? "",
+        bookingId,
+        targetStatus,
+        booking.updatedAt,
+      );
     if (result.success) dispatch({ type: "mutation/succeed", booking: result.booking, mutationId });
     else {
       dispatch({ type: "mutation/fail", bookingId, mutationId, code: result.code, message: result.message });

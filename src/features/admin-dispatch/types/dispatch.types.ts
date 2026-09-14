@@ -32,6 +32,8 @@ export type DispatchErrorCode =
   | "UNAUTHORIZED"
   | "INVALID_TRANSITION"
   | "CONFLICT"
+  | "VALIDATION_FAILED"
+  | "BOOKING_NOT_FOUND"
   | "CONTRACT_UNAVAILABLE"
   | "DISPATCH_FAILED";
 
@@ -69,5 +71,6 @@ export interface DispatchService {
     accessToken: string,
     bookingId: string,
     status: BookingStatus,
+    expectedUpdatedAt?: string,
   ): Promise<DispatchMutationResult>;
 }

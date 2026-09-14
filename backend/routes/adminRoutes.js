@@ -188,6 +188,116 @@ router.get('/bookings', authenticateToken, checkRole(['admin']), async (req, res
     }
 });
 
+// PUT /api/admin/bookings/:id/status - Update booking status (admin only)
+router.put('/bookings/:id/status', authenticateToken, checkRole(['admin']), async (req, res) => {
+    const bookingId = String(req.params.id || '').trim();
+    const requestedStatus = String(req.body?.status || '').trim().toLowerCase();
+    const expectedUpdatedAt = String(req.body?.expectedUpdatedAt || '').trim();
+    const allowedStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+    const allowedTransitions = {
+        pending: ['confirmed', 'cancelled'],
+        confirmed: ['completed', 'cancelled'],
+        completed: [],
+        cancelled: []
+    };
+
+    if (!bookingId) {
+        return res.status(400).json({
+            success: false,
+            code: 'VALIDATION_FAILED',
+            message: 'Booking ID is required.'
+        });
+    }
+
+    if (!allowedStatuses.includes(requestedStatus)) {
+        return res.status(422).json({
+            success: false,
+            code: 'VALIDATION_FAILED',
+            message: 'Unsupported booking status.',
+            allowedStatuses
+        });
+    }
+
+    try {
+        const numericBookingId = Number(bookingId);
+        const identifierCandidates = Number.isSafeInteger(numericBookingId)
+            ? [bookingId, numericBookingId]
+            : [bookingId];
+        const booking = await db.collection('bookings').findOne({
+            $or: [
+                { id: { $in: identifierCandidates } },
+                { _id: bookingId }
+            ]
+        });
+
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                code: 'BOOKING_NOT_FOUND',
+                message: 'Booking not found.'
+            });
+        }
+
+        const currentStatus = String(booking.status || '').toLowerCase();
+        const legalTargets = allowedTransitions[currentStatus] || [];
+
+        if (!legalTargets.includes(requestedStatus)) {
+            return res.status(422).json({
+                success: false,
+                code: 'INVALID_TRANSITION',
+                message: 'The requested booking transition is not allowed.',
+                bookingId,
+                currentStatus,
+                allowedTransitions: legalTargets
+            });
+        }
+
+        const authoritativeUpdatedAt = String(booking.updatedAt || booking.updated_at || '');
+        if (expectedUpdatedAt && authoritativeUpdatedAt && expectedUpdatedAt !== authoritativeUpdatedAt) {
+            return res.status(409).json({
+                success: false,
+                code: 'STALE_STATE',
+                message: 'The booking changed after it was loaded. Refresh and try again.',
+                booking
+            });
+        }
+
+        const updatedAt = new Date().toISOString();
+        const updateFilter = { _id: booking._id };
+        if (expectedUpdatedAt && booking.updatedAt) updateFilter.updatedAt = expectedUpdatedAt;
+        if (expectedUpdatedAt && booking.updated_at) updateFilter.updated_at = expectedUpdatedAt;
+
+        const updateResult = await db.collection('bookings').findOneAndUpdate(
+            updateFilter,
+            { $set: { status: requestedStatus, updatedAt } },
+            { returnDocument: 'after' }
+        );
+        const updatedBooking = updateResult?.value || updateResult;
+
+        if (!updatedBooking) {
+            const latestBooking = await db.collection('bookings').findOne({ _id: booking._id });
+            return res.status(409).json({
+                success: false,
+                code: 'STALE_STATE',
+                message: 'The booking changed while the update was being applied. Refresh and try again.',
+                booking: latestBooking
+            });
+        }
+
+        return res.json({
+            success: true,
+            booking: updatedBooking
+        });
+    } catch (error) {
+        console.error('Admin booking status update failed:', error);
+        return res.status(500).json({
+            success: false,
+            code: 'DISPATCH_FAILED',
+            message: 'Booking status could not be updated.'
+        });
+    }
+});
+
 // GET /api/admin/cars - Get all cars (admin only)
 router.get('/cars', authenticateToken, checkRole(['admin']), async (req, res) => {
     try {

@@ -52,7 +52,10 @@
     "test:dispatch-state": "tsx src/tests/dispatchState.manual.ts",
     "test:booking-transitions": "tsx src/tests/bookingTransitions.manual.ts",
     "test:dispatch-domain": "npm run test:booking-transitions && npm run test:dispatch-state",
-    "test:dispatch-interface": "tsx src/tests/dispatchInterface.manual.ts"
+    "test:dispatch-interface": "tsx src/tests/dispatchInterface.manual.ts",
+    "test:dispatch-api": "tsx src/tests/dispatchApi.manual.ts",
+    "test:dispatch-synchronization": "tsx src/tests/dispatchSynchronization.manual.ts",
+    "test:dispatch-live": "npm run test:dispatch-api && npm run test:dispatch-synchronization && npm run test:dispatch-domain && npm run test:dispatch-interface"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",
