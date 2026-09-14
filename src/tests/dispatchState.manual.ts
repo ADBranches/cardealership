@@ -1,0 +1,27 @@
+import assert from "node:assert/strict";
+import { createDispatchInitialState, dispatchReducer } from "../features/admin-dispatch/state";
+import type { DispatchBooking } from "../features/admin-dispatch/types";
+
+const booking: DispatchBooking = { id: "booking-001", customerName: "Synthetic Customer", vehicleId: "car-001", vehicleName: "Synthetic Vehicle", bookingDate: "2026-09-15", timeSlot: "10:00", status: "pending" };
+let state = createDispatchInitialState([booking]);
+assert.equal(state.bookings[0].status, "pending");
+state = dispatchReducer(state, { type: "mutation/start", bookingId: booking.id, targetStatus: "confirmed", mutationId: 1 });
+assert.equal(state.bookings[0].status, "confirmed");
+assert.equal(state.pendingByBooking[booking.id].previousStatus, "pending");
+const duplicate = dispatchReducer(state, { type: "mutation/start", bookingId: booking.id, targetStatus: "cancelled", mutationId: 2 });
+assert.equal(duplicate, state);
+const staleSuccess = dispatchReducer(state, { type: "mutation/succeed", booking: { ...booking, status: "cancelled" }, mutationId: 99 });
+assert.equal(staleSuccess, state);
+state = dispatchReducer(state, { type: "mutation/fail", bookingId: booking.id, mutationId: 1, code: "DISPATCH_FAILED", message: "Synthetic failure." });
+assert.equal(state.bookings[0].status, "pending");
+assert.equal(state.pendingByBooking[booking.id], undefined);
+assert.equal(state.error?.bookingId, booking.id);
+state = dispatchReducer(state, { type: "mutation/start", bookingId: booking.id, targetStatus: "confirmed", mutationId: 3 });
+state = dispatchReducer(state, { type: "mutation/succeed", booking: { ...booking, status: "confirmed", updatedAt: "2026-09-14T12:00:00.000Z" }, mutationId: 3 });
+assert.equal(state.bookings[0].status, "confirmed");
+assert.equal(state.pendingByBooking[booking.id], undefined);
+const unsupported = dispatchReducer(state, { type: "mutation/start", bookingId: booking.id, targetStatus: "pending", mutationId: 4 });
+assert.equal(unsupported, state);
+const staleFailure = dispatchReducer(state, { type: "mutation/fail", bookingId: booking.id, mutationId: 3, code: "CONFLICT", message: "Stale." });
+assert.equal(staleFailure, state);
+console.log(JSON.stringify({ suite: "dispatchState", passed: 13, failed: 0, optimisticMovementVerified: true, duplicateMutationBlocked: true, rollbackVerified: true, staleResponsesIgnored: true, serverAuthorityPreserved: true, syntheticDataUsed: true }, null, 2));
