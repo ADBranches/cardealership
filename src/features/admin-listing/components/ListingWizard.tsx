@@ -2,14 +2,22 @@ import { Button } from "../../../app/components/ui/button";
 import { useListingWizard } from "../hooks/useListingWizard";
 import type { ListingFieldErrors } from "../types";
 import { CoreDetailsStep } from "./CoreDetailsStep";
+import { AssetUploadStep } from "./AssetUploadStep";
 import { ListingWizardErrors } from "./ListingWizardErrors";
 import { ListingWizardProgress } from "./ListingWizardProgress";
 import { SpecificationsStep } from "./SpecificationsStep";
 
-export function ListingWizard() {
+type ListingWizardProps = {
+  maximumImages: number;
+};
+
+export function ListingWizard({
+  maximumImages,
+}: ListingWizardProps) {
   const {
     state,
     updateField,
+    setImages,
     next,
     back,
     goToStep,
@@ -23,7 +31,8 @@ export function ListingWizard() {
   const isFirstStep = state.currentStep === "core-details";
   const isImplementedStep =
     state.currentStep === "core-details" ||
-    state.currentStep === "specifications";
+    state.currentStep === "specifications" ||
+    state.currentStep === "assets";
 
   function handleContinue() {
     next();
@@ -42,7 +51,7 @@ export function ListingWizard() {
           Add new vehicle
         </h2>
         <p className="mt-2 max-w-3xl text-muted-foreground">
-          Enter the verified identity and specification details. Images and final submission remain unavailable until their implementation gates are approved.
+          Enter the verified identity, specification, and local image-selection details. Final publishing remains unavailable until its integration contract is approved.
         </p>
       </header>
 
@@ -75,15 +84,11 @@ export function ListingWizard() {
         )}
 
         {state.currentStep === "assets" && (
-          <div
-            className="rounded-lg border border-dashed border-border bg-muted/30 p-6"
-            role="status"
-          >
-            <h3 className="text-lg font-semibold">Vehicle images</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Image selection and upload are not implemented in this gate.
-            </p>
-          </div>
+          <AssetUploadStep
+            images={state.images}
+            maximumFiles={maximumImages}
+            onImagesChange={setImages}
+          />
         )}
 
         {state.currentStep === "review" && (

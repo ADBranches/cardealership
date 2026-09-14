@@ -12,6 +12,8 @@ export type ListingUploadOptions = {
 };
 
 class ProvisionalListingUploadService implements ListingUploadService {
+  private uploadInFlight = false;
+
   constructor(private readonly options: ListingUploadOptions = {}) {}
 
   async uploadImages(
@@ -19,44 +21,81 @@ class ProvisionalListingUploadService implements ListingUploadService {
     listingId: string,
     images: SelectedListingImage[],
   ): Promise<ListingUploadResult> {
+    if (this.uploadInFlight) {
+      return {
+        success: false,
+        code: "UPLOAD_FAILED",
+        message: "An image upload is already in progress.",
+        items: [],
+      };
+    }
+
     if (!accessToken.trim()) {
-      return { success: false, code: "UNAUTHORIZED", message: "Authentication is required.", items: [] };
+      return {
+        success: false,
+        code: "UNAUTHORIZED",
+        message: "Authentication is required.",
+        items: [],
+      };
     }
 
     if (!listingId.trim()) {
-      return { success: false, code: "VALIDATION_FAILED", message: "A listing identifier is required.", items: [] };
+      return {
+        success: false,
+        code: "VALIDATION_FAILED",
+        message: "A listing identifier is required.",
+        items: [],
+      };
     }
 
     const mockMode = this.options.mockMode ?? isListingMockMode(
       undefined,
-      this.options.isProduction ?? import.meta.env.PROD,
+      this.options.isProduction ?? import.meta.env?.PROD,
     );
 
     if (!mockMode) {
-      return { success: false, code: "CONTRACT_UNAVAILABLE", message: "Live batch upload remains blocked.", items: [] };
+      return {
+        success: false,
+        code: "CONTRACT_UNAVAILABLE",
+        message: "Live batch upload remains blocked.",
+        items: [],
+      };
     }
 
-    const items = [...images]
-      .sort((first, second) => first.order - second.order)
-      .map((image) => ({
-        imageId: image.id,
-        order: image.order,
-        success: image.id !== this.options.failImageId,
-        ...(image.id === this.options.failImageId
-          ? { message: "Synthetic upload failure." }
-          : { url: "synthetic://listing-image/" + image.id }),
-      }));
+    this.uploadInFlight = true;
 
-    return items.every((item) => item.success)
-      ? { success: true, items, mock: true }
-      : { success: false, code: "UPLOAD_FAILED", message: "A synthetic upload failed.", items };
+    try {
+      await Promise.resolve();
+
+      const items = [...images]
+        .sort((first, second) => first.order - second.order)
+        .map((image) => ({
+          imageId: image.id,
+          order: image.order,
+          success: image.id !== this.options.failImageId,
+          ...(image.id === this.options.failImageId
+            ? { message: "Synthetic upload failure." }
+            : { url: "synthetic://listing-image/" + image.id }),
+        }));
+
+      return items.every((item) => item.success)
+        ? { success: true, items, mock: true }
+        : {
+            success: false,
+            code: "UPLOAD_FAILED",
+            message: "A synthetic upload failed.",
+            items,
+          };
+    } finally {
+      this.uploadInFlight = false;
+    }
   }
 }
 
 export function createListingUploadService(
   options: ListingUploadOptions = {},
 ): ListingUploadService {
-  if ((options.isProduction ?? import.meta.env.PROD) && options.mockMode) {
+  if ((options.isProduction ?? import.meta.env?.PROD) && options.mockMode) {
     throw new Error("Mock listing upload service is disabled in production.");
   }
 
