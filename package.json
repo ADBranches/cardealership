@@ -47,7 +47,8 @@
     "test:listing-wizard-validation": "tsx src/tests/listingWizardValidation.manual.ts",
     "test:listing-wizard": "npm run test:listing-wizard-state && npm run test:listing-wizard-validation",
     "test:listing-image-selection": "tsx src/tests/listingImageSelection.manual.ts",
-    "test:listing-upload-adapter": "tsx src/tests/listingUploadAdapter.manual.ts"
+    "test:listing-upload-adapter": "tsx src/tests/listingUploadAdapter.manual.ts",
+    "test:listing-submission": "tsx src/tests/listingSubmission.manual.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

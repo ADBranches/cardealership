@@ -43,6 +43,7 @@ type AdminDashboardProps = {
 
 export function AdminDashboard({ vehicles }: AdminDashboardProps) {
   const [loginNotice, setLoginNotice] = useState("");
+  const [activeTab, setActiveTab] = useState("add-vehicle");
 
   const authenticated = isAuthenticated();
   const admin = isAdminUser();
@@ -132,7 +133,7 @@ export function AdminDashboard({ vehicles }: AdminDashboardProps) {
           </p>
         </div>
 
-        <Tabs defaultValue="add-vehicle" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2 mb-8 h-12">
             <TabsTrigger value="add-vehicle" className="font-semibold">
               Add Vehicle
@@ -143,7 +144,7 @@ export function AdminDashboard({ vehicles }: AdminDashboardProps) {
           </TabsList>
 
           <TabsContent value="add-vehicle">
-            <AddNewCarForm />
+            <AddNewCarForm onPublishSuccess={() => setActiveTab("manage-inventory")} />
           </TabsContent>
 
           <TabsContent value="manage-inventory">
