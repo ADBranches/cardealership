@@ -2,9 +2,14 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const { createExchangeRateService } = require("./services/exchangeRates/exchangeRateService");
+const { createExchangeRateRefreshWorker } = require("./workers/exchangeRateRefreshWorker");
 
 // Create an Express application
 const app = express();
+const exchangeRateService = createExchangeRateService();
+const exchangeRateRefreshWorker = createExchangeRateRefreshWorker({ service: exchangeRateService });
+
 
 // Define the port (use environment variable or default to 5000)
 const PORT = process.env.PORT || 5000;
@@ -301,7 +306,7 @@ app.get('/api/health', (req, res) => {
 // ============================================
 // Start the Server
 // ============================================
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log('\n========================================');
     console.log('?? Panda Motors API Server');
     console.log('========================================');
@@ -313,3 +318,15 @@ app.listen(PORT, () => {
     console.log(`   GET  /api/health              - Health check`);
     console.log('========================================\n');
 });
+
+exchangeRateRefreshWorker.start();
+
+const shutdownExchangeRateWorker = (signal) => {
+    exchangeRateRefreshWorker.stop();
+    server.close(() => {
+        console.log(`Server stopped after ${signal}`);
+    });
+};
+
+process.once("SIGINT", () => shutdownExchangeRateWorker("SIGINT"));
+process.once("SIGTERM", () => shutdownExchangeRateWorker("SIGTERM"));
