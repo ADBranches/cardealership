@@ -4,26 +4,41 @@
 
 `POST /api/cars/:id/images/bulk`
 
-The endpoint accepts multipart form data for an existing car. The multipart field name is `images`.
+The endpoint requires a valid bearer token with the `administrator` role.
 
-## Mock integration boundary
+Middleware order is authentication, administrator authorization, multipart parsing and validation, then controller processing.
 
-Sprint 9 uses mock-compatible storage and configuration boundaries. The integration owner can replace the storage or provider adapter without changing this response contract.
+## Multipart fields
 
-## Request rules
+- `images`: repeated binary file field.
+- `clientFileIds`: JSON array string or comma-separated values.
 
-- Maximum files: 10
-- Maximum size per file: 5 MiB
-- Accepted MIME types: `image/jpeg`, `image/png`, `image/webp`
-- Accepted extensions: `.jpg`, `.jpeg`, `.png`, `.webp`
-- Every frontend queue item should include a stable `clientFileId`.
+Each file must have exactly one non-empty, unique `clientFileId`. Input and result ordering are deterministic, so Ronald can map every frontend queue item to exactly one backend result.
 
-## File statuses
+## Limits
 
-- `accepted`: validation passed and processing can begin.
-- `uploaded`: storage and persistence completed.
-- `rejected`: server-side validation rejected the file.
-- `failed`: storage or persistence failed after validation.
+- Maximum files: 10.
+- Maximum size per file: 5 MiB.
+- MIME types: `image/jpeg`, `image/png`, and `image/webp`.
+- Extensions: `.jpg`, `.jpeg`, `.png`, and `.webp`.
+- Original filenames are sanitized by the backend.
+
+## File-result schema
+
+```json
+{
+  "clientFileId": "queue-001",
+  "fileName": "front.jpg",
+  "status": "uploaded",
+  "mimeType": "image/jpeg",
+  "size": 1024,
+  "imageId": "IMAGE_ID",
+  "url": "/uploads/cars/...",
+  "error": null
+}
+```
+
+Final statuses are `uploaded`, `rejected`, and `failed`. The internal `accepted` status indicates pre-processing acceptance.
 
 ## Stable error codes
 
@@ -37,14 +52,24 @@ Sprint 9 uses mock-compatible storage and configuration boundaries. The integrat
 - `STORAGE_FAILED`
 - `PERSISTENCE_FAILED`
 
-## Response contract
+## HTTP outcomes
 
-The response contains `carId`, summary counts, and one result for every submitted file. Result ordering remains deterministic and `clientFileId` maps the backend result to the corresponding frontend queue item.
+- `201`: every file uploaded.
+- `207`: partial success.
+- `422`: no file uploaded after processing.
+- `400`: malformed multipart or correlation request.
+- `413`: oversized file.
+- `401`: authentication missing or invalid.
+- `403`: administrator role required.
+- `404`: vehicle not found.
+- `500`: controlled server failure.
 
 ## Progress ownership
 
-The frontend calculates transport progress while bytes are being transmitted. The backend response reports final validation, storage, and persistence results.
+Frontend transport progress measures bytes sent. Backend results report validation, storage, persistence, and cleanup outcomes. Transport progress reaching 100 percent does not prove upload success.
 
-## Partial success
+## Replacement boundary
 
-A rejected or failed file does not erase successful file results. Summary counts report received, uploaded, rejected, and failed totals.
+The storage adapter may be replaced by any implementation exposing `store(file)` and `remove(storageKey)`. The service, controller, route, response schema, and frontend `clientFileId` mapping remain unchanged.
+
+See `bulk-image-upload-integration-handoff.md` for complete request and response examples.
