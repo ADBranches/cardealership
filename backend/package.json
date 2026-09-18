@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "test:sprint9": "node --test \"tests/**/*.test.js\"",
+    "test:sprint9:unit": "node --test \"tests/unit/**/*.test.js\"",
+    "test:sprint9:integration": "node --test \"tests/integration/**/*.test.js\""
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
