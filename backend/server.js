@@ -5,6 +5,17 @@ require('dotenv').config();
 const { createExchangeRateService } = require("./services/exchangeRates/exchangeRateService");
 const { createExchangeRateRefreshWorker } = require("./workers/exchangeRateRefreshWorker");
 const { createExchangeRateRouter } = require("./routes/exchangeRateRoutes");
+const { createCarRouter } = require("./routes/carRoutes");
+const { createBulkCarImageUploadService } = require("./services/bulkCarImageUploadService");
+const vehicleRepository = require("./repositories/vehicleRepository");
+const vehicleImageRepository = require("./repositories/vehicleImageRepository");
+const { createLocalImageStorage } = require("./services/storage/localImageStorage");
+const localImageStorage = createLocalImageStorage();
+const bulkCarImageUploadService = createBulkCarImageUploadService({
+    vehicleRepository,
+    imageStorage: localImageStorage,
+    imageRepository: vehicleImageRepository
+});
 
 // Create an Express application
 const app = express();
@@ -27,6 +38,7 @@ app.use(cors());
 // express.json() - Automatically parses incoming JSON data 
 // from POST requests into a JavaScript object (req.body)
 app.use(express.json());
+app.use("/api/cars", createCarRouter({ bulkUploadService: bulkCarImageUploadService }));
 app.use("/api/exchange-rates", createExchangeRateRouter(exchangeRateService));
 
 // ============================================

@@ -44,8 +44,18 @@ const createBulkImageUploadResponse = ({ carId, files }) => {
   return Object.freeze({ carId, summary: Object.freeze(summary), files: immutableFiles });
 };
 
+const BULK_IMAGE_UPLOAD_HTTP_STATUSES = Object.freeze({
+  COMPLETE_SUCCESS: 201,
+  PARTIAL_SUCCESS: 207,
+  COMPLETE_REJECTION: 422,
+  REQUEST_REJECTED: 400,
+  VEHICLE_NOT_FOUND: 404,
+  SERVER_FAILURE: 500
+});
+
 module.exports = Object.freeze({
   BULK_IMAGE_UPLOAD_FIELD_NAME,
+  BULK_IMAGE_UPLOAD_HTTP_STATUSES,
   BULK_IMAGE_UPLOAD_FILE_STATUSES,
   BULK_IMAGE_UPLOAD_ERROR_CODES,
   createBulkImageFileResult,
