@@ -2,9 +2,9 @@
   "name": "@figma/my-make-file",
   "private": true,
   "version": "0.0.1",
-  "main":"server.js",
+  "main": "server.js",
   "scripts": {
-     "start": "node server.js",
+    "start": "node server.js",
     "build": "vite build",
     "dev": "vite"
   },
@@ -54,6 +54,7 @@
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "0.487.0",
     "motion": "12.23.24",
+    "multer": "^2.2.0",
     "next-themes": "0.4.6",
     "pg": "^8.21.0",
     "react-day-picker": "8.10.1",
