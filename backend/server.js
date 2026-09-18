@@ -4,6 +4,7 @@ const cors = require('cors');
 require('dotenv').config();
 const { createExchangeRateService } = require("./services/exchangeRates/exchangeRateService");
 const { createExchangeRateRefreshWorker } = require("./workers/exchangeRateRefreshWorker");
+const { createExchangeRateRouter } = require("./routes/exchangeRateRoutes");
 
 // Create an Express application
 const app = express();
@@ -26,6 +27,7 @@ app.use(cors());
 // express.json() - Automatically parses incoming JSON data 
 // from POST requests into a JavaScript object (req.body)
 app.use(express.json());
+app.use("/api/exchange-rates", createExchangeRateRouter(exchangeRateService));
 
 // ============================================
 // USER STORY 1: Financial Payment Approximation
