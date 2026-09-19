@@ -10,6 +10,9 @@ import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/authRoutes.js";
 import carsRoutes from "./routes/carsRoutes.js";
+import exchangeRateRoutes from "./routes/exchangeRateRoutes.js";
+import { ensureExchangeRateSchema } from "./repositories/exchangeRateRepository.js";
+import { exchangeRateRefreshWorker } from "./workers/exchangeRateRefreshWorker.js";
 
 import bookingRoutes from "./routes/bookingRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
@@ -1160,6 +1163,7 @@ app.use("/api/auth", authRoutes);
 */
 
 app.use("/api/cars", carsRoutes);
+app.use("/api/exchange-rates", exchangeRateRoutes);
 
 // Report routes (PDF Generator)
 app.use('/api/admin/reports', reportRoutes);
@@ -1733,6 +1737,7 @@ app.use((error, req, res, next) => {
 */
 
 async function initializeDatabase() {
+  await ensureExchangeRateSchema(db);
   await db.query(`
     CREATE TABLE IF NOT EXISTS chat_messages (
 
@@ -1974,6 +1979,7 @@ app.listen(PORT, async () => {
 
   try {
     await initializeDatabase();
+    exchangeRateRefreshWorker.start();
     console.log("PostgreSQL initialization complete");
     console.log("Chat administration storage ready");
   } catch (error) {
