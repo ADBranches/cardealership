@@ -10,6 +10,7 @@ import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/authRoutes.js";
 import carsRoutes from "./routes/carsRoutes.js";
+import testDriveRoutes from "./routes/testDriveRoutes.js";
 import exchangeRateRoutes from "./routes/exchangeRateRoutes.js";
 import { ensureExchangeRateSchema } from "./repositories/exchangeRateRepository.js";
 import { exchangeRateRefreshWorker } from "./workers/exchangeRateRefreshWorker.js";
@@ -1163,6 +1164,7 @@ app.use("/api/auth", authRoutes);
 */
 
 app.use("/api/cars", carsRoutes);
+app.use("/api/test-drives", testDriveRoutes);
 app.use("/api/exchange-rates", exchangeRateRoutes);
 
 // Report routes (PDF Generator)
