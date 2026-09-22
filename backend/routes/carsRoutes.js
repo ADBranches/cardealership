@@ -1,3 +1,5 @@
+import { bulkCarImageController } from "../controllers/bulkCarImageController.js";
+import { bulkImageUpload } from "../middleware/bulkImageUpload.js";
 import express from "express";
 
 import { validateCarPayload } from "../middleware/validateCarPayload.js";
@@ -64,5 +66,14 @@ router.post("/", protect, adminOnly, validateCarPayload, addCar);
 */
 
 router.get("/:id", fetchCarById);
+
+
+router.post(
+  "/:id/images/bulk",
+  protect,
+  adminOnly,
+  bulkImageUpload,
+  bulkCarImageController.uploadBulkImages,
+);
 
 export default router;
