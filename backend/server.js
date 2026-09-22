@@ -10,6 +10,10 @@ import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/authRoutes.js";
 import carsRoutes from "./routes/carsRoutes.js";
+import testDriveRoutes from "./routes/testDriveRoutes.js";
+import exchangeRateRoutes from "./routes/exchangeRateRoutes.js";
+import { ensureExchangeRateSchema } from "./repositories/exchangeRateRepository.js";
+import { exchangeRateRefreshWorker } from "./workers/exchangeRateRefreshWorker.js";
 
 import bookingRoutes from "./routes/bookingRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
@@ -1103,6 +1107,9 @@ app.patch(
 |--------------------------------------------------------------------------
 */
 
+// Import routes (using ES module syntax)
+import reportRoutes from './routes/reportRoutes.js';
+import highValueRoutes from './routes/highValueRoutes.js';
 app.get(
   "/api/admin/chat/retention-policy",
 
@@ -1157,6 +1164,14 @@ app.use("/api/auth", authRoutes);
 */
 
 app.use("/api/cars", carsRoutes);
+app.use("/api/test-drives", testDriveRoutes);
+app.use("/api/exchange-rates", exchangeRateRoutes);
+
+// Report routes (PDF Generator)
+app.use('/api/admin/reports', reportRoutes);
+
+// High-Value Alert routes (Spotlight System)
+app.use('/api/admin/spotlight', highValueRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -1611,6 +1626,64 @@ app.use((req, res) => {
   });
 });
 
+// ============================================
+// Health Check Endpoint
+// ============================================
+// GET /api/health
+// Simple endpoint to verify the API is running
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        message: 'Panda Motors API is running!',
+        version: '3.0.0',
+        endpoints: [
+            // Financial
+            'POST /api/finance/calculate - Calculate loan payments',
+
+            // Dealership
+            'GET /api/dealership/location - Get dealership location',
+            'GET /api/dealership/status - Check if open',
+
+            // Bookings
+            'POST /api/bookings/create - Book test drive',
+            'GET /api/bookings/check-availability - Check availability',
+            'GET /api/bookings/user/:user_id - Get user bookings',
+            'PUT /api/bookings/:id/cancel - Cancel booking',
+
+            // Admin Analytics
+            'GET /api/admin/stats - Full admin statistics',
+            'GET /api/admin/stats/summary - Quick summary',
+
+            // Performance & Optimized Queries
+            'GET /api/optimized/search - Optimized inventory search',
+            'GET /api/optimized/availability - Quick availability check',
+            'GET /api/optimized/stats - Inventory statistics',
+            'GET /api/optimized/most-searched - Most searched makes',
+            'GET /api/optimized/performance - Query performance report',
+
+            // Admin Metrics Dashboard
+            'GET /api/admin/metrics - Full admin dashboard metrics',
+            'GET /api/admin/metrics/inventory - Inventory metrics only',
+            'GET /api/admin/metrics/bookings - Booking metrics only',
+
+            // Reports (NEW)
+            'GET /api/admin/reports/inventory - Download PDF inventory report',
+            'GET /api/admin/reports/inventory/json - Get inventory as JSON',
+            'GET /api/admin/reports/inventory/summary - Get inventory summary',
+
+            // High-Value Spotlight System (NEW)
+            'GET /api/admin/spotlight/alerts - View spotlight alerts',
+            'GET /api/admin/spotlight/featured - Get featured vehicles',
+            'GET /api/admin/spotlight/stats - High-value statistics',
+            'POST /api/admin/spotlight/process-all - Process all vehicles',
+            'POST /api/admin/spotlight/process/:vehicleId - Process specific vehicle',
+
+            // Health
+            'GET /api/health - Health check'
+        ]
+    });
+});
 /*
 |--------------------------------------------------------------------------
 | GLOBAL ERROR HANDLER
@@ -1666,6 +1739,7 @@ app.use((error, req, res, next) => {
 */
 
 async function initializeDatabase() {
+  await ensureExchangeRateSchema(db);
   await db.query(`
     CREATE TABLE IF NOT EXISTS chat_messages (
 
@@ -1891,6 +1965,7 @@ process.on("uncaughtException", (error) => {
   });
 });
 
+
 /*
 |--------------------------------------------------------------------------
 | START SERVER
@@ -1899,72 +1974,21 @@ process.on("uncaughtException", (error) => {
 
 app.listen(PORT, async () => {
   console.log("\n========================================");
-
-  console.log("🚀 Panda Motors API Server");
-
+  console.log("Panda Motors API Server");
   console.log("========================================");
-
-  console.log(`🚀 Server: http://localhost:${PORT}`);
-
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`Server running on: http://localhost:${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
 
   try {
     await initializeDatabase();
-
-    console.log("✅ PostgreSQL initialization complete");
-
-    console.log("💬 Chat admin storage ready");
+    exchangeRateRefreshWorker.start();
+    console.log("PostgreSQL initialization complete");
+    console.log("Chat administration storage ready");
   } catch (error) {
     logger.error("Database initialization failed", {
       message: error.message,
-
       stack: error.stack,
     });
-
-    console.error("❌ Database initialization failed:", error.message);
+    console.error("Database initialization failed:", error.message);
   }
-
-  console.log("\n🔐 Authentication:");
-
-  console.log(`   POST http://localhost:${PORT}/api/auth/register`);
-
-  console.log(`   POST http://localhost:${PORT}/api/auth/login`);
-
-  console.log("\n🚗 Cars:");
-
-  console.log(`   GET  http://localhost:${PORT}/api/cars`);
-
-  console.log("\n🔎 Search Engine Feeds:");
-
-  console.log(`   GET  http://localhost:${PORT}/sitemap.xml`);
-
-  console.log(`   GET  http://localhost:${PORT}/rss.xml`);
-
-  console.log("\n💬 Chat:");
-
-  console.log(`   POST http://localhost:${PORT}/api/chat/messages`);
-
-  console.log(
-    `   GET  http://localhost:${PORT}/api/chat/conversations/:conversationId/messages?page=1&limit=30`,
-  );
-
-  console.log("\n🛠️ Admin Chat:");
-
-  console.log(
-    `   GET   http://localhost:${PORT}/api/admin/chat/conversations?page=1&limit=20`,
-  );
-
-  console.log(
-    `   PATCH http://localhost:${PORT}/api/admin/chat/conversations/:conversationId/read`,
-  );
-
-  console.log(
-    `   GET   http://localhost:${PORT}/api/admin/chat/retention-policy`,
-  );
-
-  console.log("\n📝 Winston:");
-
-  console.log(`   ${path.join(logsDirectory, "error.log")}`);
-
-  console.log("========================================\n");
 });

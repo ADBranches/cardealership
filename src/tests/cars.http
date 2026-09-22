@@ -5,7 +5,7 @@ Content-Type: application/json
 {
   "name": "Admin User",
   "email": "admin@cars.com",
-  "password": "admin",
+  "password": "replace-with-local-test-password",
   "role": "admin"
 }
 
@@ -15,12 +15,13 @@ Content-Type: application/json
 
 {
   "email": "admin@cars.com",
-  "password": "admin"
+  "password": "replace-with-local-test-password"
 }
 
 ### GET ALL CARS
 GET http://localhost:5500/api/cars
 
+# CURRENT LIMITATION: GET /api/cars ignores query parameters in the active backend controller.
 ### FILTER BY MAKE
 GET http://localhost:5500/api/cars?make=Toyota
 
@@ -30,7 +31,7 @@ GET http://localhost:5500/api/cars/1
 ### CREATE CAR (PROTECTED)
 POST http://localhost:5500/api/cars
 Content-Type: application/json
-Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OCwiZW1haWwiOiJhZG1pbkBjYXJzLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4MjEzNjU5OSwiZXhwIjoxNzgyNzQxMzk5fQ.9dgZuNJslJ2mjgUejYPmRD9qLIV61noZ_cDn0tspV8E
+Authorization: Bearer replace-with-local-access-token
 
 {
   "vin": "123ABC",
@@ -39,13 +40,6 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OCwiZW1haWwiOiJhZG1p
   "year": 2022,
   "price": 45000000,
   "mileage": 5000
-}
-  "vin":"123ABC",
-  "make":"Toyota",
-  "model":"Harrier",
-  "year":2022,
-  "price":45000000,
-  "mileage":5000
 }
 
 ### Sprint 3 Edwin - Valid car payload
