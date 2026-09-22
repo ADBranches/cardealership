@@ -452,7 +452,12 @@ npm run test:api-config
 VITE_API_BASE_URL=https://approved-production-api.example.com npm run build
 ```
 
-Project demonstration:
+Chat mock modes are disabled by default. Synthetic chat requires explicit local opt-in and cannot be selected in a production build. Live gateway integration remains unavailable until the transport owner publishes the approved protocol.
 
-https://youtu.be/HNtln75HTEg
-"# Updated" 
+## Sprint 8 Validation
+
+Run `npm run test:sprint8-full` for the complete Sprint 8 targeted and affected regression suites. Production builds must disable every mock mode, use the approved HTTPS API origin, and restore generated `dist` assets after inspection. Detailed evidence is available in `docs/sprint8/sprint8-validation-report.md`.
+
+## Sprint 8 Administrator Workflows
+
+The administrator vehicle-listing wizard, dispatch board, and responsive sign-in experience are covered by `npm run test:sprint8-full` and `npm run test:login-interface`. Deployment requirements, blocked integration-owner dependencies, rollback guidance, and the reviewer summary are maintained under `docs/sprint8/`.

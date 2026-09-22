@@ -1,0 +1,5 @@
+import type { BookingStatus, DispatchBooking } from "../types";
+import { DispatchBookingCard } from "./DispatchBookingCard";
+import { DispatchEmptyState } from "./DispatchEmptyState";
+const LABELS: Record<BookingStatus,string>={pending:"Pending Approval",confirmed:"Confirmed",completed:"Completed",cancelled:"Canceled"};
+export function DispatchColumn({ status, bookings, pendingByBooking, onMove }: { status: BookingStatus; bookings: DispatchBooking[]; pendingByBooking: Record<string,unknown>; onMove: (id:string,status:BookingStatus)=>void }) { const label=LABELS[status]; return <section className="dispatch-column" aria-labelledby={`dispatch-${status}`}><header><h3 id={`dispatch-${status}`}>{label}</h3><span aria-label={`${bookings.length} ${label} bookings`}>{bookings.length}</span></header><div className="dispatch-column-list">{bookings.length?bookings.map(b=><DispatchBookingCard key={b.id} booking={b} pending={Boolean(pendingByBooking[b.id])} onAction={s=>onMove(b.id,s)}/>):<DispatchEmptyState statusName={label}/>}</div></section> }
