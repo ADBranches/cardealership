@@ -112,55 +112,39 @@ export async function fetchCarById(req, res) {
 export async function addCar(req, res) {
   try {
     const {
+      vin,
+      make,
+      model,
       name,
-      brand,
       type,
       category,
       year,
       price,
+      mileage,
+      color,
+      condition,
+      status,
+      description,
       power,
       engine,
       drive,
       images = [],
     } = req.body;
 
-    const parsedYear = Number(year);
-    const parsedPrice = Number(price);
-
-    if (!name || !brand) {
-      return sendError(
-        res,
-        400,
-        "CAR_DETAILS_REQUIRED",
-        "Vehicle name and brand are required.",
-      );
-    }
-
-    if (!Number.isInteger(parsedYear) || parsedYear < 1900) {
-      return sendError(
-        res,
-        400,
-        "INVALID_YEAR",
-        "A valid vehicle year is required.",
-      );
-    }
-
-    if (Number.isNaN(parsedPrice) || parsedPrice <= 0) {
-      return sendError(
-        res,
-        400,
-        "INVALID_PRICE",
-        "A valid vehicle price is required.",
-      );
-    }
-
     const carId = await createCar({
+      vin,
+      make,
+      model,
       name,
-      brand,
       type,
       category,
-      year: parsedYear,
-      price: parsedPrice,
+      year,
+      price,
+      mileage,
+      color,
+      condition,
+      status,
+      description,
       power,
       engine,
       drive,
