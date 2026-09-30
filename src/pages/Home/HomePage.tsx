@@ -11,6 +11,7 @@ import { ContactSection } from "./components/ContactSection";
 import { VehicleSearchSection } from "../../features/cars/components/VehicleSearchSection";
 import { VehicleInventorySection } from "../../features/cars/components/VehicleInventorySection";
 import { TestDriveScheduler } from "../../features/test-drive/components/TestDriveScheduler";
+import { useVehicleFilters } from "../../features/cars/hooks";
 
 import type {
   Vehicle,
@@ -27,6 +28,7 @@ export function HomePage() {
   const [error,setError] = useState("");
 
   const [vehicles,setVehicles] = useState<Vehicle[]>([]);
+  const filters = useVehicleFilters(vehicles);
 
 
 
@@ -204,54 +206,6 @@ export function HomePage() {
 
 
 
-  function filterByTab(
-    tab:InventoryTab,
-    list:Vehicle[]=vehicles
-  ){
-
-
-
-    if(tab==="all"){
-      return list;
-    }
-
-
-
-    if(tab==="4x4"){
-
-      return list.filter(
-        vehicle =>
-        vehicle.specs.drive==="4WD"
-      );
-
-    }
-
-
-
-    return list.filter(
-      vehicle =>
-      vehicle.category===tab
-    );
-
-  }
-
-
-
-
-
-  function resetFilters(){
-
-    console.log(
-      "Filters reset"
-    );
-
-  }
-
-
-
-
-
-
   return (
 
     <>
@@ -269,25 +223,25 @@ export function HomePage() {
 
       <VehicleSearchSection
 
-        searchBrand=""
+        searchBrand={filters.searchBrand}
 
-        setSearchBrand={()=>{}}
+        setSearchBrand={filters.setSearchBrand}
 
-        searchYear=""
+        searchYear={filters.searchYear}
 
-        setSearchYear={()=>{}}
+        setSearchYear={filters.setSearchYear}
 
-        priceRange={500000000}
+        priceRange={filters.priceRange}
 
-        setPriceRange={()=>{}}
+        setPriceRange={filters.setPriceRange}
 
-        showAdvanced={false}
+        showAdvanced={filters.showAdvanced}
 
-        setShowAdvanced={()=>{}}
+        setShowAdvanced={filters.setShowAdvanced}
 
-        filteredCount={vehicles.length}
+        filteredCount={filters.filteredVehicles.length}
 
-        resetFilters={resetFilters}
+        resetFilters={filters.resetFilters}
 
       />
 
@@ -311,11 +265,9 @@ export function HomePage() {
 
       <VehicleInventorySection
   loading={loading}
-  vehicles={vehicles}
-  filterByTab={filterByTab}
-  resetFilters={() => {
-    console.log("Reset filters clicked");
-  }}
+  vehicles={filters.filteredVehicles}
+  filterByTab={filters.filterByTab}
+  resetFilters={filters.resetFilters}
 />
 
 

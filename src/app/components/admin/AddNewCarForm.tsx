@@ -191,7 +191,6 @@ export function AddNewCarForm() {
 
     // TODO: Connect this prepared payload to POST /api/cars once backend inventory creation is confirmed.
     // TODO: Connect image upload to POST /api/cars/upload once Ronald's upload endpoint is available.
-    console.log("Prepared add-car form values:", values);
 
     setSubmitted(true);
   }

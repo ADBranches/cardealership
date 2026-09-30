@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import pg from "pg";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -6,60 +6,58 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const envFile =
-  process.env.NODE_ENV === "production"
-    ? ".env.production"
-    : ".env.development";
+const { Pool } = pg;
 
-dotenv.config({
-  path: path.resolve(__dirname, "..", envFile),
-});
+const envFile = process.env.NODE_ENV === "production" ? ".env.production" : ".env.development";
 
-const isProduction = process.env.NODE_ENV === "production";
+dotenv.config({ path: envFile, quiet: true });
+dotenv.config({ path: `backend/${envFile}`, quiet: true });
+
+function useDatabaseSsl() {
+  if (process.env.DATABASE_SSL !== undefined) {
+    return process.env.DATABASE_SSL === "true";
+  }
+
+  return process.env.NODE_ENV === "production";
+}
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-
-  // Local Docker PostgreSQL does not require SSL.
-  ssl: isProduction
-    ? {
-        rejectUnauthorized: false,
-      }
-    : false,
-
-  connectionTimeoutMillis: 10000,
+  ssl: useDatabaseSsl() ? { rejectUnauthorized: false } : false,
 });
 
 pool.on("error", (error) => {
-  console.error("❌ Unexpected PostgreSQL pool error:", error);
+  console.error("Database pool error", {
+    code: error.code || "DATABASE_POOL_ERROR",
+    message: "An unexpected database connection error occurred.",
+  });
 });
 
-async function verifyDatabaseConnection() {
+export async function verifyDatabaseConnection() {
   try {
-    const result = await pool.query(
-      "SELECT current_database() AS database_name, NOW() AS connected_at",
-    );
-
-    console.log(
-      `✅ Connected to PostgreSQL database: ${result.rows[0].database_name}`,
-    );
+    const client = await pool.connect();
+    client.release();
+    return { connected: true };
   } catch (error) {
-    console.error("❌ DB connection error:", error.message);
+    return {
+      connected: false,
+      error: {
+        code: error.code || "DATABASE_CONNECTION_FAILED",
+        message: "Database connection could not be established.",
+      },
+    };
   }
 }
-
-verifyDatabaseConnection();
 
 const db = {
   async query(text, params = []) {
     try {
       return await pool.query(text, params);
     } catch (error) {
-      console.error("❌ Database query failed:", {
-        text,
-        message: error.message,
+      console.error("Database query failed", {
+        code: error.code || "DATABASE_QUERY_FAILED",
+        message: "A database query could not be completed.",
       });
-
       throw error;
     }
   },

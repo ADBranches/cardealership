@@ -8,84 +8,83 @@
   Run `npm i` to install the dependencies.
 
   Run `npm run dev` to start the development server.
-  
+  ---
 
-## Sprint 5 Authentication Persistence Contract
+---
 
-Edwin's Sprint 5 frontend work will consolidate the existing local-storage authentication helpers into one authoritative session-restoration flow. This section defines the contract only. The provider, storage service, protected-route guard, and backend verification integration are implemented in later phases.
+## Sprint 4 Image Cleanup Contract
 
-### Authoritative authentication state
+Edwin's Sprint 4 backend task introduces a safe cleanup contract for stale car listing media.
 
-```text
-user: verified user or null
-accessToken: stored access token or null
-isAuthenticated: true only after backend verification succeeds
-isRestoringSession: true while startup verification is running
-isAuthReady: true only after restoration has completed
-error: sanitized authentication error or null
-```
+A car listing is eligible for image cleanup only when all of the following are true:
 
-State invariants:
+- The listing status is `Draft` or `Deleted`.
+- The listing has remained in that state for more than 30 days.
+- The listing has associated image/media links.
 
-- `isRestoringSession=true` requires `isAuthReady=false`.
-- The router must not redirect while `isAuthReady=false`.
-- `isAuthenticated=true` requires both a verified user and an access token.
-- Failed, expired, malformed, or rejected sessions clear the user and token.
-- Logout clears every recognized authentication storage key.
+The cleanup contract intentionally protects active inventory. Listings with statuses such as `Available`, `Sold`, `Pending`, `Approved`, `Published`, or `Active` must be skipped.
 
-### Session restoration sequence
-
-1. The application starts with session restoration active.
-2. The canonical `token` key is read first.
-3. Legacy token keys `authToken`, `jwt`, and `accessToken` may be read temporarily for compatibility.
-4. A missing token completes restoration as unauthenticated.
-5. An existing token is sent to the backend using `Authorization: Bearer <access-token>`.
-6. A successful backend response restores the verified user.
-7. An unauthorized, expired, malformed, or rejected session clears stored authentication data.
-8. Restoration completes in a `finally` path.
-9. `isAuthReady` becomes true.
-10. The router renders the correct public or protected destination.
-
-### Storage policy
+The cleanup timestamp fallback order is:
 
 ```text
-Canonical access-token key: token
-Canonical user key: user
-Legacy token keys: authToken, jwt, accessToken
-Legacy role keys: role, isAdmin
-Storage mechanism: localStorage
+deleted_at
+drafted_at
+updated_at
+created_at
 ```
 
-A valid legacy token may be migrated to the canonical `token` key during restoration. Invalid-session cleanup and logout must remove canonical and legacy authentication keys. JWT values must never be written to logs or user-facing error messages.
+---
 
-### Backend verification contract
+## Sprint 4 Image Cleanup PR Readiness
 
-Backend verification is authoritative. The frontend must not decode a JWT and treat its payload as proof of validity.
+Edwin's Sprint 4 backend implementation provides a safe cleanup workflow for stale car-listing media.
 
-Expected request:
+### Implemented Scope
+
+- Selects car listings with `Draft` or `Deleted` status that are older than 30 days.
+- Protects active statuses such as `Available`, `Sold`, `Pending`, `Approved`, `Published`, and `Active`.
+- Reads associated media through the `car_images` table and `image_url` field.
+- Provides a provider-safe storage adapter with `pending`, `cloudinary`, `s3`, `firebase`, `supabase`, and `local` provider options.
+- Defaults all cleanup operations to dry-run mode.
+- Requires explicit flags and environment configuration before storage or database cleanup can proceed.
+- Rechecks listing status and timestamp eligibility inside database removal queries.
+- Provides a repeatable manual cleanup script and a scheduler-ready job.
+- Keeps automatic in-process scheduling disabled until deployment-owner approval.
+- Returns structured, sanitized cleanup reports with run IDs and operation counts.
+- Includes repeatable manual validation covering stale, recent, active, media-free, malformed-media, dry-run, and execute-mode scenarios.
+
+### Manual Commands
 
 ```text
-Method: pending Devine confirmation
-Endpoint: pending Devine confirmation
-Authorization: Bearer <access-token>
+cd backend
+npm run test:car-image-cleanup
+npm run cleanup:car-images
+npm run cleanup:car-images:job
 ```
 
-Expected successful result:
+The execute command exists but must not be used until storage-provider behavior, production credentials, and destructive-cleanup ownership are approved:
 
 ```text
-valid: true
-user: { id, email, name?, role?, isAdmin? }
+cd backend
+npm run cleanup:car-images:execute
 ```
 
-Expected failure result:
+### Safe Defaults
 
 ```text
-valid: false
-code: UNAUTHORIZED | TOKEN_EXPIRED | INVALID_TOKEN | SESSION_VERIFICATION_FAILED
-message: optional sanitized message
+STORAGE_PROVIDER=pending
+CLEANUP_STORAGE_DELETE_ENABLED=false
+CLEANUP_CRON_ENABLED=false
+CLEANUP_DRY_RUN=true
+CLEANUP_OLDER_THAN_DAYS=30
+CLEANUP_STATUSES=Draft,Deleted
 ```
 
-The current backend contains login routes and JWT authentication middleware, but it does not yet expose a confirmed session-verification route. Devine must confirm the endpoint, HTTP method, response shape, invalid-token behavior, expired-token behavior, and refresh-token policy before live restoration is connected.
+### Provider-Dependent Work
+
+Real storage deletion remains intentionally disabled. Before enabling destructive cleanup, the team must confirm the production storage provider, object identifier strategy, bucket or folder rules, credentials management, storage-versus-database deletion policy, scheduler ownership, cron schedule, production dry-run policy, and approval owner.
+
+The backend exposes GET /api/auth/session. The endpoint requires Authorization: Bearer <access-token>, verifies the JWT, confirms that the referenced PostgreSQL user still exists, and returns the verified user. Missing, invalid, expired, and rejected sessions return unauthorized responses and cause the frontend to clear stored authentication data. Live deployment validation still requires securely configured DATABASE_URL and JWT_SECRET values.
 
 ### Routing safety contract
 
@@ -118,7 +117,7 @@ Run the validation with:
 npm run test:auth-persistence
 ```
 
-Live backend verification remains pending Devine confirmation. The expected frontend endpoint is `GET /api/auth/session` with `Authorization: Bearer <access-token>`. The current backend does not expose that route, and `backend/middleware/authMiddleware.js` contains unresolved merge-conflict markers. The frontend does not use local JWT decoding as proof of authentication.
+The frontend verification contract uses `GET /api/auth/session` with `Authorization: Bearer <access-token>`. The backend route and JWT authentication middleware are implemented and pass syntax validation. The deterministic persistence suite remains mock-based because live verification requires deployment-managed PostgreSQL and JWT configuration. The frontend does not use local JWT decoding as proof of authentication.
 
 ## Sprint 5 Frontend API Environment
 

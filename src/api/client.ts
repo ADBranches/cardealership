@@ -19,3 +19,9 @@ export async function apiRequest(path: string, options: RequestInit = {}): Promi
 export async function authenticatedApiRequest(path: string, token: string, options: RequestInit = {}): Promise<Response> {
   return apiRequest(path, { ...options, headers: createBearerHeaders(token, options.headers) });
 }
+
+export type AuthenticatedApiFetcher = (
+  path: string,
+  token: string,
+  options?: RequestInit,
+) => Promise<Response>;

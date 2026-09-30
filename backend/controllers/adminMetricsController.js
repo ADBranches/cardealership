@@ -6,7 +6,7 @@ export const adminMetricsController = {
   async getMetrics(req, res) {
     try {
       const startTime = Date.now();
-      
+
       // Run all aggregations in parallel for performance
       const [
         inventoryMetrics,
@@ -21,9 +21,9 @@ export const adminMetricsController = {
         this.getRevenueMetrics(),
         this.getUserMetrics()
       ]);
-      
+
       const duration = Date.now() - startTime;
-      
+
       res.json({
         success: true,
         data: {
@@ -38,7 +38,7 @@ export const adminMetricsController = {
           generationTime: `${duration}ms`
         }
       });
-      
+
     } catch (error) {
       console.error('Metrics error:', error);
       res.status(500).json({
@@ -47,7 +47,7 @@ export const adminMetricsController = {
       });
     }
   },
-  
+
   // GET /api/admin/metrics/inventory - Inventory metrics only
   async getInventoryMetrics(req, res) {
     try {
@@ -65,7 +65,7 @@ export const adminMetricsController = {
       });
     }
   },
-  
+
   // GET /api/admin/metrics/bookings - Booking metrics only
   async getBookingMetrics(req, res) {
     try {
@@ -83,9 +83,9 @@ export const adminMetricsController = {
       });
     }
   },
-  
+
   // ==================== PRIVATE METHODS ====================
-  
+
   // Inventory metrics aggregation
   async getInventoryMetrics() {
     return await queryProfiler.profileQuery(
@@ -159,13 +159,13 @@ export const adminMetricsController = {
             }
           }
         ];
-        
+
         const result = await db.collection('cars').aggregate(pipeline).toArray();
         return result[0] || {};
       }
     );
   },
-  
+
   // Booking metrics aggregation
   async getBookingMetrics() {
     return await queryProfiler.profileQuery(
@@ -174,7 +174,7 @@ export const adminMetricsController = {
         const now = new Date();
         const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const firstDayOfMonthStr = firstDayOfMonth.toISOString().split('T')[0];
-        
+
         const pipeline = [
           {
             $facet: {
@@ -252,13 +252,13 @@ export const adminMetricsController = {
             }
           }
         ];
-        
+
         const result = await db.collection('bookings').aggregate(pipeline).toArray();
         return result[0] || {};
       }
     );
   },
-  
+
   // Search metrics aggregation
   async getSearchMetrics() {
     return await queryProfiler.profileQuery(
@@ -267,7 +267,7 @@ export const adminMetricsController = {
         // Check if search_logs collection exists, if not use cars collection
         const collections = await db.listCollections().toArray();
         const hasSearchLogs = collections.some(c => c.name === 'search_logs');
-        
+
         if (hasSearchLogs) {
           const pipeline = [
             {
@@ -301,7 +301,7 @@ export const adminMetricsController = {
               }
             }
           ];
-          
+
           const result = await db.collection('search_logs').aggregate(pipeline).toArray();
           return result[0] || {};
         } else {
@@ -316,7 +316,7 @@ export const adminMetricsController = {
             { $sort: { count: -1 } },
             { $limit: 10 }
           ];
-          
+
           const result = await db.collection('cars').aggregate(pipeline).toArray();
           return {
             mostSearchedMakes: result,
@@ -326,7 +326,7 @@ export const adminMetricsController = {
       }
     );
   },
-  
+
   // Revenue metrics aggregation
   async getRevenueMetrics() {
     return await queryProfiler.profileQuery(
@@ -334,7 +334,7 @@ export const adminMetricsController = {
       async () => {
         const now = new Date();
         const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        
+
         const pipeline = [
           {
             $facet: {
@@ -394,13 +394,13 @@ export const adminMetricsController = {
             }
           }
         ];
-        
+
         const result = await db.collection('sales').aggregate(pipeline).toArray();
         return result[0] || {};
       }
     );
   },
-  
+
   // User metrics aggregation
   async getUserMetrics() {
     return await queryProfiler.profileQuery(
@@ -408,7 +408,7 @@ export const adminMetricsController = {
       async () => {
         const now = new Date();
         const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
-        
+
         const pipeline = [
           {
             $facet: {
@@ -454,7 +454,7 @@ export const adminMetricsController = {
             }
           }
         ];
-        
+
         const result = await db.collection('users').aggregate(pipeline).toArray();
         return result[0] || {};
       }

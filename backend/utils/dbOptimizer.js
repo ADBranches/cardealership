@@ -12,16 +12,16 @@ class QueryProfiler {
     const start = performance.now();
     let result;
     let error = null;
-    
+
     try {
       result = await queryFn(...params);
     } catch (err) {
       error = err;
       result = null;
     }
-    
+
     const duration = performance.now() - start;
-    
+
     // Log query performance
     const logEntry = {
       queryName,
@@ -31,15 +31,15 @@ class QueryProfiler {
       params: JSON.stringify(params),
       isSlow: duration > this.slowQueryThreshold
     };
-    
+
     this.queryLogs.push(logEntry);
-    
+
     // Warn about slow queries
     if (duration > this.slowQueryThreshold) {
       console.warn(`?? SLOW QUERY: ${queryName} took ${Math.round(duration)}ms`);
       console.warn(`   Params: ${JSON.stringify(params)}`);
     }
-    
+
     if (error) throw error;
     return { result, duration: Math.round(duration), logEntry };
   }
@@ -49,10 +49,10 @@ class QueryProfiler {
     const total = this.queryLogs.length;
     const slowQueries = this.queryLogs.filter(log => log.isSlow);
     const errors = this.queryLogs.filter(log => log.status === 'ERROR');
-    const avgDuration = total > 0 
-      ? this.queryLogs.reduce((sum, log) => sum + log.duration, 0) / total 
+    const avgDuration = total > 0
+      ? this.queryLogs.reduce((sum, log) => sum + log.duration, 0) / total
       : 0;
-    
+
     return {
       totalQueries: total,
       slowQueries: slowQueries.length,
@@ -76,12 +76,12 @@ export const queryProfiler = new QueryProfiler();
 export const queryOptimizer = {
   // Optimized inventory search with proper indexing
   async searchInventory(db, searchParams) {
-    const { 
-      make, 
-      model, 
-      minPrice, 
-      maxPrice, 
-      year, 
+    const {
+      make,
+      model,
+      minPrice,
+      maxPrice,
+      year,
       condition,
       transmission,
       fuelType,
@@ -93,7 +93,7 @@ export const queryOptimizer = {
 
     // Build optimized query with proper indexes
     let query = db.collection('cars').find();
-    
+
     // Use compound indexes for common search patterns
     if (make) query = query.filter(car => car.make.toLowerCase().includes(make.toLowerCase()));
     if (model) query = query.filter(car => car.model.toLowerCase().includes(model.toLowerCase()));
@@ -101,7 +101,7 @@ export const queryOptimizer = {
     if (condition) query = query.filter(car => car.condition === condition);
     if (transmission) query = query.filter(car => car.transmission === transmission);
     if (fuelType) query = query.filter(car => car.fuelType === fuelType);
-    
+
     // Price range with index
     if (minPrice || maxPrice) {
       query = query.filter(car => {
@@ -148,7 +148,7 @@ export const queryOptimizer = {
         $lte: endDate
       }
     };
-    
+
     if (status) {
       query.status = status;
     }

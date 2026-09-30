@@ -19,18 +19,18 @@ router.get('/stats', authenticateToken, checkRole(['admin']), async (req, res) =
 
         // Total revenue
         const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
-        
+
         // Total bookings
         const totalBookings = bookings.filter(b => b.status !== 'cancelled').length;
-        
+
         // Cars in inventory
         const inventoryCount = cars.length;
-        
+
         // Average car price
-        const avgPrice = cars.length > 0 
-            ? cars.reduce((sum, car) => sum + car.price, 0) / cars.length 
+        const avgPrice = cars.length > 0
+            ? cars.reduce((sum, car) => sum + car.price, 0) / cars.length
             : 0;
-        
+
         // Recent bookings (last 7 days)
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -80,10 +80,10 @@ router.get('/stats', authenticateToken, checkRole(['admin']), async (req, res) =
 
     } catch (error) {
         console.error('Admin stats error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            error: 'Internal server error', 
-            message: error.message 
+            error: 'Internal server error',
+            message: error.message
         });
     }
 });
@@ -98,7 +98,7 @@ router.get('/stats/summary', authenticateToken, checkRole(['admin']), async (req
         const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
         const totalBookings = bookings.filter(b => b.status !== 'cancelled').length;
         const inventoryCount = cars.length;
-        
+
         // Calculate month-to-date revenue
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -116,7 +116,7 @@ router.get('/stats/summary', authenticateToken, checkRole(['admin']), async (req
             })
             .reduce((sum, sale) => sum + sale.amount, 0);
 
-        const growth = lastMonthRevenue > 0 
+        const growth = lastMonthRevenue > 0
             ? ((mtdRevenue - lastMonthRevenue) / lastMonthRevenue * 100).toFixed(1)
             : 0;
 
@@ -136,10 +136,10 @@ router.get('/stats/summary', authenticateToken, checkRole(['admin']), async (req
 
     } catch (error) {
         console.error('Admin summary error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            error: 'Internal server error', 
-            message: error.message 
+            error: 'Internal server error',
+            message: error.message
         });
     }
 });
@@ -148,13 +148,13 @@ router.get('/stats/summary', authenticateToken, checkRole(['admin']), async (req
 router.get('/users', authenticateToken, checkRole(['admin']), async (req, res) => {
     try {
         const users = await db.collection('users').find({}).toArray();
-        
+
         // Remove passwords from response
         const safeUsers = users.map(user => {
             const { password, ...safeUser } = user;
             return safeUser;
         });
-        
+
         res.json({
             success: true,
             data: safeUsers,
@@ -173,7 +173,7 @@ router.get('/users', authenticateToken, checkRole(['admin']), async (req, res) =
 router.get('/bookings', authenticateToken, checkRole(['admin']), async (req, res) => {
     try {
         const bookings = await db.collection('bookings').find({}).toArray();
-        
+
         res.json({
             success: true,
             data: bookings,
@@ -192,7 +192,7 @@ router.get('/bookings', authenticateToken, checkRole(['admin']), async (req, res
 router.get('/cars', authenticateToken, checkRole(['admin']), async (req, res) => {
     try {
         const cars = await db.collection('cars').find({}).toArray();
-        
+
         res.json({
             success: true,
             data: cars,

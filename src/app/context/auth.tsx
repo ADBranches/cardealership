@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import type { AuthError, AuthSession, AuthState } from "../../features/auth/types";
+import type { AuthError, AuthSession, AuthState, AuthUser } from "../../features/auth/types";
 import { clearStoredSession, restoreStoredSession, saveSession } from "../../features/auth/services";
 
 const initialAuthState: AuthState = {
@@ -14,6 +14,7 @@ const initialAuthState: AuthState = {
 type AuthContextValue = AuthState & {
   login: (session: AuthSession) => void;
   logout: () => void;
+  updateUser: (user: AuthUser) => void;
   restoreSession: () => Promise<void>;
 };
 
@@ -54,6 +55,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearStoredSession();
     setState(createUnauthenticatedState());
   }, []);
+  const updateUser = useCallback((user: AuthUser) => {
+    setState((current) => {
+      if (!current.accessToken || !current.isAuthenticated) return current;
+      saveSession({ user, accessToken: current.accessToken });
+      return { ...current, user };
+    });
+  }, []);
 
   const restoreSession = useCallback(() => {
     if (restorePromiseRef.current) return restorePromiseRef.current;
@@ -77,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void restoreSession();
   }, [restoreSession]);
 
-  const value = useMemo(() => ({ ...state, login, logout, restoreSession }), [state, login, logout, restoreSession]);
+  const value = useMemo(() => ({ ...state, login, logout, updateUser, restoreSession }), [state, login, logout, updateUser, restoreSession]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

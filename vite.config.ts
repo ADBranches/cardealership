@@ -46,5 +46,10 @@ export default defineConfig(({ mode }) => {
       },
     },
     assetsInclude: ["**/*.svg", "**/*.csv"],
+    build: {
+      minify: "esbuild",
+      sourcemap: false,
+      chunkSizeWarningLimit: 500,
+    },
   };
 });
