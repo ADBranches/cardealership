@@ -1,3 +1,9 @@
+// ============================================
+// PANDA MOTORS API SERVER
+// Version: 4.0.0
+// Features: Auth + RBAC + PDF Reports + Spotlight + Analytics
+// ============================================
+
 // Import required packages
 import express from 'express';
 import cors from 'cors';
@@ -10,7 +16,10 @@ const __dirname = dirname(__filename);
 
 dotenv.config();
 
-// Import routes (using ES module syntax)
+// ============================================
+// IMPORT ROUTES
+// ============================================
+import authRoutes from './routes/authRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import optimizedRoutes from './routes/optimizedRoutes.js';
@@ -18,28 +27,35 @@ import adminMetricsRoutes from './routes/adminMetricsRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import highValueRoutes from './routes/highValueRoutes.js';
 
-// Import performance middleware
+// ============================================
+// IMPORT MIDDLEWARE
+// ============================================
 import { performanceMiddleware } from './middleware/performanceMiddleware.js';
 
-// Import database configuration and indexes
+// ============================================
+// IMPORT DATABASE CONFIG
+// ============================================
 import { createIndexes, verifyIndexes } from './config/indexes.js';
 
-// Create an Express application
+// ============================================
+// CREATE EXPRESS APP
+// ============================================
 const app = express();
 
-// Define the port (use environment variable or default to 5000)
+// Define the port
 const PORT = process.env.PORT || 5000;
 
 // ============================================
 // MIDDLEWARE
 // ============================================
-// cors() - Allows your React frontend (running on port 5173) 
-// to communicate with this backend (running on port 5000)
+// CORS - Allows React frontend (port 5173) to communicate with backend (port 5000)
 app.use(cors());
 
-// express.json() - Automatically parses incoming JSON data 
-// from POST requests into a JavaScript object (req.body)
+// JSON Parser - Automatically parses incoming JSON data
 app.use(express.json());
+
+// URL Encoded Parser
+app.use(express.urlencoded({ extended: true }));
 
 // Performance monitoring middleware
 app.use(performanceMiddleware);
@@ -47,6 +63,9 @@ app.use(performanceMiddleware);
 // ============================================
 // ROUTES
 // ============================================
+
+// Authentication routes (NEW - Task: Secure Auth & RBAC)
+app.use('/api/auth', authRoutes);
 
 // Booking routes (Task 1)
 app.use('/api/bookings', bookingRoutes);
@@ -73,17 +92,14 @@ app.use('/api/admin/spotlight', highValueRoutes);
 // This endpoint calculates monthly loan payments
 app.post('/api/finance/calculate', (req, res) => {
     try {
-        // STEP 1: Extract data from the request body
-        // The frontend sends a JSON object with these fields
         const {
-            carPrice,        // Price of the car (e.g., 285,000,000 UGX)
-            downPayment,     // Down payment amount (e.g., 50,000,000 UGX)
-            interestRate,    // Annual interest rate (e.g., 12 for 12%)
-            loanTermMonths   // Loan duration in months (e.g., 60 for 5 years)
+            carPrice,
+            downPayment,
+            interestRate,
+            loanTermMonths
         } = req.body;
 
-        // STEP 2: Input Validation
-        // Check if all required fields are present
+        // Input Validation
         if (carPrice === undefined || downPayment === undefined || 
             interestRate === undefined || loanTermMonths === undefined) {
             return res.status(400).json({
@@ -92,30 +108,21 @@ app.post('/api/finance/calculate', (req, res) => {
             });
         }
 
-        // Convert string inputs to numbers (they come as strings from JSON)
+        // Convert string inputs to numbers
         const price = parseFloat(carPrice);
         const down = parseFloat(downPayment);
         const rate = parseFloat(interestRate);
         const term = parseInt(loanTermMonths);
 
-        // STEP 3: Validate non-negative values (Acceptance Criteria)
-        if (price < 0) {
-            return res.status(400).json({ error: 'Car price cannot be negative' });
-        }
-        if (down < 0) {
-            return res.status(400).json({ error: 'Down payment cannot be negative' });
-        }
-        if (rate < 0) {
-            return res.status(400).json({ error: 'Interest rate cannot be negative' });
-        }
-        if (term <= 0) {
-            return res.status(400).json({ error: 'Loan term must be greater than 0 months' });
-        }
+        // Validate non-negative values
+        if (price < 0) return res.status(400).json({ error: 'Car price cannot be negative' });
+        if (down < 0) return res.status(400).json({ error: 'Down payment cannot be negative' });
+        if (rate < 0) return res.status(400).json({ error: 'Interest rate cannot be negative' });
+        if (term <= 0) return res.status(400).json({ error: 'Loan term must be greater than 0 months' });
 
-        // STEP 4: Calculate the loan amount
+        // Calculate loan amount
         const loanAmount = price - down;
         
-        // Check if down payment is larger than car price
         if (loanAmount <= 0) {
             return res.status(400).json({ 
                 error: 'Down payment must be less than car price',
@@ -123,46 +130,31 @@ app.post('/api/finance/calculate', (req, res) => {
             });
         }
 
-        // STEP 5: Calculate Monthly Payment using Amortization Formula
-        // Convert annual interest rate to monthly decimal
-        // Example: 12% annual = 0.12 yearly = 0.12/12 = 0.01 monthly
+        // Calculate Monthly Payment using Amortization Formula
         const monthlyRate = (rate / 100) / 12;
 
         let monthlyPayment;
         let totalPayment;
         let totalInterest;
 
-        // Formula: P = (r * PV) / (1 - (1 + r)^-n)
-        // Where:
-        // P = monthly payment
-        // r = monthly interest rate
-        // PV = present value (loan amount)
-        // n = number of payments (term)
-        
         if (monthlyRate === 0) {
-            // If interest rate is 0%, it's simple division
             monthlyPayment = loanAmount / term;
             totalPayment = loanAmount;
             totalInterest = 0;
         } else {
-            // Standard amortization formula
             const compoundFactor = Math.pow(1 + monthlyRate, term);
             monthlyPayment = loanAmount * (monthlyRate * compoundFactor) / (compoundFactor - 1);
             totalPayment = monthlyPayment * term;
             totalInterest = totalPayment - loanAmount;
         }
 
-        // STEP 6: Generate Payment Schedule (first 6 months)
-        // This shows how each payment breaks down into principal + interest
+        // Generate Payment Schedule (first 6 months)
         const paymentSchedule = [];
         let remainingBalance = loanAmount;
         
         for (let month = 1; month <= Math.min(6, term); month++) {
-            // Interest for this month = remaining balance * monthly rate
             const interestPayment = remainingBalance * monthlyRate;
-            // Principal payment = total payment - interest
             const principalPayment = monthlyPayment - interestPayment;
-            // New remaining balance
             remainingBalance -= principalPayment;
             
             paymentSchedule.push({
@@ -174,7 +166,7 @@ app.post('/api/finance/calculate', (req, res) => {
             });
         }
 
-        // STEP 7: Return the calculated results
+        // Return the calculated results
         res.json({
             success: true,
             inputs: {
@@ -194,7 +186,6 @@ app.post('/api/finance/calculate', (req, res) => {
         });
 
     } catch (error) {
-        // Handle any unexpected errors
         console.error('Calculation error:', error);
         res.status(500).json({ 
             error: 'Internal server error', 
@@ -207,18 +198,14 @@ app.post('/api/finance/calculate', (req, res) => {
 // USER STORY 2: Dealership Localization
 // ============================================
 // GET /api/dealership/location
-// This endpoint returns dealership information formatted for Google Maps
 app.get('/api/dealership/location', (req, res) => {
     try {
-        // Dealership information for Panda Motors in Banda, Kampala
         const dealershipInfo = {
             success: true,
             dealership: {
-                // Basic info
                 name: 'Panda Motors Ltd',
                 description: 'Uganda\'s trusted luxury vehicle importer',
                 
-                // Address - structured for easy display
                 address: {
                     street: 'Banda, Jinja Road',
                     city: 'Kampala',
@@ -227,15 +214,12 @@ app.get('/api/dealership/location', (req, res) => {
                     fullAddress: 'Banda, Jinja Road, Kampala, Uganda'
                 },
                 
-                // LOCATION COORDINATES - For Google Maps integration
-                // These coordinates point to Banda, Kampala, Uganda
                 location: {
-                    latitude: 0.3488,    // Decimal degrees
-                    longitude: 32.6160,   // Decimal degrees
-                    zoom: 15              // Recommended zoom level for map
+                    latitude: 0.3488,
+                    longitude: 32.6160,
+                    zoom: 15
                 },
                 
-                // Operating hours for each day
                 operatingHours: {
                     monday: { open: '08:00', close: '18:00', isOpen: true },
                     tuesday: { open: '08:00', close: '18:00', isOpen: true },
@@ -246,14 +230,12 @@ app.get('/api/dealership/location', (req, res) => {
                     sunday: { open: '00:00', close: '00:00', isOpen: false, note: 'Closed' }
                 },
                 
-                // Contact information
                 contact: {
                     phone: ['+256 770 826 951', '+256 756 053 475'],
                     whatsapp: '+256 770 826 951',
                     email: 'sales@pandamotors.co.ug'
                 },
                 
-                // Services offered
                 services: [
                     'URA Duty Clearance',
                     'Import Documentation',
@@ -261,15 +243,12 @@ app.get('/api/dealership/location', (req, res) => {
                     'Flexible Financing'
                 ],
                 
-                // GOOGLE MAPS INTEGRATION URLs
-                // These URLs can be used directly in frontend map components
                 googleMapsUrl: 'https://maps.google.com/?q=Banda,+Jinja+Road,+Kampala,+Uganda',
                 directionsUrl: 'https://maps.google.com/dir//Banda,+Jinja+Road,+Kampala,+Uganda',
                 embedMapUrl: 'https://maps.google.com/maps?q=Banda+Kampala+Uganda&z=15&output=embed'
             }
         };
 
-        // Send the response
         res.json(dealershipInfo);
 
     } catch (error) {
@@ -285,20 +264,17 @@ app.get('/api/dealership/location', (req, res) => {
 // BONUS: Dealership Open Status Endpoint
 // ============================================
 // GET /api/dealership/status
-// Returns whether the dealership is currently open
 app.get('/api/dealership/status', (req, res) => {
     const now = new Date();
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const currentDay = dayNames[now.getDay()];
     
-    // Format current time as HH:MM
     const currentTime = now.toLocaleTimeString('en-US', { 
         hour12: false, 
         hour: '2-digit', 
         minute: '2-digit' 
     });
     
-    // Operating hours (same as above)
     const hours = {
         monday: { open: '08:00', close: '18:00' },
         tuesday: { open: '08:00', close: '18:00' },
@@ -328,14 +304,23 @@ app.get('/api/dealership/status', (req, res) => {
 // Health Check Endpoint
 // ============================================
 // GET /api/health
-// Simple endpoint to verify the API is running
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
         message: 'Panda Motors API is running!',
-        version: '3.0.0',
+        version: '4.0.0',
         endpoints: [
+            // Authentication (NEW)
+            'POST /api/auth/register - Register new user',
+            'POST /api/auth/login - Login user',
+            'POST /api/auth/logout - Logout user',
+            'GET /api/auth/me - Get current user',
+            'POST /api/auth/refresh - Refresh token',
+            'PUT /api/auth/change-password - Change password',
+            'GET /api/auth/users - Get all users (Admin)',
+            'DELETE /api/auth/users/:id - Delete user (Admin)',
+            
             // Financial
             'POST /api/finance/calculate - Calculate loan payments',
             
@@ -365,12 +350,12 @@ app.get('/api/health', (req, res) => {
             'GET /api/admin/metrics/inventory - Inventory metrics only',
             'GET /api/admin/metrics/bookings - Booking metrics only',
             
-            // Reports (NEW)
+            // Reports
             'GET /api/admin/reports/inventory - Download PDF inventory report',
             'GET /api/admin/reports/inventory/json - Get inventory as JSON',
             'GET /api/admin/reports/inventory/summary - Get inventory summary',
             
-            // High-Value Spotlight System (NEW)
+            // High-Value Spotlight System
             'GET /api/admin/spotlight/alerts - View spotlight alerts',
             'GET /api/admin/spotlight/featured - Get featured vehicles',
             'GET /api/admin/spotlight/stats - High-value statistics',
@@ -384,12 +369,37 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================================
-// Database Initialization (Mock for now)
+// 404 HANDLER
 // ============================================
-// Initialize database and create indexes on startup
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        error: 'Route not found',
+        path: req.path,
+        method: req.method
+    });
+});
+
+// ============================================
+// GLOBAL ERROR HANDLER
+// ============================================
+app.use((err, req, res, next) => {
+    console.error('Global Error:', err);
+    res.status(err.status || 500).json({
+        success: false,
+        error: err.message || 'Internal server error',
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+});
+
+// ============================================
+// Database Initialization
+// ============================================
 async function initializeDatabase() {
     try {
-        console.log('?? Database initialization skipped - using in-memory data');
+        console.log('?? Initializing database...');
+        await createIndexes();
+        await verifyIndexes();
         console.log('? Database initialization complete!');
     } catch (error) {
         console.error('? Database initialization error:', error.message);
@@ -405,12 +415,23 @@ app.listen(PORT, async () => {
     console.log('========================================');
     console.log(`?? Server running on: http://localhost:${PORT}`);
     console.log(`?? Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`?? Version: 3.0.0`);
+    console.log(`?? Version: 4.0.0`);
     
     // Initialize database
     await initializeDatabase();
     
     console.log('\n?? Available Endpoints:');
+    
+    console.log('   --- Authentication (NEW) ---');
+    console.log(`   POST   /api/auth/register       - Register new user`);
+    console.log(`   POST   /api/auth/login          - Login user`);
+    console.log(`   POST   /api/auth/logout         - Logout user`);
+    console.log(`   GET    /api/auth/me             - Get current user`);
+    console.log(`   POST   /api/auth/refresh        - Refresh token`);
+    console.log(`   PUT    /api/auth/change-password - Change password`);
+    console.log(`   GET    /api/auth/users          - Get all users (Admin)`);
+    console.log(`   DELETE /api/auth/users/:id      - Delete user (Admin)`);
+    
     console.log('   --- Financial ---');
     console.log(`   POST /api/finance/calculate  - Loan calculator`);
     
@@ -419,7 +440,7 @@ app.listen(PORT, async () => {
     console.log(`   GET  /api/dealership/status   - Open status`);
     
     console.log('   --- Test Drive Booking ---');
-    console.log(`   POST /api/bookings/create     - Book test drive with conflict logic`);
+    console.log(`   POST /api/bookings/create     - Book test drive`);
     console.log(`   GET  /api/bookings/check-availability - Check availability`);
     console.log(`   GET  /api/bookings/user/:user_id - Get user bookings`);
     console.log(`   PUT  /api/bookings/:id/cancel - Cancel booking`);
@@ -440,17 +461,17 @@ app.listen(PORT, async () => {
     console.log(`   GET  /api/admin/metrics/inventory - Inventory metrics only`);
     console.log(`   GET  /api/admin/metrics/bookings - Booking metrics only`);
     
-    console.log('   --- Reports (NEW) ---');
-    console.log(`   GET  /api/admin/reports/inventory     - Download PDF inventory report`);
+    console.log('   --- Reports (PDF) ---');
+    console.log(`   GET  /api/admin/reports/inventory     - Download PDF report`);
     console.log(`   GET  /api/admin/reports/inventory/json - Get inventory as JSON`);
-    console.log(`   GET  /api/admin/reports/inventory/summary - Get inventory summary`);
+    console.log(`   GET  /api/admin/reports/inventory/summary - Get summary`);
     
-    console.log('   --- High-Value Spotlight System (NEW) ---');
-    console.log(`   GET  /api/admin/spotlight/alerts      - View spotlight alerts`);
-    console.log(`   GET  /api/admin/spotlight/featured    - Get featured vehicles`);
-    console.log(`   GET  /api/admin/spotlight/stats       - High-value statistics`);
-    console.log(`   POST /api/admin/spotlight/process-all - Process all vehicles`);
-    console.log(`   POST /api/admin/spotlight/process/:id - Process specific vehicle`);
+    console.log('   --- High-Value Spotlight System ---');
+    console.log(`   GET  /api/admin/spotlight/alerts      - View alerts`);
+    console.log(`   GET  /api/admin/spotlight/featured    - Featured vehicles`);
+    console.log(`   GET  /api/admin/spotlight/stats       - High-value stats`);
+    console.log(`   POST /api/admin/spotlight/process-all - Process all`);
+    console.log(`   POST /api/admin/spotlight/process/:id - Process specific`);
     
     console.log('   --- Health ---');
     console.log(`   GET  /api/health              - Health check`);
