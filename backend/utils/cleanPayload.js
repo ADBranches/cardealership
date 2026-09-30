@@ -1,24 +1,20 @@
 export const CAR_REQUIRED_TEXT_FIELDS = [
-  "name",
-  "brand",
-  "type",
-  "category",
-];
-
-export const CAR_OPTIONAL_TEXT_FIELDS = [
   "make",
   "model",
+  "name",
+  "type",
+  "category",
+  "color",
+  "condition",
+  "status",
   "power",
   "engine",
   "drive",
-  "status",
 ];
 
-export const CAR_NUMERIC_FIELDS = [
-  "year",
-  "price",
-  "mileage",
-];
+export const CAR_OPTIONAL_TEXT_FIELDS = ["vin", "description"];
+
+export const CAR_NUMERIC_FIELDS = ["year", "price", "mileage"];
 
 export function trimStringValue(value) {
   if (typeof value !== "string") {
@@ -31,7 +27,10 @@ export function trimStringValue(value) {
 export function cleanCarPayload(payload = {}) {
   const cleaned = { ...payload };
 
-  for (const field of [...CAR_REQUIRED_TEXT_FIELDS, ...CAR_OPTIONAL_TEXT_FIELDS]) {
+  for (const field of [
+    ...CAR_REQUIRED_TEXT_FIELDS,
+    ...CAR_OPTIONAL_TEXT_FIELDS,
+  ]) {
     if (field in cleaned) {
       cleaned[field] = trimStringValue(cleaned[field]);
     }
@@ -95,7 +94,9 @@ export function validateNumericField({
   }
 
   if (numericValue < min) {
-    errors.push(`${label} must be ${min === 0 ? "zero or greater" : `at least ${min}`}.`);
+    errors.push(
+      `${label} must be ${min === 0 ? "zero or greater" : `at least ${min}`}.`,
+    );
   }
 
   return errors;

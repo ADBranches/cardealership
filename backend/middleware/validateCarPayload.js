@@ -9,10 +9,20 @@ import {
 /**
  * Defensive car inventory payload validator.
  *
- * Purpose:
- * Reject malicious, missing, or badly typed car inventory submissions before
- * controller/model/database logic runs.
+ * Validates the complete inventory contract before the controller/model
+ * receives the vehicle data.
  */
+
+const VALID_CONDITIONS = new Set(["New", "Used"]);
+
+const VALID_STATUSES = new Set([
+  "Available",
+  "Pending Test Drive",
+  "Reserved",
+  "Sold",
+]);
+
+const VIN_PATTERN = /^[A-HJ-NPR-Z0-9]{17}$/;
 
 function hasScriptLikeContent(value) {
   if (typeof value !== "string") {
@@ -44,6 +54,52 @@ function validateRequiredTextFields(payload) {
   }
 
   return errors;
+}
+
+function validateVin(payload) {
+  const value = payload.vin;
+
+  if (value === undefined || value === null || isBlankString(value)) {
+    return ["VIN is required."];
+  }
+
+  if (typeof value !== "string") {
+    return ["VIN must be a valid text value."];
+  }
+
+  const normalizedVin = value.toUpperCase();
+
+  if (!VIN_PATTERN.test(normalizedVin)) {
+    return [
+      "VIN must be exactly 17 characters and cannot contain I, O, or Q.",
+    ];
+  }
+
+  return [];
+}
+
+function validateCondition(payload) {
+  const value = payload.condition;
+
+  if (!VALID_CONDITIONS.has(value)) {
+    return [
+      "Condition must be one of: New, Used.",
+    ];
+  }
+
+  return [];
+}
+
+function validateStatus(payload) {
+  const value = payload.status;
+
+  if (!VALID_STATUSES.has(value)) {
+    return [
+      "Status must be one of: Available, Pending Test Drive, Reserved, Sold.",
+    ];
+  }
+
+  return [];
 }
 
 function validatePositiveNumber(payload, field, label) {
@@ -97,7 +153,7 @@ function validateYear(payload) {
   const numericYear = toNumber(value);
 
   if (!Number.isInteger(numericYear)) {
-    return ["Year must be valid."];
+    return ["Year must be a whole number."];
   }
 
   if (numericYear < 1900 || numericYear > currentYear) {
@@ -132,10 +188,38 @@ function validateImages(payload) {
   return errors;
 }
 
+function validateOptionalTextFields(payload) {
+  const errors = [];
+
+  for (const field of ["vin", "description"]) {
+    const value = payload[field];
+
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    if (typeof value !== "string") {
+      errors.push(`${field} must be a valid text value.`);
+      continue;
+    }
+
+    if (hasScriptLikeContent(value)) {
+      errors.push(`${field} contains unsupported content.`);
+    }
+  }
+
+  return errors;
+}
+
 export function validateCarPayloadContract(payload = {}) {
   const cleanedPayload = cleanCarPayload(payload);
+
   const errors = [
     ...validateRequiredTextFields(cleanedPayload),
+    ...validateOptionalTextFields(cleanedPayload),
+    ...validateVin(cleanedPayload),
+    ...validateCondition(cleanedPayload),
+    ...validateStatus(cleanedPayload),
     ...validatePositiveNumber(cleanedPayload, "price", "Price"),
     ...validateNonNegativeNumber(cleanedPayload, "mileage", "Mileage"),
     ...validateYear(cleanedPayload),
@@ -161,5 +245,6 @@ export function validateCarPayload(req, res, next) {
   }
 
   req.body = result.cleanedPayload;
+
   return next();
 }
