@@ -1,0 +1,126 @@
+# Sprint 10 required endpoint tests
+@baseUrl = http://localhost:5500
+@testName = Sprint 10 API User
+@testEmail = sprint10-api-user@example.com
+@testPassword = replace-with-local-test-password
+@unknownEmail = unknown-sprint10-user@example.com
+@adminToken = replace-with-admin-access-token
+@userToken = replace-with-user-access-token
+@invalidToken = invalid-token-placeholder
+@vehicleId = 1
+@appointmentDate = 2026-10-01
+@appointmentTime = 10:00
+
+### Registration success, expected 201
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{"name":"{{testName}}","email":"{{testEmail}}","password":"{{testPassword}}","role":"user"}
+
+### Registration missing name, expected 400
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{"email":"{{testEmail}}","password":"{{testPassword}}"}
+
+### Registration invalid email, current limitation: format is not validated
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{"name":"Invalid Email Test","email":"not-an-email","password":"{{testPassword}}","role":"user"}
+
+### Registration duplicate, expected 409 after successful registration
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{"name":"{{testName}}","email":"{{testEmail}}","password":"{{testPassword}}","role":"user"}
+
+### Login success, expected 200
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"email":"{{testEmail}}","password":"{{testPassword}}"}
+
+### Login invalid password, expected 401
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"email":"{{testEmail}}","password":"incorrect-local-test-password"}
+
+### Login unknown user, expected 401
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"email":"{{unknownEmail}}","password":"{{testPassword}}"}
+
+### Login missing password, expected 400
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{"email":"{{testEmail}}"}
+
+### Cars public inventory, expected 200
+GET {{baseUrl}}/api/cars
+
+### Cars filter query, current limitation: query parameters are ignored
+GET {{baseUrl}}/api/cars?brand=Toyota
+
+### Cars sorting query, current limitation: server sorting is unsupported
+GET {{baseUrl}}/api/cars?sortBy=price&sortOrder=asc
+
+### Cars empty result: run against an empty test database
+GET {{baseUrl}}/api/cars
+
+### Cars invalid query, current limitation: unknown parameters are ignored
+GET {{baseUrl}}/api/cars?unsupportedQuery=true
+
+### Test drive success, expected 201
+POST {{baseUrl}}/api/test-drives
+Content-Type: application/json
+
+{"customerName":"{{testName}}","customerEmail":"{{testEmail}}","phone":"+256700000000","vehicleId":"{{vehicleId}}","appointmentDate":"{{appointmentDate}}","appointmentTime":"{{appointmentTime}}","notes":"Sprint 10 manual test"}
+
+### Test drive missing vehicle, expected 400
+POST {{baseUrl}}/api/test-drives
+Content-Type: application/json
+
+{"customerName":"{{testName}}","customerEmail":"{{testEmail}}","appointmentDate":"{{appointmentDate}}","appointmentTime":"{{appointmentTime}}"}
+
+### Test drive invalid date, current limitation: format is not validated
+POST {{baseUrl}}/api/test-drives
+Content-Type: application/json
+
+{"customerName":"{{testName}}","customerEmail":"{{testEmail}}","vehicleId":"{{vehicleId}}","appointmentDate":"not-a-date","appointmentTime":"{{appointmentTime}}"}
+
+### Test drive invalid time, current limitation: format is not validated
+POST {{baseUrl}}/api/test-drives
+Content-Type: application/json
+
+{"customerName":"{{testName}}","customerEmail":"{{testEmail}}","vehicleId":"{{vehicleId}}","appointmentDate":"{{appointmentDate}}","appointmentTime":"not-a-time"}
+
+### Test drive missing phone, current limitation: phone is optional
+POST {{baseUrl}}/api/test-drives
+Content-Type: application/json
+
+{"customerName":"{{testName}}","customerEmail":"{{testEmail}}","vehicleId":"{{vehicleId}}","appointmentDate":"{{appointmentDate}}","appointmentTime":"{{appointmentTime}}"}
+
+### Test drive conflict, current limitation: persistence and conflicts are unsupported
+POST {{baseUrl}}/api/test-drives
+Content-Type: application/json
+
+{"customerName":"{{testName}}","customerEmail":"{{testEmail}}","vehicleId":"{{vehicleId}}","appointmentDate":"{{appointmentDate}}","appointmentTime":"{{appointmentTime}}"}
+
+### Admin stats missing token, expected 401
+GET {{baseUrl}}/api/admin/stats
+
+### Admin stats invalid token, expected 401
+GET {{baseUrl}}/api/admin/stats
+Authorization: Bearer {{invalidToken}}
+
+### Admin stats non-admin token, expected 403
+GET {{baseUrl}}/api/admin/stats
+Authorization: Bearer {{userToken}}
+
+### Admin stats admin token, expected 200
+GET {{baseUrl}}/api/admin/stats
+Authorization: Bearer {{adminToken}}

@@ -1,7 +1,6 @@
 import { uploadImage } from "../services/cloudinaryService.js";
 import { createCarImage } from "../models/carImagesModel.js";
 
-import { createCarImage } from "../models/uploadModel";
 
 export const uploadCarImage = async (req, res) => {
   try {
