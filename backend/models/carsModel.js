@@ -4,7 +4,7 @@ import db from "../config/db.js";
 
 export const getAllCars = async () => {
   const carsQuery = `
-    SELECT 
+    SELECT
       c.*,
       COALESCE(
         json_agg(
@@ -36,9 +36,10 @@ export const getAllCars = async () => {
 };
 
 // GET SINGLE CAR
+
 export const getCarById = async (id) => {
   const carQuery = `
-    SELECT 
+    SELECT
       c.*,
       cs.power,
       cs.engine,
@@ -49,9 +50,10 @@ export const getCarById = async (id) => {
   `;
 
   const imagesQuery = `
-    SELECT image_url 
-    FROM car_images 
-    WHERE car_id = $1;
+    SELECT image_url, image_type
+    FROM car_images
+    WHERE car_id = $1
+    ORDER BY id ASC;
   `;
 
   const car = await db.query(carQuery, [id]);
@@ -59,75 +61,136 @@ export const getCarById = async (id) => {
 
   return {
     car: car.rows[0],
-    images: images.rows
+    images: images.rows,
   };
 };
 
 // CREATE CAR
+
 export const createCar = async (data) => {
   const {
+    vin,
+    make,
+    model,
     name,
-    brand,
     type,
     category,
     year,
     price,
+    mileage,
+    color,
+    condition,
+    status,
+    description,
     power,
     engine,
     drive,
-    images
+    images = [],
   } = data;
 
-  const carInsert = `
-    INSERT INTO cars (name, brand, type, category, year, price)
-    VALUES ($1,$2,$3,$4,$5,$6)
-    RETURNING id;
-  `;
+  await db.query("BEGIN");
 
-  const carResult = await db.query(carInsert, [
-    name,
-    brand,
-    type,
-    category,
-    year,
-    price
-  ]);
+  try {
+    const carInsert = `
+      INSERT INTO cars (
+        vin,
+        make,
+        model,
+        name,
+        type,
+        category,
+        year,
+        price,
+        mileage,
+        color,
+        condition,
+        status,
+        description
+      )
+      VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
+      )
+      RETURNING id;
+    `;
 
-  const carId = carResult.rows[0].id;
+    const carResult = await db.query(carInsert, [
+      vin,
+      make,
+      model,
+      name,
+      type,
+      category,
+      year,
+      price,
+      mileage,
+      color,
+      condition,
+      status,
+      description ?? null,
+    ]);
 
-  // specs
-  await db.query(
-    `INSERT INTO car_specs (car_id, power, engine, drive)
-     VALUES ($1,$2,$3,$4)`,
-    [carId, power, engine, drive]
-  );
+    const carId = carResult.rows[0].id;
 
-  // images
-  if (images && images.length > 0) {
-    for (let i = 0; i < images.length; i++) {
-      await db.query(
-        `INSERT INTO car_images (car_id, image_url, is_primary)
-         VALUES ($1,$2,$3)`,
-        [carId, images[i], i === 0]
-      );
+    // Vehicle specifications
+
+    await db.query(
+      `
+        INSERT INTO car_specs (
+          car_id,
+          power,
+          engine,
+          drive
+        )
+        VALUES ($1,$2,$3,$4);
+      `,
+      [carId, power, engine, drive],
+    );
+
+    // Initial images
+
+    if (Array.isArray(images) && images.length > 0) {
+      for (let i = 0; i < images.length; i += 1) {
+        const image = images[i];
+
+        if (typeof image !== "string" || image.trim() === "") {
+          continue;
+        }
+
+        await db.query(
+          `
+            INSERT INTO car_images (
+              car_id,
+              image_url,
+              image_type
+            )
+            VALUES ($1,$2,$3);
+          `,
+          [carId, image.trim(), i === 0 ? "primary" : "general"],
+        );
+      }
     }
-  }
 
-  return carId;
+    await db.query("COMMIT");
+
+    return carId;
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  }
 };
 
 export const saveCarImage = async (carId, imageUrl, imageType = "general") => {
   const query = `
-    INSERT INTO car_images (car_id, image_url, image_type)
+    INSERT INTO car_images (
+      car_id,
+      image_url,
+      image_type
+    )
     VALUES ($1, $2, $3)
     RETURNING id, car_id, image_url, image_type;
   `;
 
-  const result = await db.query(query, [
-    carId,
-    imageUrl,
-    imageType
-  ]);
+  const result = await db.query(query, [carId, imageUrl, imageType]);
 
   return result.rows[0];
 };
@@ -177,7 +240,9 @@ export const deleteCarImageRecordById = async ({
   timestampField = "created_at",
 } = {}) => {
   const safeTimestampField = normalizeCleanupTimestampField(timestampField);
+
   const safeStatuses = normalizeCleanupStatuses(statuses);
+
   const safeOlderThanDays = normalizeCleanupOlderThanDays(olderThanDays);
 
   const query = `
@@ -190,7 +255,11 @@ export const deleteCarImageRecordById = async ({
     RETURNING ci.id, ci.car_id, ci.image_url;
   `;
 
-  const result = await db.query(query, [imageId, safeStatuses, safeOlderThanDays]);
+  const result = await db.query(query, [
+    imageId,
+    safeStatuses,
+    safeOlderThanDays,
+  ]);
 
   return {
     deletedCount: result.rowCount,
@@ -205,7 +274,9 @@ export const deleteCarImageRecords = async ({
   timestampField = "created_at",
 } = {}) => {
   const safeTimestampField = normalizeCleanupTimestampField(timestampField);
+
   const safeStatuses = normalizeCleanupStatuses(statuses);
+
   const safeOlderThanDays = normalizeCleanupOlderThanDays(olderThanDays);
 
   const query = `
@@ -218,7 +289,11 @@ export const deleteCarImageRecords = async ({
     RETURNING ci.id, ci.car_id, ci.image_url;
   `;
 
-  const result = await db.query(query, [carId, safeStatuses, safeOlderThanDays]);
+  const result = await db.query(query, [
+    carId,
+    safeStatuses,
+    safeOlderThanDays,
+  ]);
 
   return {
     deletedCount: result.rowCount,
