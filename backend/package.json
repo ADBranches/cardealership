@@ -14,16 +14,18 @@
     "test:car-image-cleanup": "node tests/carImageCleanup.manual.js"
   },
   "dependencies": {
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "pdfkit": "^0.20.2",
-    "pdfmake": "^0.3.11",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.10.0",
     "compression": "^1.8.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "forwarded": "^0.2.0",
+    "ipaddr.js": "^2.5.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
+    "pdfkit": "^0.20.2",
+    "pdfmake": "^0.3.11",
     "pg": "^8.21.0",
     "sharp": "^0.35.3",
     "winston": "^3.19.0"
