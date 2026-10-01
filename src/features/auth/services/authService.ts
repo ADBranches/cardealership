@@ -58,7 +58,7 @@ export async function restoreStoredSession(
     return null;
   }
 
-  const session = {
+  const session: AuthSession = {
     accessToken: token,
     user: result.user,
   };
@@ -68,21 +68,10 @@ export async function restoreStoredSession(
   return session;
 }
 
-type LoginApiResponse = {
-  success?: boolean;
-  message?: string;
-  token?: string;
-  user?: {
-    id?: number | string;
-    name?: string;
-    email?: string;
-    role?: string;
-  };
-};
-
-export async function login(
-  credentials: LoginCredentials,
-): Promise<{ success: boolean; message: string }> {
+export async function login(credentials: LoginCredentials): Promise<{
+  success: boolean;
+  message: string;
+}> {
   try {
     const response = await fetch(buildApiUrl("/api/auth/login"), {
       method: "POST",
@@ -96,12 +85,22 @@ export async function login(
       }),
     });
 
-    const data = (await response.json().catch(() => ({}))) as LoginApiResponse;
+    const data = (await response.json().catch(() => ({}))) as {
+      success?: boolean;
+      message?: string;
+      token?: string;
+      user?: {
+        id?: number | string;
+        name?: string;
+        email?: string;
+        role?: string;
+      };
+    };
 
-    if (!response.ok || data.success !== true) {
+    if (!response.ok || !data.success) {
       return {
         success: false,
-        message: data.message ?? "Unable to sign in.",
+        message: data.message ?? "Login failed.",
       };
     }
 
@@ -113,20 +112,12 @@ export async function login(
       };
     }
 
-    if (data.user.id === undefined || !data.user.email || !data.user.role) {
-      return {
-        success: false,
-        message:
-          "Login succeeded, but the server returned incomplete user information.",
-      };
-    }
-
     const session: AuthSession = {
       accessToken: data.token,
       user: {
         id: String(data.user.id),
         name: data.user.name,
-        email: data.user.email,
+        email: data.user.email ?? credentials.email.trim().toLowerCase(),
         role: data.user.role,
         isAdmin: data.user.role === "admin",
       },
@@ -149,9 +140,10 @@ export async function login(
   }
 }
 
-export async function register(
-  credentials: RegisterCredentials,
-): Promise<{ success: boolean; message: string }> {
+export async function register(credentials: RegisterCredentials): Promise<{
+  success: boolean;
+  message: string;
+}> {
   void credentials;
 
   return {

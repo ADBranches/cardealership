@@ -28,15 +28,35 @@ export function useChatSocket(options: UseChatSocketOptions) {
   const previousRoomRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const environment = getChatEnvironment();
-    const adapter = createChatSocket({
-      gatewayUrl: environment.gatewayUrl,
-      transport: environment.transport,
-      mockMode: environment.mockMode,
-      authentication: {
-        accessToken: options.accessToken ?? "",
-      },
-    });
+    let adapter: ChatSocketAdapter;
+
+    try {
+      const environment = getChatEnvironment();
+
+      adapter = createChatSocket({
+        gatewayUrl: environment.gatewayUrl,
+        transport: environment.transport,
+        mockMode: environment.mockMode,
+        authentication: {
+          accessToken: options.accessToken ?? "",
+        },
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Chat connection is unavailable.";
+
+      options.onConnectionStatus("error");
+      options.onError({
+        code: "CONNECTION_FAILED",
+        message,
+      });
+
+      adapterRef.current = null;
+
+      return;
+    }
 
     adapterRef.current = adapter;
 
@@ -63,7 +83,11 @@ export function useChatSocket(options: UseChatSocketOptions) {
 
     return () => {
       previousRoomRef.current = null;
-      for (const unsubscribe of unsubscribes) unsubscribe();
+
+      for (const unsubscribe of unsubscribes) {
+        unsubscribe();
+      }
+
       adapter.disconnect();
       adapterRef.current = null;
     };
@@ -81,6 +105,7 @@ export function useChatSocket(options: UseChatSocketOptions) {
     if (!adapter) return;
 
     const previousRoom = previousRoomRef.current;
+
     if (previousRoom && previousRoom !== options.activeInquiryId) {
       adapter.leaveRoom({ inquiryId: previousRoom });
     }
