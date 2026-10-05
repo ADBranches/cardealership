@@ -6,6 +6,9 @@ export const getAllCars = async () => {
   const carsQuery = `
     SELECT
       c.*,
+      cs.power,
+      cs.engine,
+      cs.drive,
       COALESCE(
         json_agg(
           json_build_object(
@@ -25,8 +28,9 @@ export const getAllCars = async () => {
       ) AS primary_image
 
     FROM cars c
+    LEFT JOIN car_specs cs ON cs.car_id = c.id
     LEFT JOIN car_images ci ON ci.car_id = c.id
-    GROUP BY c.id
+    GROUP BY c.id, cs.power, cs.engine, cs.drive
     ORDER BY c.created_at DESC
     LIMIT 20;
   `;
@@ -41,6 +45,9 @@ export const getCarById = async (id) => {
   const carQuery = `
     SELECT
       c.*,
+      cs.power,
+      cs.engine,
+      cs.drive,
       cs.power,
       cs.engine,
       cs.drive
@@ -131,8 +138,6 @@ export const createCar = async (data) => {
 
     const carId = carResult.rows[0].id;
 
-    // Vehicle specifications
-
     await db.query(
       `
         INSERT INTO car_specs (
@@ -145,8 +150,6 @@ export const createCar = async (data) => {
       `,
       [carId, power, engine, drive],
     );
-
-    // Initial images
 
     if (Array.isArray(images) && images.length > 0) {
       for (let i = 0; i < images.length; i += 1) {
@@ -178,6 +181,166 @@ export const createCar = async (data) => {
     throw error;
   }
 };
+
+// UPDATE CAR
+
+export const updateCar = async (id, data) => {
+  const allowedCarFields = [
+    "vin",
+    "make",
+    "model",
+    "name",
+    "type",
+    "category",
+    "year",
+    "price",
+    "mileage",
+    "color",
+    "condition",
+    "status",
+    "description",
+  ];
+
+  const specFields = ["power", "engine", "drive"];
+
+  const carEntries = Object.entries(data).filter(
+    ([field, value]) => allowedCarFields.includes(field) && value !== undefined,
+  );
+
+  const specEntries = Object.entries(data).filter(
+    ([field, value]) => specFields.includes(field) && value !== undefined,
+  );
+
+  await db.query("BEGIN");
+
+  try {
+    const existing = await db.query(`SELECT id FROM cars WHERE id = $1;`, [id]);
+
+    if (existing.rowCount === 0) {
+      await db.query("ROLLBACK");
+      return null;
+    }
+
+    if (carEntries.length > 0) {
+      const assignments = carEntries.map(
+        ([field], index) => `${field} = $${index + 1}`,
+      );
+
+      const values = carEntries.map(([, value]) => value);
+
+      values.push(id);
+
+      await db.query(
+        `
+          UPDATE cars
+          SET
+            ${assignments.join(", ")},
+            updated_at = NOW()
+          WHERE id = $${values.length};
+        `,
+        values,
+      );
+    }
+
+    if (specEntries.length > 0) {
+      const currentSpecs = await db.query(
+        `
+          SELECT power, engine, drive
+          FROM car_specs
+          WHERE car_id = $1;
+        `,
+        [id],
+      );
+
+      const current = currentSpecs.rows[0] ?? {};
+
+      const nextSpecs = {
+        power: data.power !== undefined ? data.power : (current.power ?? ""),
+        engine:
+          data.engine !== undefined ? data.engine : (current.engine ?? ""),
+        drive: data.drive !== undefined ? data.drive : (current.drive ?? ""),
+      };
+
+      if (currentSpecs.rowCount > 0) {
+        await db.query(
+          `
+            UPDATE car_specs
+            SET
+              power = $1,
+              engine = $2,
+              drive = $3
+            WHERE car_id = $4;
+          `,
+          [nextSpecs.power, nextSpecs.engine, nextSpecs.drive, id],
+        );
+      } else {
+        await db.query(
+          `
+            INSERT INTO car_specs (
+              car_id,
+              power,
+              engine,
+              drive
+            )
+            VALUES ($1, $2, $3, $4);
+          `,
+          [id, nextSpecs.power, nextSpecs.engine, nextSpecs.drive],
+        );
+      }
+    }
+
+    await db.query("COMMIT");
+
+    return getCarById(id);
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  }
+};
+
+// DELETE CAR
+
+export const deleteCar = async (id) => {
+  await db.query("BEGIN");
+
+  try {
+    const existing = await db.query(
+      `
+        SELECT id, name
+        FROM cars
+        WHERE id = $1;
+      `,
+      [id],
+    );
+
+    if (existing.rowCount === 0) {
+      await db.query("ROLLBACK");
+      return null;
+    }
+
+    await db.query(`DELETE FROM car_images WHERE car_id = $1;`, [id]);
+
+    await db.query(`DELETE FROM car_specs WHERE car_id = $1;`, [id]);
+
+    const result = await db.query(
+      `
+        DELETE FROM cars
+        WHERE id = $1
+        RETURNING id, name;
+      `,
+      [id],
+    );
+
+    await db.query("COMMIT");
+
+    return result.rows[0];
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  }
+};
+
+// SAVE CAR IMAGE
 
 export const saveCarImage = async (carId, imageUrl, imageType = "general") => {
   const query = `
@@ -308,3 +471,5 @@ export const markCarImagesCleaned = async () => ({
   skipped: true,
   reason: "No image cleanup marker column is currently defined for car_images.",
 });
+
+

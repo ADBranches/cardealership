@@ -1,56 +1,28 @@
 import { useState } from "react";
 import { useAuth } from "../../../features/auth/hooks";
-import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AdminListingsTable } from "./AdminListingsTable";
 import { AddNewCarForm } from "./AddNewCarForm";
 import { DispatchBoard } from "../../../features/admin-dispatch/components";
 
-type AdminVehicle = {
-  id: number;
-  name: string;
-  brand: string;
-  type: string;
-  year: number;
-  price: number;
-  condition: string;
-  image: string;
-  specs: {
-    power: string;
-    engine: string;
-    drive: string;
-  };
-};
-
-type AdminDashboardProps = {
-  vehicles: AdminVehicle[];
-};
-
 /**
  * AdminDashboard
  *
  * Purpose:
- * Private admin dashboard entry component for dealership managers.
+ * Private admin inventory dashboard for dealership managers.
  *
- * Current behavior:
- * - Blocks unauthenticated users.
- * - Blocks authenticated non-admin users.
- * - Shows inventory controls only when admin access is detected.
+ * Responsibilities:
+ * - Verify administrator access.
+ * - Provide inventory workflow navigation.
+ * - Host vehicle creation, inventory management, and dispatch operations.
  *
- * TODO:
- * Replace temporary localStorage-based auth checks with the team's final
- * JWT/auth provider once the backend role payload and login route are confirmed.
+ * Inventory data is owned by the inventory components rather than being
+ * supplied by the application router.
  */
-
-export function AdminDashboard({ vehicles }: AdminDashboardProps) {
-  const [loginNotice, setLoginNotice] = useState("");
+export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("add-vehicle");
 
-  const {
-    user,
-    isAuthenticated,
-    isAuthReady,
-  } = useAuth();
+  const { user, isAuthenticated, isAuthReady } = useAuth();
 
   if (!isAuthReady) {
     return (
@@ -73,9 +45,11 @@ export function AdminDashboard({ vehicles }: AdminDashboardProps) {
           <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-primary">
             Administrator access required
           </p>
+
           <h3 className="mb-4 text-4xl font-bold md:text-6xl">
             ACCESS UNAVAILABLE
           </h3>
+
           <p className="text-lg text-muted-foreground">
             A verified administrator session is required.
           </p>
@@ -107,19 +81,26 @@ export function AdminDashboard({ vehicles }: AdminDashboardProps) {
             <TabsTrigger value="add-vehicle" className="font-semibold">
               Add Vehicle
             </TabsTrigger>
+
             <TabsTrigger value="manage-inventory" className="font-semibold">
               Manage Inventory
             </TabsTrigger>
-            <TabsTrigger value="dispatch" className="font-semibold">Dispatch Board</TabsTrigger>
+
+            <TabsTrigger value="dispatch" className="font-semibold">
+              Dispatch Board
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="add-vehicle">
-            <AddNewCarForm onPublishSuccess={() => setActiveTab("manage-inventory")} />
+            <AddNewCarForm
+              onPublishSuccess={() => setActiveTab("manage-inventory")}
+            />
           </TabsContent>
 
           <TabsContent value="manage-inventory">
-            <AdminListingsTable vehicles={vehicles} />
+            <AdminListingsTable />
           </TabsContent>
+
           <TabsContent value="dispatch">
             <DispatchBoard />
           </TabsContent>

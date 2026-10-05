@@ -13,7 +13,6 @@ export type DeleteVehicle = {
   name?: string;
   make?: string;
   model?: string;
-  brand?: string;
   year?: number;
   price?: number;
   condition?: string;
@@ -26,27 +25,42 @@ export type DeleteVehicle = {
 type DeleteConfirmModalProps = {
   vehicle: DeleteVehicle | null;
   open: boolean;
+  isDeleting?: boolean;
+  error?: string;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void> | void;
 };
 
 function formatUGX(amount?: number) {
-  if (amount === undefined) return "Price not available";
-  if (amount >= 1_000_000_000) return "UGX " + (amount / 1_000_000_000).toFixed(1) + "B";
-  if (amount >= 1_000_000) return "UGX " + (amount / 1_000_000).toFixed(0) + "M";
+  if (amount === undefined) {
+    return "Price not available";
+  }
+
+  if (amount >= 1_000_000_000) {
+    return "UGX " + (amount / 1_000_000_000).toFixed(1) + "B";
+  }
+
+  if (amount >= 1_000_000) {
+    return "UGX " + (amount / 1_000_000).toFixed(0) + "M";
+  }
+
   return "UGX " + amount.toLocaleString();
 }
 
 function getVehicleLabel(vehicle: DeleteVehicle) {
-  const brandOrMake = vehicle.brand ?? vehicle.make ?? "";
-  const modelOrName = vehicle.name ?? vehicle.model ?? "";
-
-  return (brandOrMake + " " + modelOrName).trim() || "Selected vehicle";
+  return (
+    [vehicle.make, vehicle.model || vehicle.name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || "Selected vehicle"
+  );
 }
 
 export function DeleteConfirmModal({
   vehicle,
   open,
+  isDeleting = false,
+  error = "",
   onOpenChange,
   onConfirm,
 }: DeleteConfirmModalProps) {
@@ -55,36 +69,73 @@ export function DeleteConfirmModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!isDeleting) {
+          onOpenChange(nextOpen);
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Confirm Vehicle Removal</DialogTitle>
+
           <DialogDescription>
-            Please review the selected listing before removing it from the admin dashboard view.
-            Backend deletion is not connected yet.
+            This permanently removes the selected vehicle from dealership
+            inventory. This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
 
         <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-          <p className="font-semibold text-foreground">{getVehicleLabel(vehicle)}</p>
+          <p className="font-semibold text-foreground">
+            {getVehicleLabel(vehicle)}
+          </p>
+
+          <p className="text-sm text-muted-foreground">
+            Listing: {vehicle.name ?? "Not available"}
+          </p>
+
           <p className="text-sm text-muted-foreground">
             Year: {vehicle.year ?? "Not available"}
           </p>
+
           <p className="text-sm text-muted-foreground">
             Condition: {vehicle.condition ?? "Not available"}
           </p>
+
           <p className="text-sm text-muted-foreground">
-            Drive: {vehicle.specs?.drive ?? "Not available"}
+            Status: {vehicle.status ?? "Not available"}
           </p>
-          <p className="text-sm font-medium text-primary">{formatUGX(vehicle.price)}</p>
+
+          <p className="text-sm font-medium text-primary">
+            {formatUGX(vehicle.price)}
+          </p>
         </div>
 
+        {error && (
+          <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-700">
+            {error}
+          </div>
+        )}
+
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isDeleting}
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm}>
-            Confirm Delete
+
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={isDeleting}
+            onClick={() => void onConfirm()}
+          >
+            {isDeleting ? "Deleting..." : "Confirm Delete"}
           </Button>
         </DialogFooter>
       </DialogContent>

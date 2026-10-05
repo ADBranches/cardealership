@@ -1,14 +1,22 @@
-import { Calendar, CheckCircle2, Clock, LogIn } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Calendar, CheckCircle2, LogIn } from "lucide-react";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent } from "../../../components/ui/card";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import { useTestDrive } from "../hooks";
 import { AvailabilitySlotPicker } from "./AvailabilitySlotPicker";
 import type { TestDriveVehicleOption } from "../types";
 
 interface TestDriveSchedulerProps {
   vehicles: TestDriveVehicleOption[];
+}
+
+function getVehicleLabel(vehicle: TestDriveVehicleOption | undefined) {
+  if (!vehicle) {
+    return "selected vehicle";
+  }
+
+  return [vehicle.make, vehicle.model, vehicle.name].filter(Boolean).join(" ");
 }
 
 export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
@@ -41,10 +49,14 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
           <p className="text-primary text-sm font-bold tracking-[0.3em] mb-4 uppercase">
             Book Your Slot
           </p>
-          <h3 className="text-5xl md:text-6xl font-bold mb-4">SCHEDULE A TEST DRIVE</h3>
+
+          <h3 className="text-5xl md:text-6xl font-bold mb-4">
+            SCHEDULE A TEST DRIVE
+          </h3>
+
           <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-            Pick your preferred vehicle, choose a valid date and time, and our team will help
-            reserve your showroom test drive.
+            Pick your preferred vehicle, choose a valid date and time, and our
+            team will help reserve your showroom test drive.
           </p>
         </div>
 
@@ -52,12 +64,20 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
           <CardContent className="p-6 md:p-8">
             {success ? (
               <div className="text-center py-10">
-                <CheckCircle2 className="mx-auto mb-5 text-green-600" size={64} />
-                <h4 className="text-3xl font-bold mb-3">Test Drive Request Sent</h4>
+                <CheckCircle2
+                  className="mx-auto mb-5 text-green-600"
+                  size={64}
+                />
+
+                <h4 className="text-3xl font-bold mb-3">
+                  Test Drive Request Sent
+                </h4>
+
                 <p className="text-muted-foreground mb-6">
-                  Your request for {selectedVehicle?.brand} {selectedVehicle?.name} on {date} at{" "}
-                  {time} has been captured.
+                  Your request for {getVehicleLabel(selectedVehicle)} on {date}{" "}
+                  at {time} has been captured.
                 </p>
+
                 <Button
                   type="button"
                   onClick={resetSuccess}
@@ -84,15 +104,18 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <Label htmlFor="vehicle">Vehicle</Label>
+
                     <select
                       id="vehicle"
                       value={selectedVehicleId}
-                      onChange={(event) => setSelectedVehicleId(event.target.value)}
+                      onChange={(event) =>
+                        setSelectedVehicleId(event.target.value)
+                      }
                       className="h-12 w-full rounded-lg border border-border bg-background px-4 text-sm"
                     >
                       {vehicles.map((vehicle) => (
                         <option key={vehicle.id} value={vehicle.id}>
-                          {vehicle.brand} {vehicle.name} — {vehicle.year}
+                          {getVehicleLabel(vehicle)} — {vehicle.year}
                         </option>
                       ))}
                     </select>
@@ -100,6 +123,7 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
+
                     <Input
                       id="phone"
                       type="tel"
@@ -115,6 +139,7 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
                       <Calendar size={16} />
                       Date
                     </Label>
+
                     <Input
                       id="date"
                       type="date"
@@ -136,6 +161,7 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
 
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notes</Label>
+
                   <textarea
                     id="notes"
                     value={notes}

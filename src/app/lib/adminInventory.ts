@@ -1,8 +1,13 @@
-export type VehicleStatus = "Available" | "Pending Test Drive" | "Sold";
+export type VehicleStatus =
+  | "Available"
+  | "Pending Test Drive"
+  | "Reserved"
+  | "Sold";
 
 export const VEHICLE_STATUSES: VehicleStatus[] = [
   "Available",
   "Pending Test Drive",
+  "Reserved",
   "Sold",
 ];
 

@@ -14,38 +14,22 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import type { AdminVehicle } from "../../../types/vehicle";
 
-type EditVehicle = {
-  id: number;
-  name: string;
-  brand: string;
-  year: number;
-  price: number;
-  condition: string;
-  status?: VehicleStatus;
-};
-
 type EditVehicleModalProps = {
   vehicle: AdminVehicle | null;
   open: boolean;
+  isSaving?: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (updatedVehicle: AdminVehicle) => void;
+  onSave: (updates: {
+    price: number;
+    condition: string;
+    status: VehicleStatus;
+  }) => Promise<void> | void;
 };
-
-function getInitialStatus(vehicle: EditVehicle): VehicleStatus {
-  if (vehicle.status) {
-    return vehicle.status;
-  }
-
-  if (vehicle.condition === "Sold") {
-    return "Sold";
-  }
-
-  return "Available";
-}
 
 export function EditVehicleModal({
   vehicle,
   open,
+  isSaving = false,
   onOpenChange,
   onSave,
 }: EditVehicleModalProps) {
@@ -55,55 +39,66 @@ export function EditVehicleModal({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!vehicle) return;
+    if (!vehicle) {
+      return;
+    }
 
     setPrice(vehicle.price.toString());
     setCondition(vehicle.condition);
-    setStatus(getInitialStatus(vehicle));
+    setStatus(vehicle.status ?? "Available");
     setError("");
   }, [vehicle]);
 
-  function handleSave() {
-    if (!vehicle) return;
+  async function handleSave() {
+    if (!vehicle || isSaving) {
+      return;
+    }
 
     const parsedPrice = Number(price);
 
-    if (!price.trim() || Number.isNaN(parsedPrice) || parsedPrice <= 0) {
+    if (!price.trim() || !Number.isFinite(parsedPrice) || parsedPrice <= 0) {
       setError("Please enter a valid vehicle price.");
       return;
     }
 
-    if (!condition.trim()) {
-      setError("Please select a valid vehicle condition.");
+    if (condition !== "New" && condition !== "Used") {
+      setError("Condition must be either New or Used.");
       return;
     }
 
-    if (!status) {
-      setError("Please select a valid vehicle status.");
-      return;
+    setError("");
+
+    try {
+      await onSave({
+        price: parsedPrice,
+        condition,
+        status,
+      });
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Unable to update the vehicle.",
+      );
     }
-
-    // TODO: Replace this UI-only update with protected PUT /api/cars/:id
-    // once the backend inventory update endpoint and admin JWT middleware are confirmed.
-    onSave({
-      ...vehicle,
-      price: parsedPrice,
-      condition,
-      status,
-    });
-
-    onOpenChange(false);
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!isSaving) {
+          onOpenChange(nextOpen);
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Vehicle Listing</DialogTitle>
+
           <DialogDescription>
-            Update listing details for the selected vehicle. These changes are
-            applied to the current admin dashboard view only until the protected
-            backend update endpoint is connected.
+            Update the vehicle price, condition, and inventory status. Saved
+            changes are written directly to the dealership inventory.
           </DialogDescription>
         </DialogHeader>
 
@@ -111,10 +106,11 @@ export function EditVehicleModal({
           <div className="space-y-5">
             <div className="rounded-lg border border-border bg-muted/30 p-4">
               <p className="font-semibold">
-                {vehicle.brand} {vehicle.name}
+                {vehicle.make} {vehicle.model || vehicle.name}
               </p>
+
               <p className="text-sm text-muted-foreground">
-                Year: {vehicle.year}
+                {vehicle.name} · Year: {vehicle.year}
               </p>
             </div>
 
@@ -126,11 +122,13 @@ export function EditVehicleModal({
 
             <div className="space-y-2">
               <Label htmlFor="edit-price">Price</Label>
+
               <Input
                 id="edit-price"
                 type="number"
                 min="1"
                 value={price}
+                disabled={isSaving}
                 onChange={(event) => setPrice(event.target.value)}
                 placeholder="Enter vehicle price"
               />
@@ -138,24 +136,29 @@ export function EditVehicleModal({
 
             <div className="space-y-2">
               <Label htmlFor="edit-condition">Condition</Label>
+
               <select
                 id="edit-condition"
                 value={condition}
+                disabled={isSaving}
                 onChange={(event) => setCondition(event.target.value)}
                 className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
               >
                 <option value="New">New</option>
                 <option value="Used">Used</option>
-                <option value="Sold">Sold</option>
               </select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="edit-status">Status</Label>
+
               <select
                 id="edit-status"
                 value={status}
-                onChange={(event) => setStatus(event.target.value as VehicleStatus)}
+                disabled={isSaving}
+                onChange={(event) =>
+                  setStatus(event.target.value as VehicleStatus)
+                }
                 className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
               >
                 {VEHICLE_STATUSES.map((vehicleStatus) => (
@@ -172,6 +175,7 @@ export function EditVehicleModal({
           <Button
             type="button"
             variant="outline"
+            disabled={isSaving}
             onClick={() => onOpenChange(false)}
           >
             Cancel
@@ -179,10 +183,11 @@ export function EditVehicleModal({
 
           <Button
             type="button"
+            disabled={isSaving}
             className="bg-primary text-white hover:bg-primary/90"
-            onClick={handleSave}
+            onClick={() => void handleSave()}
           >
-            Save Changes
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>
