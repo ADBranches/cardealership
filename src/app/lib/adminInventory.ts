@@ -1,3 +1,4 @@
+import type { ListingReviewStatus } from "../../features/admin-operations/types";
 export type VehicleStatus = "Available" | "Pending Test Drive" | "Sold";
 
 export const VEHICLE_STATUSES: VehicleStatus[] = [
@@ -17,6 +18,7 @@ export type AdminVehicle = {
   price: number;
   mileage?: number;
   status: VehicleStatus;
+  reviewStatus?: ListingReviewStatus;
   condition?: string;
   image?: string;
   specs?: {
