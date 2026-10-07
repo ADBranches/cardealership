@@ -1,7 +1,9 @@
 import express from 'express';
+import { authenticateToken, checkRole } from "../middleware/authMiddleware.js";
 import db from '../config/database.js';
 
 const router = express.Router();
+router.use(authenticateToken, checkRole(["admin"]));
 
 // GET /api/admin/metrics - Full dashboard metrics
 router.get('/', async (req, res) => {

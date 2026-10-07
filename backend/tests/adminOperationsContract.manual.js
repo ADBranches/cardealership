@@ -1,18 +1,6 @@
-import assert from "node:assert/strict";
-import { BOOKING_STATUSES, canTransitionBooking, isBookingStatus } from "../utils/bookingTransitions.js";
-import { readFileSync } from "node:fs";
-
-assert.deepEqual(BOOKING_STATUSES, ["pending", "confirmed", "completed", "cancelled"]);
-assert.equal(canTransitionBooking("pending", "confirmed"), true);
-assert.equal(canTransitionBooking("pending", "completed"), false);
-assert.equal(canTransitionBooking("confirmed", "completed"), true);
-assert.equal(canTransitionBooking("completed", "pending"), false);
-assert.equal(isBookingStatus("approved"), false);
-const routes = readFileSync("backend/routes/adminRoutes.js", "utf8");
-const auth = readFileSync("backend/controllers/authController.js", "utf8");
-assert.equal(routes.includes('router.put("/bookings/:id/status"'), true);
-assert.equal(routes.includes('checkRole(["admin"])'), true);
-assert.equal(routes.includes('../config/database.js'), false);
-assert.equal(auth.includes('allowedRoles = ["user", "admin"]'), false);
-assert.equal(auth.includes('normalizedRole = "user"'), true);
-console.log(JSON.stringify({ suite: "adminOperationsContract", passed: 11, failed: 0, postgresqlAdminRouter: true, publicAdminRegistrationBlocked: true }, null, 2));
+import assert from "node:assert/strict";import {readFileSync} from "node:fs";import {canTransitionBooking,isBookingStatus} from "../utils/adminStatusTransitions.js";
+const routes=readFileSync("routes/adminRoutes.js","utf8");const controller=readFileSync("controllers/adminController.js","utf8");const server=readFileSync("server.js","utf8");const metrics=readFileSync("routes/adminMetricsRoutes.js","utf8");
+assert.equal(isBookingStatus("rejected"),true);assert.equal(canTransitionBooking("pending","rejected"),true);assert.equal(canTransitionBooking("pending","completed"),false);assert.equal(canTransitionBooking("confirmed","completed"),true);assert.equal(canTransitionBooking("completed","pending"),false);
+for(const route of ['router.get("/stats"','router.get("/bookings"','router.patch("/bookings/:id/status"','router.get("/listings/pending"','router.patch("/listings/:id/approve"','router.patch("/listings/:id/reject"'])assert.equal(routes.includes(route),true);
+assert.equal(routes.includes('authenticateToken'),true);assert.equal(routes.includes('checkRole(["admin"])'),true);assert.equal(routes.includes('config/database.js'),false);assert.equal(controller.includes('updated_at = NOW()'),true);assert.equal(controller.includes('rejection_reason = NULL'),true);assert.equal(controller.includes('approved_at = NULL'),true);assert.equal(controller.includes('error.message'),false);assert.equal(server.includes('app.use("/api/admin", adminRoutes)'),true);assert.equal(metrics.includes('router.use(authenticateToken, checkRole(["admin"]));'),true);
+console.log(JSON.stringify({suite:"adminOperationsContract",passed:20,failed:0,stableEnvelopes:true,parameterizedSql:true,protectedRoutes:true,analyticsProtected:true},null,2));

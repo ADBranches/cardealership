@@ -11,7 +11,8 @@
     "cleanup:car-images": "node scripts/cleanupStaleCarImages.js --dry-run",
     "cleanup:car-images:execute": "node scripts/cleanupStaleCarImages.js --execute",
     "cleanup:car-images:job": "node -e \"import('./jobs/cleanupStaleCarImagesJob.js').then(async (m) => console.log(JSON.stringify(await m.runCleanupStaleCarImagesJob(), null, 2)))\"",
-    "test:car-image-cleanup": "node tests/carImageCleanup.manual.js"
+    "test:car-image-cleanup": "node tests/carImageCleanup.manual.js",
+    "test:admin-operations": "node tests/adminOperationsContract.manual.js"
   },
   "dependencies": {
     "cors": "^2.8.6",
