@@ -3,6 +3,7 @@ export type {
   VehicleCategory,
   VehicleCondition,
   VehicleDrive,
+  VehicleStatus,
   VehicleFilterState,
   VehicleSpecs,
   InventoryTab,

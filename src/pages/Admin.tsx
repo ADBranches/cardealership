@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks';
 import { authenticatedApiRequest } from '../api/client';
 import { AdminChatNavLink } from "../features/admin-chat/components";
+import { DispatchBoard } from "../features/admin-dispatch/components";
 
 const Admin: React.FC = () => {
   const [stats, setStats] = useState({
@@ -62,7 +63,10 @@ const Admin: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{
+      <div
+        aria-busy="true"
+        aria-label="Verifying administrator access"
+        style={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
@@ -215,6 +219,10 @@ const Admin: React.FC = () => {
                 View sales and analytics reports
               </p>
             </div>
+          </div>
+
+          <div style={{ marginTop: "32px" }}>
+            <DispatchBoard />
           </div>
 
           {/* Recent Activity */}

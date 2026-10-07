@@ -12,7 +12,7 @@ import { generateToken } from "../utils/jwt.js";
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role = "user" } = req.body;
+    const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -32,9 +32,8 @@ export const register = async (req, res) => {
       });
     }
 
-    const allowedRoles = ["user", "admin"];
 
-    const normalizedRole = allowedRoles.includes(role) ? role : "user";
+    const normalizedRole = "user";
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
