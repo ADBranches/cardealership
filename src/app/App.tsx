@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/auth";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { AdminRoute } from "./components/auth/AdminRoute";
 import { PublicOnlyRoute } from "./components/auth/PublicOnlyRoute";
 import { LoginPage } from "../pages/Login/LoginPage";
 import RegisterPage from "../pages/Register";
@@ -37,9 +38,9 @@ export default function App() {
           <Route
             path="/Admin"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <AdminChatLayout />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           >
             <Route index element={<Admin />} />

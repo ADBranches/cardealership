@@ -1,0 +1,3 @@
+import type { AdminDashboardStats } from "../types";
+const cards=[['Total cars','totalCars'],['Bookings','totalBookings'],['Users','totalUsers'],['Pending bookings','pendingBookings'],['Pending listings','pendingListings']] as const;
+export function AdminStatsCards({stats}:{stats:AdminDashboardStats}){return <section aria-label="Dealership summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{cards.map(([label,key])=><article key={key} className="rounded-xl border bg-card p-5 shadow-sm"><p className="text-sm font-medium text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-bold" aria-label={`${label}: ${stats[key]}`}>{stats[key]}</p></article>)}</section>}

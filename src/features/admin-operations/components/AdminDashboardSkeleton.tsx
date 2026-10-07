@@ -1,0 +1,1 @@
+export function AdminDashboardSkeleton(){return <section aria-busy="true" aria-label="Loading admin dashboard" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{Array.from({length:5},(_,index)=><div key={index} className="h-28 animate-pulse rounded-xl bg-muted" />)}</section>}
