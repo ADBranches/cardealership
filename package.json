@@ -60,7 +60,8 @@
     "test:dispatch": "npm run test:booking-transitions && npm run test:dispatch-api && npm run test:dispatch-state && npm run test:dispatch-sync && npm run test:dispatch-accessibility && npm run test:dispatch-interface",
     "test:admin-operations-contracts": "tsx src/tests/adminOperationsContracts.manual.ts",
     "test:admin-operations-api": "tsx src/tests/adminOperationsApi.manual.ts",
-    "test:admin-route": "tsx src/tests/adminRoute.manual.ts"
+    "test:admin-route": "tsx src/tests/adminRoute.manual.ts",
+    "test:admin-booking-workflow": "tsx src/tests/adminBookingWorkflow.manual.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

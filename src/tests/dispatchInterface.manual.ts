@@ -4,7 +4,7 @@ const board=readFileSync("src/features/admin-dispatch/components/DispatchBoard.t
 const card=readFileSync("src/features/admin-dispatch/components/DispatchBookingCard.tsx","utf8");
 const action=readFileSync("src/features/admin-dispatch/components/DispatchActionMenu.tsx","utf8");
 const css=readFileSync("src/features/admin-dispatch/components/DispatchBoard.css","utf8");
-const dashboard=readFileSync("src/pages/Admin.tsx","utf8");
+const dashboard = readFileSync("src/features/admin-operations/components/AdminDashboardShell.tsx", "utf8");
 assert.equal(board.includes("BOOKING_STATUS_COLUMNS.map"),true);
 assert.equal(board.includes("aria-busy"),true);
 assert.equal(board.includes("DispatchErrorState"),true);
@@ -19,6 +19,6 @@ assert.equal(css.includes("repeat(4"),true);
 assert.equal(css.includes("repeat(2"),true);
 assert.equal(css.includes("grid-template-columns:1fr"),true);
 assert.equal(css.includes("overflow-wrap:anywhere"),true);
-assert.equal(dashboard.includes("<DispatchBoard />"),true);
+assert.equal(dashboard.includes("<BookingManagementTable/>"),true);
 assert.equal(board.includes("fetch("),false);
 console.log(JSON.stringify({suite:"dispatchInterface",passed:16,failed:0,statusesRendered:true,loadingAndEmptyStates:true,legalActionsOnly:true,cancellationConfirmation:true,responsiveReachability:true,liveMutationConnected:true},null,2));
