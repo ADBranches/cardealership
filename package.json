@@ -61,7 +61,8 @@
     "test:admin-operations-contracts": "tsx src/tests/adminOperationsContracts.manual.ts",
     "test:admin-operations-api": "tsx src/tests/adminOperationsApi.manual.ts",
     "test:admin-route": "tsx src/tests/adminRoute.manual.ts",
-    "test:admin-booking-workflow": "tsx src/tests/adminBookingWorkflow.manual.ts"
+    "test:admin-booking-workflow": "tsx src/tests/adminBookingWorkflow.manual.ts",
+    "test:admin-listing-review": "tsx src/tests/adminListingReviewWorkflow.manual.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",
