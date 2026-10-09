@@ -7,6 +7,8 @@ import { AboutPage } from "@/pages/About/AboutPage";
 import { ContactPage } from "@/pages/Contact/ContactPage";
 import { LoginPage } from "@/pages/Login/LoginPage";
 import { RegisterPage } from "@/pages/Register/RegisterPage";
+import { ForgotPasswordPage } from "@/pages/ForgotPassword/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/pages/ResetPassword/ResetPasswordPage";
 import { VerifyEmailPage } from "@/pages/VerifyEmail/VerifyEmailPage";
 
 export const router = createBrowserRouter([
@@ -25,6 +27,8 @@ export const router = createBrowserRouter([
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> },
       { path: "verify-email", element: <VerifyEmailPage /> },
+      { path: "forgot-password", element: <ForgotPasswordPage /> },
+      { path: "reset-password", element: <ResetPasswordPage /> },
     ],
   },
 ]);

@@ -11,6 +11,8 @@ import { AdminChatProvider } from "../features/admin-chat/context/AdminChatConte
 import TestTasks from "../pages/TestTasks/TestTasks";
 import { HomePage } from "../pages/Home/HomePage";
 import { SettingsPage } from "../pages/Settings/SettingsPage";
+import { ForgotPasswordPage } from "../pages/ForgotPassword/ForgotPasswordPage";
+import { ResetPasswordPage } from "../pages/ResetPassword/ResetPasswordPage";
 import { VerifyEmailPage } from "../pages/VerifyEmail/VerifyEmailPage";
 import { useAuth } from "../features/auth/hooks";
 
@@ -37,6 +39,8 @@ export default function App() {
           <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/Admin"
             element={

@@ -32,3 +32,6 @@ export async function sendEmailVerification({ recipient, name, token, fetcher, t
   if (config.provider === "nodemailer") return deliverWithNodemailer(config, message, recipient, transporterFactory);
   return { accepted: false, provider: config.provider, reason: "EMAIL_PROVIDER_NOT_CONFIGURED" };
 }
+
+export function buildPasswordResetUrl(token){const siteUrl=(process.env.SITE_URL||"http://localhost:5173").replace(/\/$/,"");return `${siteUrl}/reset-password?token=${encodeURIComponent(token)}`}
+export async function sendPasswordReset({recipient,name,token,fetcher,transporterFactory}){const {createPasswordResetMessage}=await import("../templates/passwordReset.js");const config=getEmailConfig();const message=createPasswordResetMessage({name,resetUrl:buildPasswordResetUrl(token)});if(!config.ready)return{accepted:false,provider:config.provider,reason:"EMAIL_PROVIDER_NOT_CONFIGURED"};if(config.provider==="sendgrid")return deliverWithSendGrid(config,message,recipient,fetcher);if(config.provider==="nodemailer")return deliverWithNodemailer(config,message,recipient,transporterFactory);return{accepted:false,provider:config.provider,reason:"EMAIL_PROVIDER_NOT_CONFIGURED"}}

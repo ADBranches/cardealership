@@ -13,3 +13,6 @@ export function createEmailVerificationToken(now = Date.now()) {
 export function isVerificationTokenShapeValid(token) {
   return typeof token === "string" && /^[A-Za-z0-9_-]{40,100}$/.test(token);
 }
+
+export function createPasswordResetToken(now=Date.now()){const token=crypto.randomBytes(32).toString("base64url");const ttlMinutes=Number(process.env.AUTH_RESET_TOKEN_TTL_MINUTES||30);return{token,tokenHash:hashAuthToken(token),expiresAt:new Date(now+ttlMinutes*60_000)}}
+export const isResetTokenShapeValid=isVerificationTokenShapeValid;

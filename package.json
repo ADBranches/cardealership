@@ -67,7 +67,9 @@
     "test:email-verification": "tsx src/tests/emailVerification.manual.ts",
     "test:phase3-auth": "npm run test:auth-registration && npm run test:email-verification && npm run test:auth && npm run test:protected-route && npm run test:auth-persistence",
     "test:login-security": "tsx src/tests/authLoginValidation.manual.ts",
-    "test:phase4-auth": "npm run test:login-security && npm run test:auth && npm run test:protected-route && npm run test:auth-persistence"
+    "test:phase4-auth": "npm run test:login-security && npm run test:auth && npm run test:protected-route && npm run test:auth-persistence",
+    "test:password-reset": "tsx src/tests/passwordReset.manual.ts",
+    "test:phase5-auth": "npm run test:password-reset && npm run test:password && npm run test:phase4-auth"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

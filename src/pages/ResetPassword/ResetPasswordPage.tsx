@@ -1,0 +1,1 @@
+import{ResetPasswordForm}from"@/features/auth/components/ResetPasswordForm";export function ResetPasswordPage(){return <main className="min-h-screen grid place-items-center px-6"><div className="w-full max-w-md"><ResetPasswordForm/></div></main>}

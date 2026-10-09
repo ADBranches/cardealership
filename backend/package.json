@@ -17,7 +17,9 @@
     "test:email-verification": "node tests/authEmailVerification.manual.js",
     "test:phase3-auth": "npm run test:auth-registration && npm run test:email-verification",
     "test:login-security": "node tests/authLoginSecurity.manual.js",
-    "test:phase4-auth": "npm run test:login-security"
+    "test:phase4-auth": "npm run test:login-security",
+    "test:password-reset": "node tests/passwordReset.manual.js",
+    "test:phase5-auth": "npm run test:password-reset"
   },
   "dependencies": {
     "cors": "^2.8.6",

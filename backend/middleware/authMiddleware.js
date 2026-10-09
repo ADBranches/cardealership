@@ -7,6 +7,7 @@
 
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { findUserById } from "../repositories/authRepository.js";
 
 
 const JWT_SECRET = process.env.JWT_SECRET || "panda_motors_secret_key_2026";
@@ -16,7 +17,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "panda_motors_secret_key_2026";
 // ============================================
 // Verifies the JWT token from the Authorization header
 
-export const authenticateToken = (req, res, next) => {
+export const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
 
   const token = authHeader && authHeader.split(" ")[1];
