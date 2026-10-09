@@ -1,16 +1,1 @@
-export type RouteDecision = "loading" | "allow" | "redirect-login" | "redirect-authenticated";
-
-export function getProtectedRouteDecision(isAuthReady: boolean, isAuthenticated: boolean): RouteDecision {
-  if (!isAuthReady) return "loading";
-  return isAuthenticated ? "allow" : "redirect-login";
-}
-
-export function getPublicOnlyRouteDecision(isAuthReady: boolean, isAuthenticated: boolean): RouteDecision {
-  if (!isAuthReady) return "loading";
-  return isAuthenticated ? "redirect-authenticated" : "allow";
-}
-
-export function getSafeRedirectPath(value: string | null, fallback = "/"): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return fallback;
-  return value;
-}
+export type RouteDecision="loading"|"allow"|"redirect-login"|"redirect-authenticated";export function getProtectedRouteDecision(isAuthReady:boolean,isAuthenticated:boolean):RouteDecision{if(!isAuthReady)return"loading";return isAuthenticated?"allow":"redirect-login"}export function getPublicOnlyRouteDecision(isAuthReady:boolean,isAuthenticated:boolean):RouteDecision{if(!isAuthReady)return"loading";return isAuthenticated?"redirect-authenticated":"allow"}export function getSafeRedirectPath(value:string|null,fallback="/"):string{if(!value||!value.startsWith("/")||value.startsWith("//")||value.includes("\\")||/[\u0000-\u001F]/.test(value))return fallback;try{const decoded=decodeURIComponent(value);if(!decoded.startsWith("/")||decoded.startsWith("//")||decoded.includes("\\"))return fallback;return value}catch{return fallback}}

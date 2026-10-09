@@ -183,47 +183,6 @@ export const decodeToken = (token) => {
   }
 };
 
-// ============================================
-// Middleware: Rate Limiting for Auth Routes
-// ============================================
-
-const loginAttempts = new Map();
-
-export const rateLimitLogin = (req, res, next) => {
-  const ip = req.ip || req.connection.remoteAddress;
-
-  const now = Date.now();
-
-  if (!loginAttempts.has(ip)) {
-    loginAttempts.set(ip, []);
-  }
-
-  const attempts = loginAttempts.get(ip);
-
-  const recentAttempts = attempts.filter((time) => now - time < 15 * 60 * 1000);
-
-  if (recentAttempts.length >= 5) {
-    return res.status(429).json({
-      success: false,
-
-      error: {
-        code: "TOO_MANY_LOGIN_ATTEMPTS",
-
-        message: "Too many login attempts. Please try again in 15 minutes.",
-
-        status: 429,
-
-        details: null,
-      },
-    });
-  }
-
-  recentAttempts.push(now);
-
-  loginAttempts.set(ip, recentAttempts);
-
-  return next();
-};
 
 // ============================================
 // ROUTE-FRIENDLY ALIASES
@@ -256,5 +215,4 @@ export default {
   generateToken,
   verifyToken,
   decodeToken,
-  rateLimitLogin,
 };
