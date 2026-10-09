@@ -464,3 +464,15 @@ https://youtu.be/HNtln75HTEg
 ## Sprint 12 validation
 
 Run `npm run test:sprint12-validation` in the frontend and backend, then run the complete authentication regression suites and production builds. Live API validation requires the ignored backend environment and an available PostgreSQL database.
+
+## Sprint 12 secure authentication handoff
+
+Sprint 12 is complete on `feature/edwin-sprint12-secure-authentication`. The implementation includes database-backed registration and login, email verification, password recovery and reset, token-version revocation, protected and administrator access, accessibility validation, security cleanup, and live PostgreSQL endpoint tests.
+
+Final documentation:
+
+- `docs/sprint12/FINAL_SPRINT12_REPORT.md`
+- `docs/sprint12/FINAL_UPSTREAM_INTEGRATION_REVIEW.md`
+- `docs/sprint12/SPRINT12_PULL_REQUEST_CHECKLIST.md`
+
+The final upstream review rejected the parent authentication rewrite because it removes verified Sprint 12 controls. No upstream code was integrated, and no direct merge to `main` is permitted.
