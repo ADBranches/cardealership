@@ -455,4 +455,8 @@ VITE_API_BASE_URL=https://approved-production-api.example.com npm run build
 Project demonstration:
 
 https://youtu.be/HNtln75HTEg
-"# Updated" 
+"# Updated"
+
+## Sprint 12 authentication security
+
+`src/app/App.tsx` is the only active authentication router. Canonical pages live under `src/pages/Login/` and `src/pages/Register/`; top-level files are compatibility exports only. Never commit real tokens, local `.env` files, logs, generated reports, or evidence. Local token utilities require explicit development-only environment configuration and no fallback secret. See the Sprint 12 security review and rollback plan.

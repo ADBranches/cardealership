@@ -1,24 +1,2 @@
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'panda_motors_secret_key_2026';
-
-// Create a test admin token
-const token = jwt.sign(
-    {
-        id: 1,
-        email: 'admin@test.com',
-        role: 'admin',
-        name: 'Test Admin'
-    },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-);
-
-console.log('\n?? ADMIN TOKEN:');
-console.log('========================================');
-console.log(token);
-console.log('========================================\n');
-console.log('Use this token in Authorization header:');
-console.log(`Bearer ${token}\n`);
+import jwt from "jsonwebtoken";
+if(process.env.NODE_ENV!=="development"){console.error("Token generation is restricted to local development.");process.exitCode=1;}else if(!process.env.JWT_SECRET){console.error("JWT_SECRET is required. No fallback secret is permitted.");process.exitCode=1;}else{const id=process.env.LOCAL_TOKEN_USER_ID,email=process.env.LOCAL_TOKEN_EMAIL,role=process.env.LOCAL_TOKEN_ROLE;if(!id||!email||!role){console.error("LOCAL_TOKEN_USER_ID, LOCAL_TOKEN_EMAIL, and LOCAL_TOKEN_ROLE are required.");process.exitCode=1;}else{process.stdout.write(jwt.sign({id,email,role,tokenVersion:Number(process.env.LOCAL_TOKEN_VERSION||0)},process.env.JWT_SECRET,{expiresIn:"15m"}));}}
