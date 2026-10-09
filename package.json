@@ -62,7 +62,10 @@
     "test:admin-operations-api": "tsx src/tests/adminOperationsApi.manual.ts",
     "test:admin-route": "tsx src/tests/adminRoute.manual.ts",
     "test:admin-booking-workflow": "tsx src/tests/adminBookingWorkflow.manual.ts",
-    "test:admin-listing-review": "tsx src/tests/adminListingReviewWorkflow.manual.ts"
+    "test:admin-listing-review": "tsx src/tests/adminListingReviewWorkflow.manual.ts",
+    "test:auth-registration": "tsx src/tests/authRegistration.manual.ts",
+    "test:email-verification": "tsx src/tests/emailVerification.manual.ts",
+    "test:phase3-auth": "npm run test:auth-registration && npm run test:email-verification && npm run test:auth && npm run test:protected-route && npm run test:auth-persistence"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

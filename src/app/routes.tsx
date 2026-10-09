@@ -7,6 +7,7 @@ import { AboutPage } from "@/pages/About/AboutPage";
 import { ContactPage } from "@/pages/Contact/ContactPage";
 import { LoginPage } from "@/pages/Login/LoginPage";
 import { RegisterPage } from "@/pages/Register/RegisterPage";
+import { VerifyEmailPage } from "@/pages/VerifyEmail/VerifyEmailPage";
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> },
+      { path: "verify-email", element: <VerifyEmailPage /> },
     ],
   },
 ]);

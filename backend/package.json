@@ -12,7 +12,10 @@
     "cleanup:car-images:execute": "node scripts/cleanupStaleCarImages.js --execute",
     "cleanup:car-images:job": "node -e \"import('./jobs/cleanupStaleCarImagesJob.js').then(async (m) => console.log(JSON.stringify(await m.runCleanupStaleCarImagesJob(), null, 2)))\"",
     "test:car-image-cleanup": "node tests/carImageCleanup.manual.js",
-    "test:admin-operations": "node tests/adminOperationsContract.manual.js"
+    "test:admin-operations": "node tests/adminOperationsContract.manual.js",
+    "test:auth-registration": "node tests/authRegistration.manual.js",
+    "test:email-verification": "node tests/authEmailVerification.manual.js",
+    "test:phase3-auth": "npm run test:auth-registration && npm run test:email-verification"
   },
   "dependencies": {
     "cors": "^2.8.6",
@@ -27,7 +30,8 @@
     "multer": "^2.0.2",
     "pg": "^8.21.0",
     "sharp": "^0.35.3",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "nodemailer": "^7.0.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

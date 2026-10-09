@@ -4,13 +4,14 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AdminRoute } from "./components/auth/AdminRoute";
 import { PublicOnlyRoute } from "./components/auth/PublicOnlyRoute";
 import { LoginPage } from "../pages/Login/LoginPage";
-import RegisterPage from "../pages/Register";
+import { RegisterPage } from "../pages/Register/RegisterPage";
 import Admin from "../pages/Admin";
 import { AdminChatPage } from "../pages/AdminChat/AdminChatPage";
 import { AdminChatProvider } from "../features/admin-chat/context/AdminChatContext";
 import TestTasks from "../pages/TestTasks/TestTasks";
 import { HomePage } from "../pages/Home/HomePage";
 import { SettingsPage } from "../pages/Settings/SettingsPage";
+import { VerifyEmailPage } from "../pages/VerifyEmail/VerifyEmailPage";
 import { useAuth } from "../features/auth/hooks";
 
 function AdminChatLayout() {
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/test" element={<TestTasks />} />
           <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route
             path="/Admin"
             element={
