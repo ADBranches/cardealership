@@ -65,4 +65,5 @@ const db = {
   pool,
 };
 
+export const authDatabase = db;
 export default db;
