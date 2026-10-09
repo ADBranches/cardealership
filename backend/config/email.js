@@ -109,3 +109,11 @@ export function getRedactedEmailConfig() {
     ready: config.ready,
   };
 }
+
+export function getVerificationEmailConfig() {
+  const config = getEmailConfig();
+  return {
+    ...config,
+    verificationTokenTtlMinutes: Number(process.env.AUTH_VERIFICATION_TOKEN_TTL_MINUTES || 30),
+  };
+}

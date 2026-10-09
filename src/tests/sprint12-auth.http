@@ -1,0 +1,24 @@
+@baseUrl = http://localhost:5500/api/auth
+@accessToken = {{$dotenv ACCESS_TOKEN}}
+
+### Register
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{"name":"Sprint Twelve","email":"sprint12@example.test","password":"StrongPass1"}
+
+### Login
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{"email":"sprint12@example.test","password":"StrongPass1"}
+
+### Session
+GET {{baseUrl}}/session
+Authorization: Bearer {{accessToken}}
+
+### Forgot password
+POST {{baseUrl}}/forgot-password
+Content-Type: application/json
+
+{"email":"sprint12@example.test"}

@@ -9,6 +9,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/authRoutes.js";
+import { ensureAuthSecuritySchema } from "./scripts/ensureAuthSecuritySchema.js";
 import carsRoutes from "./routes/carsRoutes.js";
 import testDriveRoutes from "./routes/testDriveRoutes.js";
 import exchangeRateRoutes from "./routes/exchangeRateRoutes.js";
@@ -1739,6 +1740,7 @@ app.use((error, req, res, next) => {
 */
 
 async function initializeDatabase() {
+  await ensureAuthSecuritySchema();
   await ensureExchangeRateSchema(db);
   await db.query(`
     CREATE TABLE IF NOT EXISTS chat_messages (

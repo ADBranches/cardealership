@@ -32,3 +32,10 @@ pnpm-debug.log*
 # Temporary files
 *.tmp
 *.temp
+
+# Security-generated artifacts
+coverage/
+reports/
+*.pdf
+*token*.txt
+*evidence*.txt

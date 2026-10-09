@@ -85,6 +85,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void restoreSession();
   }, [restoreSession]);
 
+  useEffect(() => {
+    const invalidate = () => { clearStoredSession(); setState(createUnauthenticatedState({ code: "UNAUTHORIZED", message: "Please sign in again." })); };
+    window.addEventListener("auth:session-invalid", invalidate);
+    return () => window.removeEventListener("auth:session-invalid", invalidate);
+  }, []);
+
+
   const value = useMemo(() => ({ ...state, login, logout, updateUser, restoreSession }), [state, login, logout, updateUser, restoreSession]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

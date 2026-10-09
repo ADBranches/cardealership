@@ -1,0 +1,1 @@
+export function EmailVerificationNotice({ email }: { email: string }) { return <section role="status" className="rounded-lg border border-border bg-muted/40 p-4 text-sm"><strong>Check your email.</strong><p>We sent verification instructions to {email}. The link expires and can be used once.</p></section>; }

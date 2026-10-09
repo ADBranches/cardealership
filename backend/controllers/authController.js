@@ -1,145 +1,20 @@
 import bcrypt from "bcrypt";
-
-import { findUserByEmail, createUser } from "../models/userModel.js";
-
+import { createAuthError, createAuthSuccess, toPublicAuthUser, AUTH_ERROR_CODES } from "../contracts/auth.contract.js";
+import { validateLoginInput, validateRegistrationInput, normalizeEmail, validatePassword } from "../utils/authValidation.js";
+import { createUser, findUserByEmail, setEmailVerificationToken, findUserByVerificationTokenHash, markEmailVerified, recordFailedLogin, clearFailedLogins, setPasswordResetToken, findUserByPasswordResetTokenHash, resetUserPassword, findUserById, changeUserPassword } from "../repositories/authRepository.js";
+import { createEmailVerificationToken, hashAuthToken, isVerificationTokenShapeValid, createPasswordResetToken, isResetTokenShapeValid } from "../services/authTokenService.js";
+import { sendEmailVerification, sendPasswordReset } from "../services/authEmailService.js";
 import { generateToken } from "../utils/jwt.js";
+const GENERIC_VERIFICATION_MESSAGE="If the account can receive verification email, instructions have been sent.";const GENERIC_LOGIN_MESSAGE="Invalid email or password.";
+async function issueVerification(user){const issued=createEmailVerificationToken();await setEmailVerificationToken(user.id,issued.tokenHash,issued.expiresAt);await sendEmailVerification({recipient:user.email,name:user.name,token:issued.token});}
+export const register=async(req,res)=>{try{const validation=validateRegistrationInput(req.body);if(!validation.valid)return res.status(400).json(createAuthError(AUTH_ERROR_CODES.validationFailed,"Review the highlighted registration fields.",400,validation.errors));const existing=await findUserByEmail(validation.value.email);if(existing)return res.status(202).json(createAuthSuccess(GENERIC_VERIFICATION_MESSAGE,{verificationRequired:true}));const hash=await bcrypt.hash(validation.value.password,12);const user=await createUser(validation.value.name,validation.value.email,hash,"user");await issueVerification(user);return res.status(201).json(createAuthSuccess(GENERIC_VERIFICATION_MESSAGE,{user:toPublicAuthUser(user),verificationRequired:true}));}catch(error){console.error("Registration failed",{code:error.code||"REGISTRATION_FAILED"});return res.status(503).json(createAuthError(AUTH_ERROR_CODES.unavailable,"Registration is temporarily unavailable.",503));}};
+export const resendVerification=async(req,res)=>{try{const email=normalizeEmail(req.body?.email);const user=email?await findUserByEmail(email):null;if(user&&!user.email_verified)await issueVerification(user);return res.status(202).json(createAuthSuccess(GENERIC_VERIFICATION_MESSAGE));}catch(error){console.error("Verification resend failed",{code:error.code||"VERIFICATION_RESEND_FAILED"});return res.status(202).json(createAuthSuccess(GENERIC_VERIFICATION_MESSAGE));}};
+export const verifyEmail=async(req,res)=>{try{const token=String(req.query?.token||"");if(!isVerificationTokenShapeValid(token))return res.status(400).json(createAuthError(AUTH_ERROR_CODES.invalidToken,"The verification link is invalid or expired.",400));const user=await findUserByVerificationTokenHash(hashAuthToken(token));if(!user||!user.email_verification_expires_at||new Date(user.email_verification_expires_at)<=new Date())return res.status(400).json(createAuthError(AUTH_ERROR_CODES.invalidToken,"The verification link is invalid or expired.",400));await markEmailVerified(user.id);return res.status(200).json(createAuthSuccess("Email verified successfully."));}catch(error){console.error("Email verification failed",{code:error.code||"EMAIL_VERIFICATION_FAILED"});return res.status(503).json(createAuthError(AUTH_ERROR_CODES.unavailable,"Email verification is temporarily unavailable.",503));}};
+export const login=async(req,res)=>{try{const validation=validateLoginInput(req.body);if(!validation.valid)return res.status(400).json(createAuthError(AUTH_ERROR_CODES.validationFailed,"Review the login fields.",400,validation.errors));const user=await findUserByEmail(validation.value.email);const valid=user?await bcrypt.compare(validation.value.password,user.password):false;if(!user||!valid){if(user)await recordFailedLogin(user.id);return res.status(401).json(createAuthError(AUTH_ERROR_CODES.invalidCredentials,GENERIC_LOGIN_MESSAGE,401));}if(user.locked_until&&new Date(user.locked_until)>new Date())return res.status(429).json(createAuthError(AUTH_ERROR_CODES.rateLimited,"Too many login attempts. Please wait and try again.",429));if(!user.email_verified&&user.role!=="admin")return res.status(403).json(createAuthError("EMAIL_VERIFICATION_REQUIRED","Verify your email before signing in.",403));await clearFailedLogins(user.id);const token=generateToken(user);return res.status(200).json({success:true,message:"Login successful.",data:{token,user:toPublicAuthUser(user)},token,user:toPublicAuthUser(user)});}catch(error){console.error("Login failed",{code:error.code||"LOGIN_FAILED"});return res.status(503).json(createAuthError(AUTH_ERROR_CODES.unavailable,"Login is temporarily unavailable.",503));}};
+export const getSession=async(req,res)=>res.status(200).json({success:true,valid:true,user:{id:String(req.user.id),name:req.user.name,email:req.user.email,role:req.user.role}});
 
-/*
-|--------------------------------------------------------------------------
-| REGISTER USER
-|--------------------------------------------------------------------------
-*/
-
-export const register = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, email and password are required.",
-      });
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-    const existingUser = await findUserByEmail(normalizedEmail);
-
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: "A user with this email already exists.",
-      });
-    }
-
-
-    const normalizedRole = "user";
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await createUser(
-      name.trim(),
-      normalizedEmail,
-      hashedPassword,
-      normalizedRole,
-    );
-
-    const token = generateToken(user);
-
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully.",
-      token,
-
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error("Registration failed:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Registration failed.",
-      error: error.message,
-    });
-  }
-};
-
-/*
-|--------------------------------------------------------------------------
-| LOGIN USER
-|--------------------------------------------------------------------------
-*/
-
-export const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required.",
-      });
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-    const user = await findUserByEmail(normalizedEmail);
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password.",
-      });
-    }
-
-    const passwordMatches = await bcrypt.compare(password, user.password);
-
-    if (!passwordMatches) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password.",
-      });
-    }
-
-    const token = generateToken(user);
-
-    return res.status(200).json({
-      success: true,
-      message: "Login successful.",
-      token,
-
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error("Login failed:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Login failed.",
-      error: error.message,
-    });
-  }
-};
-
-export const getSession = async (req, res) => {
-  return res.status(200).json({
-    success: true,
-    valid: true,
-    user: {
-      id: req.user.id,
-      name: req.user.name,
-      email: req.user.email,
-      role: req.user.role,
-    },
-  });
-};
+const GENERIC_RESET_MESSAGE="If the account exists, password reset instructions have been sent.";
+export const forgotPassword=async(req,res)=>{try{const email=normalizeEmail(req.body?.email);const user=email?await findUserByEmail(email):null;if(user){const issued=createPasswordResetToken();await setPasswordResetToken(user.id,issued.tokenHash,issued.expiresAt);await sendPasswordReset({recipient:user.email,name:user.name,token:issued.token});}return res.status(202).json(createAuthSuccess(GENERIC_RESET_MESSAGE));}catch(error){console.error("Password-reset request failed",{code:error.code||"PASSWORD_RESET_REQUEST_FAILED"});return res.status(202).json(createAuthSuccess(GENERIC_RESET_MESSAGE));}};
+export const resetPassword=async(req,res)=>{try{const token=String(req.body?.token||"");const password=req.body?.password;const passwordError=validatePassword(password);if(passwordError)return res.status(400).json(createAuthError(AUTH_ERROR_CODES.validationFailed,"Review the password field.",400,{password:passwordError}));if(!isResetTokenShapeValid(token))return res.status(400).json(createAuthError(AUTH_ERROR_CODES.invalidToken,"The reset link is invalid or expired.",400));const user=await findUserByPasswordResetTokenHash(hashAuthToken(token));if(!user||!user.password_reset_expires_at||new Date(user.password_reset_expires_at)<=new Date())return res.status(400).json(createAuthError(AUTH_ERROR_CODES.invalidToken,"The reset link is invalid or expired.",400));const hash=await bcrypt.hash(password,12);await resetUserPassword(user.id,hash);return res.status(200).json(createAuthSuccess("Password reset successfully. Please sign in again."));}catch(error){console.error("Password reset failed",{code:error.code||"PASSWORD_RESET_FAILED"});return res.status(503).json(createAuthError(AUTH_ERROR_CODES.unavailable,"Password reset is temporarily unavailable.",503));}};
+export const changePassword=async(req,res)=>{try{const current=String(req.body?.currentPassword||"");const next=req.body?.newPassword;const error=validatePassword(next);if(error)return res.status(400).json(createAuthError(AUTH_ERROR_CODES.validationFailed,"Review the new password.",400,{newPassword:error}));const user=await findUserById(req.user.id);if(!user||!(await bcrypt.compare(current,user.password)))return res.status(403).json(createAuthError("CURRENT_PASSWORD_INCORRECT","The current password is incorrect.",403));await changeUserPassword(user.id,await bcrypt.hash(next,12));return res.status(200).json(createAuthSuccess("Password changed successfully. Please sign in again."));}catch(error){console.error("Password change failed",{code:error.code||"PASSWORD_CHANGE_FAILED"});return res.status(503).json(createAuthError(AUTH_ERROR_CODES.unavailable,"Password change is temporarily unavailable.",503));}};
+export const logout=async(_req,res)=>res.status(200).json(createAuthSuccess("Signed out successfully."));

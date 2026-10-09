@@ -1,3 +1,4 @@
+import { guardUnauthorizedResponse } from "../features/auth/services/sessionGuard";
 import { getApiBaseUrl } from "../config/env";
 
 export function buildApiUrl(path: string): string {
@@ -17,7 +18,7 @@ export async function apiRequest(path: string, options: RequestInit = {}): Promi
 }
 
 export async function authenticatedApiRequest(path: string, token: string, options: RequestInit = {}): Promise<Response> {
-  return apiRequest(path, { ...options, headers: createBearerHeaders(token, options.headers) });
+  return guardUnauthorizedResponse(await apiRequest(path, { ...options, headers: createBearerHeaders(token, options.headers) }));
 }
 
 export type AuthenticatedApiFetcher = (

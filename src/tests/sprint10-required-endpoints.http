@@ -124,3 +124,6 @@ Authorization: Bearer {{userToken}}
 ### Admin stats admin token, expected 200
 GET {{baseUrl}}/api/admin/stats
 Authorization: Bearer {{adminToken}}
+
+### Sprint 12 authentication validation
+# See src/tests/sprint12-auth.http for secret-safe authentication requests.

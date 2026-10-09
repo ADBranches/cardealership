@@ -14,3 +14,11 @@ yarn-error.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Security-generated artifacts
+coverage/
+reports/
+*.pdf
+*token*.txt
+*evidence*.txt
+*.log

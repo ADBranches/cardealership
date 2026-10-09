@@ -455,4 +455,24 @@ VITE_API_BASE_URL=https://approved-production-api.example.com npm run build
 Project demonstration:
 
 https://youtu.be/HNtln75HTEg
-"# Updated" 
+"# Updated"
+
+## Sprint 12 authentication security
+
+`src/app/App.tsx` is the only active authentication router. Canonical pages live under `src/pages/Login/` and `src/pages/Register/`; top-level files are compatibility exports only. Never commit real tokens, local `.env` files, logs, generated reports, or evidence. Local token utilities require explicit development-only environment configuration and no fallback secret. See the Sprint 12 security review and rollback plan.
+
+## Sprint 12 validation
+
+Run `npm run test:sprint12-validation` in the frontend and backend, then run the complete authentication regression suites and production builds. Live API validation requires the ignored backend environment and an available PostgreSQL database.
+
+## Sprint 12 secure authentication handoff
+
+Sprint 12 is complete on `feature/edwin-sprint12-secure-authentication`. The implementation includes database-backed registration and login, email verification, password recovery and reset, token-version revocation, protected and administrator access, accessibility validation, security cleanup, and live PostgreSQL endpoint tests.
+
+Final documentation:
+
+- `docs/sprint12/FINAL_SPRINT12_REPORT.md`
+- `docs/sprint12/FINAL_UPSTREAM_INTEGRATION_REVIEW.md`
+- `docs/sprint12/SPRINT12_PULL_REQUEST_CHECKLIST.md`
+
+The final upstream review rejected the parent authentication rewrite because it removes verified Sprint 12 controls. No upstream code was integrated, and no direct merge to `main` is permitted.
