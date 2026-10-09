@@ -649,3 +649,6 @@ Authorization: Bearer {{adminToken}}
 ### 29. FINAL ADMIN CONVERSATION SUMMARY
 GET {{baseUrl}}/api/admin/chat/conversations?page=1&limit=20
 Authorization: Bearer {{adminToken}}
+
+### Sprint 12 authentication validation
+# See src/tests/sprint12-auth.http for secret-safe authentication requests.

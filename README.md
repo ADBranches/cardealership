@@ -460,3 +460,7 @@ https://youtu.be/HNtln75HTEg
 ## Sprint 12 authentication security
 
 `src/app/App.tsx` is the only active authentication router. Canonical pages live under `src/pages/Login/` and `src/pages/Register/`; top-level files are compatibility exports only. Never commit real tokens, local `.env` files, logs, generated reports, or evidence. Local token utilities require explicit development-only environment configuration and no fallback secret. See the Sprint 12 security review and rollback plan.
+
+## Sprint 12 validation
+
+Run `npm run test:sprint12-validation` in the frontend and backend, then run the complete authentication regression suites and production builds. Live API validation requires the ignored backend environment and an available PostgreSQL database.

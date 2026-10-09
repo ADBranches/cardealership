@@ -21,7 +21,8 @@
     "test:password-reset": "node tests/passwordReset.manual.js",
     "test:phase5-auth": "npm run test:password-reset",
     "test:session-protection": "node tests/sessionProtection.manual.js",
-    "test:phase6-auth": "npm run test:session-protection"
+    "test:phase6-auth": "npm run test:session-protection",
+    "test:sprint12-validation": "node tests/authEndpoints.manual.js"
   },
   "dependencies": {
     "cors": "^2.8.6",
