@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import { authenticatedApiRequest } from "@/api/client";
-import { Button } from "@/components/ui/button";
+import { authenticatedApiRequest } from "../../../api/client";
+import { Button } from "../../../components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { useAuth } from "@/features/auth/hooks";
+} from "../../../components/ui/dialog";
+import { useAuth } from "../../../features/auth/hooks";
 
 type Lead = {
   id: number;
