@@ -18,6 +18,7 @@ import TestTasks from "../pages/TestTasks/TestTasks";
 import { HomePage } from "../pages/Home/HomePage";
 import { SettingsPage } from "../pages/Settings/SettingsPage";
 import { useAuth } from "../features/auth/hooks";
+import { VehicleDetailsPage } from "../pages/Cars/VehicleDetailsPage";
 
 function AdminChatLayout() {
   const { user } = useAuth();
@@ -50,6 +51,7 @@ export default function App() {
           />
 
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/cars/:id" element={<VehicleDetailsPage />} />
 
           <Route
             path="/Admin"

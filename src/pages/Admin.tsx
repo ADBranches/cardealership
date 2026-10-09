@@ -254,7 +254,7 @@ const Admin: React.FC = () => {
               }}
             >
               <h4 style={{ fontWeight: "bold", fontSize: "18px" }}>
-                ?? Manage Cars
+                Manage Cars
               </h4>
               <p
                 style={{ fontSize: "14px", color: "#6b7280", marginTop: "8px" }}
@@ -272,7 +272,7 @@ const Admin: React.FC = () => {
               }}
             >
               <h4 style={{ fontWeight: "bold", fontSize: "18px" }}>
-                ?? Manage Bookings
+                Manage Bookings
               </h4>
               <p
                 style={{ fontSize: "14px", color: "#6b7280", marginTop: "8px" }}
@@ -284,6 +284,33 @@ const Admin: React.FC = () => {
             <AdminChatNavLink />
 
             <div
+              onClick={() => navigate("/Admin/inventory?tab=financing-leads")}
+              style={{
+                border: "1px solid #bfdbfe",
+                borderRadius: "8px",
+                padding: "16px",
+                cursor: "pointer",
+                backgroundColor: "#eff6ff",
+              }}
+            >
+              <h4
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "18px",
+                  color: "#1d4ed8",
+                }}
+              >
+                Financing Quotes
+              </h4>
+              <p
+                style={{ fontSize: "14px", color: "#475569", marginTop: "8px" }}
+              >
+                Review customer quote requests and their phone, WhatsApp, and
+                email details.
+              </p>
+            </div>
+
+            <div
               style={{
                 border: "1px solid #e5e7eb",
                 borderRadius: "8px",
@@ -292,7 +319,7 @@ const Admin: React.FC = () => {
               }}
             >
               <h4 style={{ fontWeight: "bold", fontSize: "18px" }}>
-                ?? View Reports
+                View Reports
               </h4>
               <p
                 style={{ fontSize: "14px", color: "#6b7280", marginTop: "8px" }}

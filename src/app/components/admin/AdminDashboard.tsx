@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../../features/auth/hooks";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { AdminListingsTable } from "./AdminListingsTable";
 import { AddNewCarForm } from "./AddNewCarForm";
 import { DispatchBoard } from "../../../features/admin-dispatch/components";
+import { AdminFinancingLeads } from "../../../features/financing/components/AdminFinancingLeads";
 
 /**
  * AdminDashboard
@@ -20,7 +22,12 @@ import { DispatchBoard } from "../../../features/admin-dispatch/components";
  * supplied by the application router.
  */
 export function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("add-vehicle");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("tab") === "financing-leads"
+      ? "financing-leads"
+      : "add-vehicle",
+  );
 
   const { user, isAuthenticated, isAuthReady } = useAuth();
 
@@ -76,8 +83,15 @@ export function AdminDashboard() {
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3 mb-8 h-12">
+        <Tabs
+          value={activeTab}
+          onValueChange={(tab) => {
+            setActiveTab(tab);
+            setSearchParams(tab === "add-vehicle" ? {} : { tab });
+          }}
+          className="w-full"
+        >
+          <TabsList className="grid w-full max-w-3xl grid-cols-4 mb-8 h-12">
             <TabsTrigger value="add-vehicle" className="font-semibold">
               Add Vehicle
             </TabsTrigger>
@@ -88,6 +102,9 @@ export function AdminDashboard() {
 
             <TabsTrigger value="dispatch" className="font-semibold">
               Dispatch Board
+            </TabsTrigger>
+            <TabsTrigger value="financing-leads" className="font-semibold">
+              Financing Leads
             </TabsTrigger>
           </TabsList>
 
@@ -103,6 +120,9 @@ export function AdminDashboard() {
 
           <TabsContent value="dispatch">
             <DispatchBoard />
+          </TabsContent>
+          <TabsContent value="financing-leads">
+            <AdminFinancingLeads />
           </TabsContent>
         </Tabs>
       </div>

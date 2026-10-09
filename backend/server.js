@@ -12,6 +12,7 @@ import authRoutes from "./routes/authRoutes.js";
 import carsRoutes from "./routes/carsRoutes.js";
 import testDriveRoutes from "./routes/testDriveRoutes.js";
 import exchangeRateRoutes from "./routes/exchangeRateRoutes.js";
+import financingRoutes from "./routes/financingRoutes.js";
 import { ensureExchangeRateSchema } from "./repositories/exchangeRateRepository.js";
 import { exchangeRateRefreshWorker } from "./workers/exchangeRateRefreshWorker.js";
 
@@ -1108,8 +1109,8 @@ app.patch(
 */
 
 // Import routes (using ES module syntax)
-import reportRoutes from './routes/reportRoutes.js';
-import highValueRoutes from './routes/highValueRoutes.js';
+import reportRoutes from "./routes/reportRoutes.js";
+import highValueRoutes from "./routes/highValueRoutes.js";
 app.get(
   "/api/admin/chat/retention-policy",
 
@@ -1168,10 +1169,10 @@ app.use("/api/test-drives", testDriveRoutes);
 app.use("/api/exchange-rates", exchangeRateRoutes);
 
 // Report routes (PDF Generator)
-app.use('/api/admin/reports', reportRoutes);
+app.use("/api/admin/reports", reportRoutes);
 
 // High-Value Alert routes (Spotlight System)
-app.use('/api/admin/spotlight', highValueRoutes);
+app.use("/api/admin/spotlight", highValueRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -1208,12 +1209,15 @@ app.use("/api/optimized", optimizedRoutes);
 
 app.use("/api/admin", adminRoutes);
 
+app.use("/api/finance", financingRoutes);
+
 /*
 |--------------------------------------------------------------------------
 | FINANCIAL PAYMENT APPROXIMATION
 |--------------------------------------------------------------------------
 */
 
+/* Legacy implementation: the modular router above owns this endpoint.
 app.post("/api/finance/calculate", (req, res, next) => {
   try {
     const { carPrice, downPayment, interestRate, loanTermMonths } = req.body;
@@ -1351,6 +1355,8 @@ app.post("/api/finance/calculate", (req, res, next) => {
     next(error);
   }
 });
+
+*/
 
 /*
 |--------------------------------------------------------------------------
@@ -1631,58 +1637,58 @@ app.use((req, res) => {
 // ============================================
 // GET /api/health
 // Simple endpoint to verify the API is running
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-        message: 'Panda Motors API is running!',
-        version: '3.0.0',
-        endpoints: [
-            // Financial
-            'POST /api/finance/calculate - Calculate loan payments',
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    message: "Panda Motors API is running!",
+    version: "3.0.0",
+    endpoints: [
+      // Financial
+      "POST /api/finance/calculate - Calculate loan payments",
 
-            // Dealership
-            'GET /api/dealership/location - Get dealership location',
-            'GET /api/dealership/status - Check if open',
+      // Dealership
+      "GET /api/dealership/location - Get dealership location",
+      "GET /api/dealership/status - Check if open",
 
-            // Bookings
-            'POST /api/bookings/create - Book test drive',
-            'GET /api/bookings/check-availability - Check availability',
-            'GET /api/bookings/user/:user_id - Get user bookings',
-            'PUT /api/bookings/:id/cancel - Cancel booking',
+      // Bookings
+      "POST /api/bookings/create - Book test drive",
+      "GET /api/bookings/check-availability - Check availability",
+      "GET /api/bookings/user/:user_id - Get user bookings",
+      "PUT /api/bookings/:id/cancel - Cancel booking",
 
-            // Admin Analytics
-            'GET /api/admin/stats - Full admin statistics',
-            'GET /api/admin/stats/summary - Quick summary',
+      // Admin Analytics
+      "GET /api/admin/stats - Full admin statistics",
+      "GET /api/admin/stats/summary - Quick summary",
 
-            // Performance & Optimized Queries
-            'GET /api/optimized/search - Optimized inventory search',
-            'GET /api/optimized/availability - Quick availability check',
-            'GET /api/optimized/stats - Inventory statistics',
-            'GET /api/optimized/most-searched - Most searched makes',
-            'GET /api/optimized/performance - Query performance report',
+      // Performance & Optimized Queries
+      "GET /api/optimized/search - Optimized inventory search",
+      "GET /api/optimized/availability - Quick availability check",
+      "GET /api/optimized/stats - Inventory statistics",
+      "GET /api/optimized/most-searched - Most searched makes",
+      "GET /api/optimized/performance - Query performance report",
 
-            // Admin Metrics Dashboard
-            'GET /api/admin/metrics - Full admin dashboard metrics',
-            'GET /api/admin/metrics/inventory - Inventory metrics only',
-            'GET /api/admin/metrics/bookings - Booking metrics only',
+      // Admin Metrics Dashboard
+      "GET /api/admin/metrics - Full admin dashboard metrics",
+      "GET /api/admin/metrics/inventory - Inventory metrics only",
+      "GET /api/admin/metrics/bookings - Booking metrics only",
 
-            // Reports (NEW)
-            'GET /api/admin/reports/inventory - Download PDF inventory report',
-            'GET /api/admin/reports/inventory/json - Get inventory as JSON',
-            'GET /api/admin/reports/inventory/summary - Get inventory summary',
+      // Reports (NEW)
+      "GET /api/admin/reports/inventory - Download PDF inventory report",
+      "GET /api/admin/reports/inventory/json - Get inventory as JSON",
+      "GET /api/admin/reports/inventory/summary - Get inventory summary",
 
-            // High-Value Spotlight System (NEW)
-            'GET /api/admin/spotlight/alerts - View spotlight alerts',
-            'GET /api/admin/spotlight/featured - Get featured vehicles',
-            'GET /api/admin/spotlight/stats - High-value statistics',
-            'POST /api/admin/spotlight/process-all - Process all vehicles',
-            'POST /api/admin/spotlight/process/:vehicleId - Process specific vehicle',
+      // High-Value Spotlight System (NEW)
+      "GET /api/admin/spotlight/alerts - View spotlight alerts",
+      "GET /api/admin/spotlight/featured - Get featured vehicles",
+      "GET /api/admin/spotlight/stats - High-value statistics",
+      "POST /api/admin/spotlight/process-all - Process all vehicles",
+      "POST /api/admin/spotlight/process/:vehicleId - Process specific vehicle",
 
-            // Health
-            'GET /api/health - Health check'
-        ]
-    });
+      // Health
+      "GET /api/health - Health check",
+    ],
+  });
 });
 /*
 |--------------------------------------------------------------------------
@@ -1964,7 +1970,6 @@ process.on("uncaughtException", (error) => {
     stack: error.stack,
   });
 });
-
 
 /*
 |--------------------------------------------------------------------------

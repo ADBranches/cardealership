@@ -3,12 +3,14 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { formatUGX } from "../utils/formatUGX";
 import type { Vehicle } from "../types";
+import { useNavigate } from "react-router-dom";
 
 interface VehicleCardProps {
   vehicle: Vehicle;
 }
 
 export function VehicleCard({ vehicle }: VehicleCardProps) {
+  const navigate = useNavigate();
   const modelLabel = vehicle.model?.trim();
 
   return (
@@ -81,7 +83,10 @@ export function VehicleCard({ vehicle }: VehicleCardProps) {
           </div>
         </div>
 
-        <Button className="w-full mt-6 bg-primary hover:bg-primary/90 text-white font-semibold">
+        <Button
+          onClick={() => navigate(`/cars/${vehicle.id}`)}
+          className="w-full mt-6 bg-primary hover:bg-primary/90 text-white font-semibold"
+        >
           VIEW DETAILS
           <ChevronRight className="ml-2" size={18} />
         </Button>
