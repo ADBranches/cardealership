@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../features/auth/hooks";
 import { Calendar, CheckCircle2, Clock, LogIn } from "lucide-react";
 import { Button } from "../ui/button";
 import { submitTestDriveBookingDraft, type TestDriveBookingPayload } from "../../../services";
@@ -24,17 +26,10 @@ function getTodayDateInputValue() {
   return new Date().toISOString().split("T")[0];
 }
 
-function isAuthenticated() {
-  // TODO: Replace this temporary localStorage check with the team's auth provider/context
-  // once the final JWT authentication flow is confirmed.
-  return Boolean(
-    localStorage.getItem("token") ||
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("jwt")
-  );
-}
 
 export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const today = useMemo(() => getTodayDateInputValue(), []);
 
   const [selectedVehicleId, setSelectedVehicleId] = useState(vehicles[0]?.id?.toString() ?? "");
@@ -60,10 +55,8 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
     if (!isAuthenticated()) {
       setAuthMessage("Please sign in first so we can reserve your test drive securely.");
 
-      // TODO: Replace this URL-only redirect with real navigation once the login route exists.
-      // Using history.pushState avoids a confusing full-page reload while the app has no /login route.
-      setTimeout(() => {
-        window.history.pushState(null, "", LOGIN_REDIRECT_PATH);
+          setTimeout(() => {
+        navigate(LOGIN_REDIRECT_PATH);
       }, 1200);
 
       return;

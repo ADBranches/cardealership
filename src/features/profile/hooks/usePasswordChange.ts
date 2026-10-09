@@ -34,7 +34,7 @@ export function usePasswordChange() {
       try {
         const response = await changePassword(accessToken, values);
         setResult(response);
-        if (!response.success && response.code === "UNAUTHORIZED") logout();
+        if (response.success || response.code === "UNAUTHORIZED") logout();
         return response;
       } finally {
         setIsSubmitting(false);

@@ -19,7 +19,9 @@
     "test:login-security": "node tests/authLoginSecurity.manual.js",
     "test:phase4-auth": "npm run test:login-security",
     "test:password-reset": "node tests/passwordReset.manual.js",
-    "test:phase5-auth": "npm run test:password-reset"
+    "test:phase5-auth": "npm run test:password-reset",
+    "test:session-protection": "node tests/sessionProtection.manual.js",
+    "test:phase6-auth": "npm run test:session-protection"
   },
   "dependencies": {
     "cors": "^2.8.6",

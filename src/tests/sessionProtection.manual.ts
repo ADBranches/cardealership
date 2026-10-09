@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { clearUnauthorizedSession, isUnauthorizedSession } from "../features/auth/services/sessionGuard";
+import { getAdminRouteDecision } from "../app/components/auth/routeAccess";
+assert.equal(isUnauthorizedSession(401), true);
+assert.equal(isUnauthorizedSession(403), false);
+assert.equal(isUnauthorizedSession(200, "SESSION_REVOKED"), true);
+assert.equal(clearUnauthorizedSession(403), false);
+assert.equal(getAdminRouteDecision(true, false, null), "redirect-login");
+assert.equal(getAdminRouteDecision(true, true, "user"), "deny");
+assert.equal(getAdminRouteDecision(true, true, "admin"), "allow");
+console.log(JSON.stringify({ suite: "sessionProtectionFrontend", passed: 7, failed: 0, centralizedCleanup: true, adminEnforcement: true }));

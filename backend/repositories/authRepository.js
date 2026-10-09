@@ -13,3 +13,5 @@ export async function clearFailedLogins(userId){await db.query(`UPDATE users SET
 
 export async function findUserByPasswordResetTokenHash(tokenHash){const r=await db.query(`SELECT ${AUTH_USER_COLUMNS} FROM users WHERE password_reset_token_hash=$1 LIMIT 1`,[tokenHash]);return r.rows[0]??null;}
 export async function resetUserPassword(userId,passwordHash){const r=await db.query(`UPDATE users SET password=$2,password_reset_token_hash=NULL,password_reset_expires_at=NULL,password_updated_at=NOW(),token_version=token_version+1,failed_login_attempts=0,locked_until=NULL,updated_at=NOW() WHERE id=$1 RETURNING ${AUTH_USER_COLUMNS}`,[userId,passwordHash]);return r.rows[0]??null;}
+
+export async function changeUserPassword(userId,passwordHash){const r=await db.query(`UPDATE users SET password=$2,password_updated_at=NOW(),token_version=token_version+1,failed_login_attempts=0,locked_until=NULL,updated_at=NOW() WHERE id=$1 RETURNING ${AUTH_USER_COLUMNS}`,[userId,passwordHash]);return r.rows[0]??null;}
