@@ -1,3 +1,21 @@
+// Import required packages
+const express = require('express');
+const cors = require('cors');
+require('dotenv').config();
+const { createExchangeRateService } = require("./services/exchangeRates/exchangeRateService");
+const { createExchangeRateRefreshWorker } = require("./workers/exchangeRateRefreshWorker");
+const { createExchangeRateRouter } = require("./routes/exchangeRateRoutes");
+const { createCarRouter } = require("./routes/carRoutes");
+const { createBulkCarImageUploadService } = require("./services/bulkCarImageUploadService");
+const vehicleRepository = require("./repositories/vehicleRepository");
+const vehicleImageRepository = require("./repositories/vehicleImageRepository");
+const { createLocalImageStorage } = require("./services/storage/localImageStorage");
+const localImageStorage = createLocalImageStorage();
+const bulkCarImageUploadService = createBulkCarImageUploadService({
+    vehicleRepository,
+    imageStorage: localImageStorage,
+    imageRepository: vehicleImageRepository
+});
 ﻿// backend/server.js
 
 import express from "express";
@@ -1283,6 +1301,9 @@ import { createIndexes, verifyIndexes } from './config/indexes.js';
 // CREATE EXPRESS APP
 // ============================================
 const app = express();
+const exchangeRateService = createExchangeRateService();
+const exchangeRateRefreshWorker = createExchangeRateRefreshWorker({ service: exchangeRateService });
+
 
 // Define the port
 const PORT = process.env.PORT || 5000;
@@ -1295,6 +1316,8 @@ app.use(cors());
 
 // JSON Parser - Automatically parses incoming JSON data
 app.use(express.json());
+app.use("/api/cars", createCarRouter({ bulkUploadService: bulkCarImageUploadService }));
+app.use("/api/exchange-rates", createExchangeRateRouter(exchangeRateService));
 
 // URL Encoded Parser
 app.use(express.urlencoded({ extended: true }));
@@ -1836,6 +1859,7 @@ process.on("uncaughtException", (error) => {
 // ============================================
 // Start the Server
 // ============================================
+const server = app.listen(PORT, () => {
 app.listen(PORT, async () => {
     console.log('\n========================================');
     console.log('?? Panda Motors API Server');
@@ -1903,4 +1927,17 @@ app.listen(PORT, async () => {
     console.log('   --- Health ---');
     console.log(`   GET  /api/health              - Health check`);
     console.log('========================================\n');
+});
+
+exchangeRateRefreshWorker.start();
+
+const shutdownExchangeRateWorker = (signal) => {
+    exchangeRateRefreshWorker.stop();
+    server.close(() => {
+        console.log(`Server stopped after ${signal}`);
+    });
+};
+
+process.once("SIGINT", () => shutdownExchangeRateWorker("SIGINT"));
+process.once("SIGTERM", () => shutdownExchangeRateWorker("SIGTERM"));
 });

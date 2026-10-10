@@ -1,3 +1,11 @@
+"use strict";
+
+const express = require("express");
+const { createExchangeRateController } = require("../controllers/exchangeRateController");
+
+const createExchangeRateRouter = (exchangeRateService) => {
+  const router = express.Router();
+  const controller = createExchangeRateController(exchangeRateService);
 import express from "express";
 import {
   createExchangeRateController,
@@ -18,4 +26,7 @@ export const createExchangeRateRouter = (
   return router;
 };
 
+module.exports = Object.freeze({
+  createExchangeRateRouter
+});
 export default createExchangeRateRouter();

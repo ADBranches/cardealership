@@ -106,4 +106,22 @@ router.delete(
     }
 );
 
+    // create JWT
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.status(200).json({
+      message: "Login successful",
+      token
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+module.exports = router;
 export default router;
