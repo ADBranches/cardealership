@@ -1,38 +1,109 @@
-// backend/routes/authRoutes.js
-
-import express from "express";
-import { authenticateToken } from "../middleware/authMiddleware.js";
-
-import { register, login, getSession } from "../controllers/authController.js";
+import express from 'express';
+import authController from '../controllers/authController.js';
+import { 
+    authenticateToken, 
+    checkRole,
+    isAdmin,
+    rateLimitLogin 
+} from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-/*
-|--------------------------------------------------------------------------
-| REGISTER USER
-|--------------------------------------------------------------------------
-|
-| POST /api/auth/register
-|
-| Saves the new user in the PostgreSQL users table through authController.
-|
-*/
+// ============================================
+// PUBLIC ROUTES (No Authentication)
+// ============================================
 
-router.post("/register", register);
+// POST /api/auth/register - Register new user
+router.post('/register', authController.register.bind(authController));
 
-/*
-|--------------------------------------------------------------------------
-| LOGIN USER
-|--------------------------------------------------------------------------
-|
-| POST /api/auth/login
-|
-| Finds the user in PostgreSQL, verifies the hashed password,
-| and returns a signed JWT.
-|
-*/
+// POST /api/auth/login - Login user
+router.post('/login', rateLimitLogin, authController.login.bind(authController));
 
-router.post("/login", login);
+// POST /api/auth/logout - Logout user
+router.post('/logout', authController.logout.bind(authController));
 
-router.get("/session", authenticateToken, getSession);
+// ============================================
+// PROTECTED ROUTES (Authentication Required)
+// ============================================
+
+// GET /api/auth/me - Get current user
+router.get(
+    '/me',
+    authenticateToken,
+    authController.getCurrentUser.bind(authController)
+);
+
+// POST /api/auth/refresh - Refresh token
+router.post(
+    '/refresh',
+    authenticateToken,
+    authController.refreshToken.bind(authController)
+);
+
+// PUT /api/auth/change-password - Change password
+router.put(
+    '/change-password',
+    authenticateToken,
+    authController.changePassword.bind(authController)
+);
+
+// ============================================
+// ADMIN ONLY ROUTES
+// ============================================
+
+// GET /api/auth/users - Get all users (Admin only)
+router.get(
+    '/users',
+    authenticateToken,
+    isAdmin,
+    async (req, res) => {
+        try {
+            const db = (await import('../config/database.js')).default;
+            const users = await db.collection('users').find({}).toArray();
+            
+            const safeUsers = users.map(user => {
+                const { password, ...safeUser } = user;
+                return safeUser;
+            });
+
+            res.json({
+                success: true,
+                data: safeUsers,
+                total: safeUsers.length
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+);
+
+// DELETE /api/auth/users/:id - Delete user (Admin only)
+router.delete(
+    '/users/:id',
+    authenticateToken,
+    isAdmin,
+    async (req, res) => {
+        try {
+            const db = (await import('../config/database.js')).default;
+            const userId = parseInt(req.params.id);
+
+            const result = await db.collection('users').deleteOne({ id: userId });
+
+            if (result.deletedCount === 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'User not found'
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'User deleted successfully'
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+);
+
 export default router;

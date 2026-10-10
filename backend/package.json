@@ -1,17 +1,12 @@
 {
-  "name": "@figma/my-make-file-backend",
-  "private": true,
-  "version": "0.0.1",
+  "name": "panda-motors-backend",
+  "version": "4.0.0",
+  "description": "Panda Motors Car Dealership API with Authentication, RBAC, PDF Reports, and Analytics",
   "type": "module",
-  "main": "server.cjs",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "build": "node --check server.js",
-    "cleanup:car-images": "node scripts/cleanupStaleCarImages.js --dry-run",
-    "cleanup:car-images:execute": "node scripts/cleanupStaleCarImages.js --execute",
-    "cleanup:car-images:job": "node -e \"import('./jobs/cleanupStaleCarImagesJob.js').then(async (m) => console.log(JSON.stringify(await m.runCleanupStaleCarImagesJob(), null, 2)))\"",
-    "test:car-image-cleanup": "node tests/carImageCleanup.manual.js"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -29,8 +24,24 @@
     "pg": "^8.21.0",
     "sharp": "^0.35.3",
     "winston": "^3.19.0"
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "pdfkit": "^0.14.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
-  }
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "car-dealership",
+    "api",
+    "express",
+    "authentication",
+    "jwt",
+    "rbac"
+  ],
+  "author": "Max Tinka",
+  "license": "ISC"
 }
