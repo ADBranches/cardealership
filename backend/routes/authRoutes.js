@@ -1,54 +1,110 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+import express from 'express';
+import authController from '../controllers/authController.js';
+import { 
+    authenticateToken, 
+    checkRole,
+    isAdmin,
+    rateLimitLogin 
+} from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// REGISTER
-router.post("/register", async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
+// ============================================
+// PUBLIC ROUTES (No Authentication)
+// ============================================
 
-    // check duplicate email
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already exists" });
+// POST /api/auth/register - Register new user
+router.post('/register', authController.register.bind(authController));
+
+// POST /api/auth/login - Login user
+router.post('/login', rateLimitLogin, authController.login.bind(authController));
+
+// POST /api/auth/logout - Logout user
+router.post('/logout', authController.logout.bind(authController));
+
+// ============================================
+// PROTECTED ROUTES (Authentication Required)
+// ============================================
+
+// GET /api/auth/me - Get current user
+router.get(
+    '/me',
+    authenticateToken,
+    authController.getCurrentUser.bind(authController)
+);
+
+// POST /api/auth/refresh - Refresh token
+router.post(
+    '/refresh',
+    authenticateToken,
+    authController.refreshToken.bind(authController)
+);
+
+// PUT /api/auth/change-password - Change password
+router.put(
+    '/change-password',
+    authenticateToken,
+    authController.changePassword.bind(authController)
+);
+
+// ============================================
+// ADMIN ONLY ROUTES
+// ============================================
+
+// GET /api/auth/users - Get all users (Admin only)
+router.get(
+    '/users',
+    authenticateToken,
+    isAdmin,
+    async (req, res) => {
+        try {
+            const db = (await import('../config/database.js')).default;
+            const users = await db.collection('users').find({}).toArray();
+            
+            const safeUsers = users.map(user => {
+                const { password, ...safeUser } = user;
+                return safeUser;
+            });
+
+            res.json({
+                success: true,
+                data: safeUsers,
+                total: safeUsers.length
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, error: error.message });
+        }
     }
+);
 
-    // hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+// DELETE /api/auth/users/:id - Delete user (Admin only)
+router.delete(
+    '/users/:id',
+    authenticateToken,
+    isAdmin,
+    async (req, res) => {
+        try {
+            const db = (await import('../config/database.js')).default;
+            const userId = parseInt(req.params.id);
 
-    const newUser = new User({
-      name,
-      email,
-      password: hashedPassword
-    });
+            const result = await db.collection('users').deleteOne({ id: userId });
 
-    await newUser.save();
+            if (result.deletedCount === 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'User not found'
+                });
+            }
 
-    res.status(201).json({ message: "User registered successfully" });
-
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
-// LOGIN
-router.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+            res.json({
+                success: true,
+                message: 'User deleted successfully'
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, error: error.message });
+        }
     }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
+);
 
     // create JWT
     const token = jwt.sign(
@@ -68,3 +124,4 @@ router.post("/login", async (req, res) => {
 });
 
 module.exports = router;
+export default router;

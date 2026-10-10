@@ -16,30 +16,1339 @@ const bulkCarImageUploadService = createBulkCarImageUploadService({
     imageStorage: localImageStorage,
     imageRepository: vehicleImageRepository
 });
+﻿// backend/server.js
 
-// Create an Express application
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import winston from "winston";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+import authRoutes from "./routes/authRoutes.js";
+import carsRoutes from "./routes/carsRoutes.js";
+import testDriveRoutes from "./routes/testDriveRoutes.js";
+import exchangeRateRoutes from "./routes/exchangeRateRoutes.js";
+import financingRoutes from "./routes/financingRoutes.js";
+import { ensureExchangeRateSchema } from "./repositories/exchangeRateRepository.js";
+import { exchangeRateRefreshWorker } from "./workers/exchangeRateRefreshWorker.js";
+
+import bookingRoutes from "./routes/bookingRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import optimizedRoutes from "./routes/optimizedRoutes.js";
+import adminMetricsRoutes from "./routes/adminMetricsRoutes.js";
+
+import { protect, adminOnly } from "./middleware/authMiddleware.js";
+
+import { performanceMiddleware } from "./middleware/performanceMiddleware.js";
+
+import db from "./config/db.js";
+
+const __filename = fileURLToPath(import.meta.url);
+
+const __dirname = path.dirname(__filename);
+
+dotenv.config();
+
+const app = express();
+
+const PORT = process.env.PORT || 5500;
+
+const SITE_URL = process.env.SITE_URL || "http://localhost:5173";
+
+/*
+|--------------------------------------------------------------------------
+| CHAT CONFIGURATION
+|--------------------------------------------------------------------------
+*/
+
+const CHAT_RETENTION_DAYS = Number(process.env.CHAT_RETENTION_DAYS || 365);
+
+const CHAT_DEFAULT_PAGE_SIZE = 30;
+
+const CHAT_MAX_PAGE_SIZE = 100;
+
+const ADMIN_CONVERSATION_DEFAULT_PAGE_SIZE = 20;
+
+const ADMIN_CONVERSATION_MAX_PAGE_SIZE = 100;
+
+/*
+|--------------------------------------------------------------------------
+| WINSTON LOGGING
+|--------------------------------------------------------------------------
+*/
+
+const logsDirectory = path.join(__dirname, "logs");
+
+if (!fs.existsSync(logsDirectory)) {
+  fs.mkdirSync(logsDirectory, {
+    recursive: true,
+  });
+}
+
+const logger = winston.createLogger({
+  level: "info",
+
+  format: winston.format.combine(
+    winston.format.timestamp(),
+
+    winston.format.errors({
+      stack: true,
+    }),
+
+    winston.format.json(),
+  ),
+
+  transports: [
+    new winston.transports.File({
+      filename: path.join(logsDirectory, "error.log"),
+
+      level: "error",
+    }),
+
+    new winston.transports.File({
+      filename: path.join(logsDirectory, "combined.log"),
+    }),
+  ],
+});
+
+if (process.env.NODE_ENV !== "production") {
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.timestamp(),
+
+        winston.format.colorize(),
+
+        winston.format.printf(
+          ({ timestamp, level, message, stack }) =>
+            `${timestamp} ${level}: ${stack || message}`,
+        ),
+      ),
+    }),
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| BASIC MIDDLEWARE
+|--------------------------------------------------------------------------
+*/
+
+app.use(cors());
+
+app.use(express.json());
+
+app.use(
+  express.urlencoded({
+    extended: true,
+  }),
+);
+
+app.use(performanceMiddleware);
+
+/*
+|--------------------------------------------------------------------------
+| 500 RESPONSE LOGGER
+|--------------------------------------------------------------------------
+*/
+
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+
+  res.on("finish", () => {
+    if (res.statusCode >= 500) {
+      logger.error("HTTP request returned server error", {
+        method: req.method,
+
+        url: req.originalUrl,
+
+        statusCode: res.statusCode,
+
+        durationMs: Date.now() - startedAt,
+
+        ip: req.ip,
+
+        userAgent: req.get("user-agent"),
+      });
+    }
+  });
+
+  next();
+});
+
+/*
+|--------------------------------------------------------------------------
+| STANDARD CHAT ERROR RESPONSE
+|--------------------------------------------------------------------------
+*/
+
+function sendChatError(res, status, code, message, details = null) {
+  return res.status(status).json({
+    success: false,
+
+    error: {
+      code,
+      message,
+      status,
+      details,
+    },
+  });
+}
+
+/*
+|--------------------------------------------------------------------------
+| PAGINATION HELPER
+|--------------------------------------------------------------------------
+*/
+
+function parsePagination(query, { defaultLimit, maxLimit }) {
+  const requestedPage = Number(query.page);
+
+  const requestedLimit = Number(query.limit);
+
+  const page =
+    Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+
+  const limit =
+    Number.isInteger(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, maxLimit)
+      : defaultLimit;
+
+  const offset = (page - 1) * limit;
+
+  return {
+    page,
+    limit,
+    offset,
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| CONVERSATION ACCESS HELPER
+|--------------------------------------------------------------------------
+*/
+
+async function ensureConversationAccess(req, res, conversationId) {
+  if (req.user?.role === "admin") {
+    return true;
+  }
+
+  const result = await db.query(
+    `
+        SELECT customer_id
+        FROM chat_messages
+        WHERE
+          conversation_id = $1
+          AND customer_id IS NOT NULL
+        LIMIT 1;
+      `,
+    [conversationId],
+  );
+
+  if (result.rows.length === 0) {
+    sendChatError(
+      res,
+      404,
+      "CONVERSATION_NOT_FOUND",
+      "Conversation was not found.",
+    );
+
+    return false;
+  }
+
+  const customerId = Number(result.rows[0].customer_id);
+
+  if (customerId !== Number(req.user?.id)) {
+    sendChatError(
+      res,
+      403,
+      "CHAT_ACCESS_DENIED",
+      "You do not have permission to access this conversation.",
+    );
+
+    return false;
+  }
+
+  return true;
+}
+
+/*
+|--------------------------------------------------------------------------
+| XML HELPER
+|--------------------------------------------------------------------------
+*/
+
+function escapeXml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+/*
+|--------------------------------------------------------------------------
+| DYNAMIC XML SITEMAP
+|--------------------------------------------------------------------------
+*/
+
+app.get("/sitemap.xml", async (req, res, next) => {
+  try {
+    const result = await db.query(`
+          SELECT
+            id,
+            name,
+            brand,
+            created_at,
+            updated_at
+          FROM cars
+          WHERE
+            COALESCE(
+              is_available,
+              TRUE
+            ) = TRUE
+          ORDER BY
+            COALESCE(
+              updated_at,
+              created_at
+            ) DESC,
+            id DESC;
+        `);
+
+    const vehicleUrls = result.rows
+      .map((car) => {
+        const lastModified = car.updated_at || car.created_at;
+
+        const lastmod = lastModified
+          ? new Date(lastModified).toISOString().split("T")[0]
+          : null;
+
+        return `
+  <url>
+    <loc>${escapeXml(`${SITE_URL}/cars/${car.id}`)}</loc>
+    ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+      })
+      .join("");
+
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <url>
+    <loc>${escapeXml(SITE_URL)}</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>${escapeXml(`${SITE_URL}/cars`)}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+${vehicleUrls}
+
+</urlset>`;
+
+    res.set("Content-Type", "application/xml; charset=utf-8");
+
+    res.set("Cache-Control", "public, max-age=300");
+
+    return res.status(200).send(sitemap);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/*
+|--------------------------------------------------------------------------
+| DYNAMIC RSS FEED
+|--------------------------------------------------------------------------
+*/
+
+app.get("/rss.xml", async (req, res, next) => {
+  try {
+    const result = await db.query(`
+          SELECT
+            id,
+            name,
+            brand,
+            year,
+            price,
+            description,
+            created_at,
+            updated_at
+          FROM cars
+          WHERE
+            COALESCE(
+              is_available,
+              TRUE
+            ) = TRUE
+          ORDER BY
+            COALESCE(
+              created_at,
+              updated_at
+            ) DESC,
+            id DESC
+          LIMIT 50;
+        `);
+
+    const items = result.rows
+      .map((car) => {
+        const date = car.created_at || car.updated_at || new Date();
+
+        const title = `${car.year || ""} ${car.brand || ""} ${
+          car.name || ""
+        }`.trim();
+
+        const description =
+          car.description ||
+          `${title} available at Panda Motors for UGX ${Number(
+            car.price || 0,
+          ).toLocaleString()}.`;
+
+        const vehicleUrl = `${SITE_URL}/cars/${car.id}`;
+
+        return `
+    <item>
+      <title>${escapeXml(title)}</title>
+
+      <link>${escapeXml(vehicleUrl)}</link>
+
+      <guid isPermaLink="true">${escapeXml(vehicleUrl)}</guid>
+
+      <description>${escapeXml(description)}</description>
+
+      <pubDate>${new Date(date).toUTCString()}</pubDate>
+    </item>`;
+      })
+      .join("");
+
+    const rss = `<?xml version="1.0" encoding="UTF-8"?>
+
+<rss version="2.0">
+
+  <channel>
+
+    <title>Panda Motors Vehicle Inventory</title>
+
+    <link>${escapeXml(SITE_URL)}</link>
+
+    <description>
+      Latest vehicles currently available at Panda Motors.
+    </description>
+
+    <language>en</language>
+
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+
+${items}
+
+  </channel>
+
+</rss>`;
+
+    res.set("Content-Type", "application/rss+xml; charset=utf-8");
+
+    res.set("Cache-Control", "public, max-age=300");
+
+    return res.status(200).send(rss);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/*
+|--------------------------------------------------------------------------
+| CHAT — SAVE MESSAGE
+|--------------------------------------------------------------------------
+*/
+
+app.post(
+  "/api/chat/messages",
+
+  protect,
+
+  async (req, res, next) => {
+    try {
+      const {
+        conversationId,
+        clientMessageId,
+        customerId,
+        carId,
+        sender,
+        message,
+      } = req.body;
+
+      if (!conversationId || typeof conversationId !== "string") {
+        return sendChatError(
+          res,
+          400,
+          "INVALID_CONVERSATION_ID",
+          "conversationId is required.",
+        );
+      }
+
+      if (!clientMessageId || typeof clientMessageId !== "string") {
+        return sendChatError(
+          res,
+          400,
+          "CLIENT_MESSAGE_ID_REQUIRED",
+          "clientMessageId is required.",
+        );
+      }
+
+      if (!message || typeof message !== "string" || !message.trim()) {
+        return sendChatError(
+          res,
+          400,
+          "INVALID_MESSAGE",
+          "message is required.",
+        );
+      }
+
+      const parsedCustomerId = Number(customerId);
+
+      const parsedCarId = Number(carId);
+
+      if (!Number.isInteger(parsedCustomerId) || parsedCustomerId <= 0) {
+        return sendChatError(
+          res,
+          400,
+          "INVALID_CUSTOMER_ID",
+          "A valid customerId is required.",
+        );
+      }
+
+      if (!Number.isInteger(parsedCarId) || parsedCarId <= 0) {
+        return sendChatError(
+          res,
+          400,
+          "INVALID_CAR_ID",
+          "A valid carId is required.",
+        );
+      }
+
+      const authenticatedIsAdmin = req.user?.role === "admin";
+
+      const expectedSender = authenticatedIsAdmin ? "admin" : "customer";
+
+      if (sender !== expectedSender) {
+        return sendChatError(
+          res,
+          403,
+          "INVALID_CHAT_SENDER",
+          `Authenticated user must send messages as '${expectedSender}'.`,
+        );
+      }
+
+      if (!authenticatedIsAdmin && Number(req.user?.id) !== parsedCustomerId) {
+        return sendChatError(
+          res,
+          403,
+          "CHAT_ACCESS_DENIED",
+          "You cannot send messages for another customer.",
+        );
+      }
+
+      const carResult = await db.query(
+        `
+            SELECT id
+            FROM cars
+            WHERE id = $1
+            LIMIT 1;
+          `,
+        [parsedCarId],
+      );
+
+      if (carResult.rows.length === 0) {
+        return sendChatError(
+          res,
+          404,
+          "CAR_NOT_FOUND",
+          "Vehicle was not found.",
+        );
+      }
+
+      const insertResult = await db.query(
+        `
+            INSERT INTO chat_messages (
+              conversation_id,
+              client_message_id,
+              customer_id,
+              car_id,
+              sender,
+              message,
+              is_read,
+              read_at,
+              retention_expires_at
+            )
+
+            VALUES (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              $7,
+              $8,
+              NOW() + ($9::int * INTERVAL '1 day')
+            )
+
+            ON CONFLICT (
+              conversation_id,
+              client_message_id
+            )
+            DO NOTHING
+
+            RETURNING
+              id,
+              conversation_id,
+              client_message_id,
+              customer_id,
+              car_id,
+              sender,
+              message,
+              is_read,
+              read_at,
+              created_at,
+              retention_expires_at;
+          `,
+
+        [
+          conversationId.trim(),
+
+          clientMessageId.trim(),
+
+          parsedCustomerId,
+
+          parsedCarId,
+
+          sender,
+
+          message.trim(),
+
+          sender === "admin",
+
+          sender === "admin" ? new Date() : null,
+
+          CHAT_RETENTION_DAYS,
+        ],
+      );
+
+      if (insertResult.rows.length > 0) {
+        return res.status(201).json({
+          success: true,
+
+          duplicate: false,
+
+          message: insertResult.rows[0],
+        });
+      }
+
+      const duplicateResult = await db.query(
+        `
+            SELECT
+              id,
+              conversation_id,
+              client_message_id,
+              customer_id,
+              car_id,
+              sender,
+              message,
+              is_read,
+              read_at,
+              created_at,
+              retention_expires_at
+            FROM chat_messages
+            WHERE
+              conversation_id = $1
+              AND client_message_id = $2
+            LIMIT 1;
+          `,
+
+        [conversationId.trim(), clientMessageId.trim()],
+      );
+
+      if (duplicateResult.rows.length === 0) {
+        return sendChatError(
+          res,
+          409,
+          "MESSAGE_ID_CONFLICT",
+          "Unable to reconcile duplicate message.",
+        );
+      }
+
+      return res.status(200).json({
+        success: true,
+
+        duplicate: true,
+
+        message: duplicateResult.rows[0],
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| CHAT — PAGINATED HISTORY
+|--------------------------------------------------------------------------
+*/
+
+app.get(
+  "/api/chat/conversations/:conversationId/messages",
+
+  protect,
+
+  async (req, res, next) => {
+    try {
+      const { conversationId } = req.params;
+
+      const accessAllowed = await ensureConversationAccess(
+        req,
+        res,
+        conversationId,
+      );
+
+      if (!accessAllowed) {
+        return;
+      }
+
+      const { page, limit, offset } = parsePagination(req.query, {
+        defaultLimit: CHAT_DEFAULT_PAGE_SIZE,
+
+        maxLimit: CHAT_MAX_PAGE_SIZE,
+      });
+
+      const countResult = await db.query(
+        `
+            SELECT
+              COUNT(*)::int AS total
+            FROM chat_messages
+            WHERE
+              conversation_id = $1;
+          `,
+
+        [conversationId],
+      );
+
+      const total = countResult.rows[0]?.total || 0;
+
+      const historyResult = await db.query(
+        `
+            SELECT
+              id,
+              conversation_id,
+              client_message_id,
+              customer_id,
+              car_id,
+              sender,
+              message,
+              is_read,
+              read_at,
+              created_at,
+              retention_expires_at
+
+            FROM chat_messages
+
+            WHERE
+              conversation_id = $1
+
+            ORDER BY
+              created_at DESC,
+              id DESC
+
+            LIMIT $2
+            OFFSET $3;
+          `,
+
+        [conversationId, limit, offset],
+      );
+
+      const messages = historyResult.rows.reverse();
+
+      const totalPages = Math.ceil(total / limit);
+
+      return res.status(200).json({
+        success: true,
+
+        conversationId,
+
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+
+          hasNextPage: page < totalPages,
+
+          hasPreviousPage: page > 1,
+        },
+
+        messages,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN CHAT — CONVERSATION LIST
+|--------------------------------------------------------------------------
+*/
+
+app.get(
+  "/api/admin/chat/conversations",
+
+  protect,
+  adminOnly,
+
+  async (req, res, next) => {
+    try {
+      const { page, limit, offset } = parsePagination(req.query, {
+        defaultLimit: ADMIN_CONVERSATION_DEFAULT_PAGE_SIZE,
+
+        maxLimit: ADMIN_CONVERSATION_MAX_PAGE_SIZE,
+      });
+
+      const countResult = await db.query(`
+          SELECT
+            COUNT(
+              DISTINCT conversation_id
+            )::int AS total
+          FROM chat_messages;
+        `);
+
+      const total = countResult.rows[0]?.total || 0;
+
+      const result = await db.query(
+        `
+            WITH conversation_summary AS (
+              SELECT
+                conversation_id,
+
+                MAX(customer_id)
+                  AS customer_id,
+
+                MAX(car_id)
+                  AS car_id,
+
+                COUNT(*)::int
+                  AS message_count,
+
+                COUNT(*) FILTER (
+                  WHERE
+                    sender = 'customer'
+                    AND is_read = FALSE
+                )::int
+                  AS unread_count,
+
+                MIN(created_at)
+                  AS first_message_at,
+
+                MAX(created_at)
+                  AS last_message_at
+
+              FROM chat_messages
+
+              GROUP BY
+                conversation_id
+            )
+
+            SELECT
+              summary.conversation_id,
+              summary.message_count,
+              summary.unread_count,
+              summary.first_message_at,
+              summary.last_message_at,
+
+              customer.id
+                AS customer_id,
+
+              customer.name
+                AS customer_name,
+
+              customer.email
+                AS customer_email,
+
+              car.id
+                AS car_id,
+
+              car.name
+                AS car_name,
+
+              car.brand
+                AS car_brand,
+
+              car.year
+                AS car_year,
+
+              car.price
+                AS car_price,
+
+              latest.id
+                AS last_message_id,
+
+              latest.sender
+                AS last_sender,
+
+              latest.message
+                AS last_message,
+
+              latest.created_at
+                AS last_message_created_at
+
+            FROM conversation_summary summary
+
+            LEFT JOIN users customer
+              ON customer.id =
+                summary.customer_id
+
+            LEFT JOIN cars car
+              ON car.id =
+                summary.car_id
+
+            JOIN LATERAL (
+              SELECT
+                id,
+                sender,
+                message,
+                created_at
+
+              FROM chat_messages
+
+              WHERE
+                conversation_id =
+                  summary.conversation_id
+
+              ORDER BY
+                created_at DESC,
+                id DESC
+
+              LIMIT 1
+            ) latest
+              ON TRUE
+
+            ORDER BY
+              summary.last_message_at DESC
+
+            LIMIT $1
+            OFFSET $2;
+          `,
+
+        [limit, offset],
+      );
+
+      const conversations = result.rows.map((row) => ({
+        conversationId: row.conversation_id,
+
+        messageCount: row.message_count,
+
+        unreadCount: row.unread_count,
+
+        firstMessageAt: row.first_message_at,
+
+        lastMessageAt: row.last_message_at,
+
+        customer: row.customer_id
+          ? {
+              id: row.customer_id,
+
+              name: row.customer_name,
+
+              email: row.customer_email,
+            }
+          : null,
+
+        vehicle: row.car_id
+          ? {
+              id: row.car_id,
+
+              name: row.car_name,
+
+              brand: row.car_brand,
+
+              year: row.car_year,
+
+              price: row.car_price,
+            }
+          : null,
+
+        lastMessage: {
+          id: row.last_message_id,
+
+          sender: row.last_sender,
+
+          message: row.last_message,
+
+          createdAt: row.last_message_created_at,
+        },
+      }));
+
+      const totalPages = Math.ceil(total / limit);
+
+      return res.status(200).json({
+        success: true,
+
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+
+          hasNextPage: page < totalPages,
+
+          hasPreviousPage: page > 1,
+        },
+
+        conversations,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN CHAT — MARK AS READ
+|--------------------------------------------------------------------------
+*/
+
+app.patch(
+  "/api/admin/chat/conversations/:conversationId/read",
+
+  protect,
+  adminOnly,
+
+  async (req, res, next) => {
+    try {
+      const { conversationId } = req.params;
+
+      const conversationResult = await db.query(
+        `
+            SELECT 1
+            FROM chat_messages
+            WHERE
+              conversation_id = $1
+            LIMIT 1;
+          `,
+
+        [conversationId],
+      );
+
+      if (conversationResult.rows.length === 0) {
+        return sendChatError(
+          res,
+          404,
+          "CONVERSATION_NOT_FOUND",
+          "Conversation was not found.",
+        );
+      }
+
+      const updateResult = await db.query(
+        `
+            UPDATE chat_messages
+
+            SET
+              is_read = TRUE,
+
+              read_at =
+                COALESCE(
+                  read_at,
+                  NOW()
+                )
+
+            WHERE
+              conversation_id = $1
+
+              AND sender = 'customer'
+
+              AND is_read = FALSE
+
+            RETURNING id;
+          `,
+
+        [conversationId],
+      );
+
+      const unreadResult = await db.query(
+        `
+            SELECT
+              COUNT(*)::int
+                AS unread_count
+
+            FROM chat_messages
+
+            WHERE
+              conversation_id = $1
+
+              AND sender =
+                'customer'
+
+              AND is_read =
+                FALSE;
+          `,
+
+        [conversationId],
+      );
+
+      return res.status(200).json({
+        success: true,
+
+        conversationId,
+
+        updatedCount: updateResult.rowCount,
+
+        unreadCount: unreadResult.rows[0]?.unread_count || 0,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN CHAT — RETENTION POLICY
+|--------------------------------------------------------------------------
+*/
+
+// Import routes (using ES module syntax)
+import reportRoutes from "./routes/reportRoutes.js";
+import highValueRoutes from "./routes/highValueRoutes.js";
+app.get(
+  "/api/admin/chat/retention-policy",
+
+  protect,
+  adminOnly,
+
+  (req, res) => {
+    return res.status(200).json({
+      success: true,
+
+      retentionPolicy: {
+        retentionDays: CHAT_RETENTION_DAYS,
+
+        basis: "message_created_at",
+
+        actionAfterExpiry: "eligible_for_archival_or_deletion",
+
+        automaticDeletion: false,
+
+        description: `Chat messages are retained for ${CHAT_RETENTION_DAYS} days from creation. Expired records are marked by retention_expires_at and become eligible for archival or deletion.`,
+      },
+    });
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| EXISTING APPLICATION ROUTES
+|--------------------------------------------------------------------------
+|
+| Restored:
+|
+| /api/auth
+| /api/cars
+|
+| Existing team routes remain mounted.
+|
+*/
+
+/*
+|--------------------------------------------------------------------------
+| AUTH
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/auth", authRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| CARS
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/cars", carsRoutes);
+app.use("/api/test-drives", testDriveRoutes);
+app.use("/api/exchange-rates", exchangeRateRoutes);
+
+// Report routes (PDF Generator)
+app.use("/api/admin/reports", reportRoutes);
+
+// High-Value Alert routes (Spotlight System)
+app.use("/api/admin/spotlight", highValueRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| BOOKINGS
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/bookings", bookingRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN METRICS
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/admin/metrics", adminMetricsRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| OPTIMIZED QUERIES
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/optimized", optimizedRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| GENERAL ADMIN ROUTER
+|--------------------------------------------------------------------------
+|
+| Keep this after the dedicated /api/admin/chat routes.
+|
+*/
+
+app.use("/api/admin", adminRoutes);
+
+app.use("/api/finance", financingRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| FINANCIAL PAYMENT APPROXIMATION
+|--------------------------------------------------------------------------
+*/
+
+/* Legacy implementation: the modular router above owns this endpoint.
+app.post("/api/finance/calculate", (req, res, next) => {
+  try {
+    const { carPrice, downPayment, interestRate, loanTermMonths } = req.body;
+
+    if (
+      carPrice === undefined ||
+      downPayment === undefined ||
+      interestRate === undefined ||
+      loanTermMonths === undefined
+    ) {
+      return res.status(400).json({
+        error: "Missing required fields",
+
+        required: ["carPrice", "downPayment", "interestRate", "loanTermMonths"],
+      });
+    }
+
+    const price = parseFloat(carPrice);
+
+    const down = parseFloat(downPayment);
+
+    const rate = parseFloat(interestRate);
+// ============================================
+// PANDA MOTORS API SERVER
+// Version: 4.0.0
+// Features: Auth + RBAC + PDF Reports + Spotlight + Analytics
+// ============================================
+
+// Import required packages
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config();
+
+// ============================================
+// IMPORT ROUTES
+// ============================================
+import authRoutes from './routes/authRoutes.js';
+import bookingRoutes from './routes/bookingRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import optimizedRoutes from './routes/optimizedRoutes.js';
+import adminMetricsRoutes from './routes/adminMetricsRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
+import highValueRoutes from './routes/highValueRoutes.js';
+
+// ============================================
+// IMPORT MIDDLEWARE
+// ============================================
+import { performanceMiddleware } from './middleware/performanceMiddleware.js';
+
+// ============================================
+// IMPORT DATABASE CONFIG
+// ============================================
+import { createIndexes, verifyIndexes } from './config/indexes.js';
+
+// ============================================
+// CREATE EXPRESS APP
+// ============================================
 const app = express();
 const exchangeRateService = createExchangeRateService();
 const exchangeRateRefreshWorker = createExchangeRateRefreshWorker({ service: exchangeRateService });
 
 
-// Define the port (use environment variable or default to 5000)
+// Define the port
 const PORT = process.env.PORT || 5000;
 
 // ============================================
 // MIDDLEWARE
 // ============================================
-// Middleware functions that run before every request
-
-// cors() - Allows your React frontend (running on port 5173) 
-// to communicate with this backend (running on port 5000)
+// CORS - Allows React frontend (port 5173) to communicate with backend (port 5000)
 app.use(cors());
 
-// express.json() - Automatically parses incoming JSON data 
-// from POST requests into a JavaScript object (req.body)
+// JSON Parser - Automatically parses incoming JSON data
 app.use(express.json());
 app.use("/api/cars", createCarRouter({ bulkUploadService: bulkCarImageUploadService }));
 app.use("/api/exchange-rates", createExchangeRateRouter(exchangeRateService));
+
+// URL Encoded Parser
+app.use(express.urlencoded({ extended: true }));
+
+// Performance monitoring middleware
+app.use(performanceMiddleware);
+
+// ============================================
+// ROUTES
+// ============================================
+
+// Authentication routes (NEW - Task: Secure Auth & RBAC)
+app.use('/api/auth', authRoutes);
+
+// Booking routes (Task 1)
+app.use('/api/bookings', bookingRoutes);
+
+// Admin routes (Task 2)
+app.use('/api/admin', adminRoutes);
+
+// Optimized query routes (Performance & Analytics)
+app.use('/api/optimized', optimizedRoutes);
+
+// Admin metrics routes (Unified Admin Analytics Dashboard)
+app.use('/api/admin/metrics', adminMetricsRoutes);
+
+// Report routes (PDF Generator)
+app.use('/api/admin/reports', reportRoutes);
+
+// High-Value Alert routes (Spotlight System)
+app.use('/api/admin/spotlight', highValueRoutes);
 
 // ============================================
 // USER STORY 1: Financial Payment Approximation
@@ -48,17 +1357,14 @@ app.use("/api/exchange-rates", createExchangeRateRouter(exchangeRateService));
 // This endpoint calculates monthly loan payments
 app.post('/api/finance/calculate', (req, res) => {
     try {
-        // STEP 1: Extract data from the request body
-        // The frontend sends a JSON object with these fields
         const {
-            carPrice,        // Price of the car (e.g., 285,000,000 UGX)
-            downPayment,     // Down payment amount (e.g., 50,000,000 UGX)
-            interestRate,    // Annual interest rate (e.g., 12 for 12%)
-            loanTermMonths   // Loan duration in months (e.g., 60 for 5 years)
+            carPrice,
+            downPayment,
+            interestRate,
+            loanTermMonths
         } = req.body;
 
-        // STEP 2: Input Validation
-        // Check if all required fields are present
+        // Input Validation
         if (carPrice === undefined || downPayment === undefined || 
             interestRate === undefined || loanTermMonths === undefined) {
             return res.status(400).json({
@@ -67,30 +1373,21 @@ app.post('/api/finance/calculate', (req, res) => {
             });
         }
 
-        // Convert string inputs to numbers (they come as strings from JSON)
+        // Convert string inputs to numbers
         const price = parseFloat(carPrice);
         const down = parseFloat(downPayment);
         const rate = parseFloat(interestRate);
         const term = parseInt(loanTermMonths);
 
-        // STEP 3: Validate non-negative values (Acceptance Criteria)
-        if (price < 0) {
-            return res.status(400).json({ error: 'Car price cannot be negative' });
-        }
-        if (down < 0) {
-            return res.status(400).json({ error: 'Down payment cannot be negative' });
-        }
-        if (rate < 0) {
-            return res.status(400).json({ error: 'Interest rate cannot be negative' });
-        }
-        if (term <= 0) {
-            return res.status(400).json({ error: 'Loan term must be greater than 0 months' });
-        }
+        // Validate non-negative values
+        if (price < 0) return res.status(400).json({ error: 'Car price cannot be negative' });
+        if (down < 0) return res.status(400).json({ error: 'Down payment cannot be negative' });
+        if (rate < 0) return res.status(400).json({ error: 'Interest rate cannot be negative' });
+        if (term <= 0) return res.status(400).json({ error: 'Loan term must be greater than 0 months' });
 
-        // STEP 4: Calculate the loan amount
+        // Calculate loan amount
         const loanAmount = price - down;
         
-        // Check if down payment is larger than car price
         if (loanAmount <= 0) {
             return res.status(400).json({ 
                 error: 'Down payment must be less than car price',
@@ -98,46 +1395,31 @@ app.post('/api/finance/calculate', (req, res) => {
             });
         }
 
-        // STEP 5: Calculate Monthly Payment using Amortization Formula
-        // Convert annual interest rate to monthly decimal
-        // Example: 12% annual = 0.12 yearly = 0.12/12 = 0.01 monthly
+        // Calculate Monthly Payment using Amortization Formula
         const monthlyRate = (rate / 100) / 12;
 
         let monthlyPayment;
         let totalPayment;
         let totalInterest;
 
-        // Formula: P = (r * PV) / (1 - (1 + r)^-n)
-        // Where:
-        // P = monthly payment
-        // r = monthly interest rate
-        // PV = present value (loan amount)
-        // n = number of payments (term)
-        
         if (monthlyRate === 0) {
-            // If interest rate is 0%, it's simple division
             monthlyPayment = loanAmount / term;
             totalPayment = loanAmount;
             totalInterest = 0;
         } else {
-            // Standard amortization formula
             const compoundFactor = Math.pow(1 + monthlyRate, term);
             monthlyPayment = loanAmount * (monthlyRate * compoundFactor) / (compoundFactor - 1);
             totalPayment = monthlyPayment * term;
             totalInterest = totalPayment - loanAmount;
         }
 
-        // STEP 6: Generate Payment Schedule (first 6 months)
-        // This shows how each payment breaks down into principal + interest
+        // Generate Payment Schedule (first 6 months)
         const paymentSchedule = [];
         let remainingBalance = loanAmount;
         
         for (let month = 1; month <= Math.min(6, term); month++) {
-            // Interest for this month = remaining balance * monthly rate
             const interestPayment = remainingBalance * monthlyRate;
-            // Principal payment = total payment - interest
             const principalPayment = monthlyPayment - interestPayment;
-            // New remaining balance
             remainingBalance -= principalPayment;
             
             paymentSchedule.push({
@@ -149,7 +1431,7 @@ app.post('/api/finance/calculate', (req, res) => {
             });
         }
 
-        // STEP 7: Return the calculated results
+        // Return the calculated results
         res.json({
             success: true,
             inputs: {
@@ -169,7 +1451,6 @@ app.post('/api/finance/calculate', (req, res) => {
         });
 
     } catch (error) {
-        // Handle any unexpected errors
         console.error('Calculation error:', error);
         res.status(500).json({ 
             error: 'Internal server error', 
@@ -178,22 +1459,122 @@ app.post('/api/finance/calculate', (req, res) => {
     }
 });
 
+*/
+
+/*
+|--------------------------------------------------------------------------
+| DEALERSHIP LOCATION
+|--------------------------------------------------------------------------
+*/
+
+app.get("/api/dealership/location", (req, res, next) => {
+  try {
+    const dealershipInfo = {
+      success: true,
+
+      dealership: {
+        name: "Panda Motors Ltd",
+
+        description: "Uganda's trusted luxury vehicle importer",
+
+        address: {
+          street: "Banda, Jinja Road",
+
+          city: "Kampala",
+
+          district: "Kampala District",
+
+          country: "Uganda",
+
+          fullAddress: "Banda, Jinja Road, Kampala, Uganda",
+        },
+
+        location: {
+          latitude: 0.3488,
+
+          longitude: 32.616,
+
+          zoom: 15,
+        },
+
+        operatingHours: {
+          monday: {
+            open: "08:00",
+            close: "18:00",
+            isOpen: true,
+          },
+
+          tuesday: {
+            open: "08:00",
+            close: "18:00",
+            isOpen: true,
+          },
+
+          wednesday: {
+            open: "08:00",
+            close: "18:00",
+            isOpen: true,
+          },
+
+          thursday: {
+            open: "08:00",
+            close: "18:00",
+            isOpen: true,
+          },
+
+          friday: {
+            open: "08:00",
+            close: "18:00",
+            isOpen: true,
+          },
+
+          saturday: {
+            open: "09:00",
+            close: "17:00",
+            isOpen: true,
+          },
+
+          sunday: {
+            open: "00:00",
+            close: "00:00",
+            isOpen: false,
+
+            note: "Closed",
+          },
+        },
+
+        contact: {
+          phone: ["+256 770 826 951", "+256 756 053 475"],
+
+          whatsapp: "+256 770 826 951",
+
+          email: "sales@pandamotors.co.ug",
+        },
+
+        services: [
+          "URA Duty Clearance",
+          "Import Documentation",
+          "Certified Workshop",
+          "Flexible Financing",
+        ],
+
+        googleMapsUrl:
+          "https://maps.google.com/?q=Banda,+Jinja+Road,+Kampala,+Uganda",
+
+        directionsUrl:
+          "https://maps.google.com/dir//Banda,+Jinja+Road,+Kampala,+Uganda",
 // ============================================
 // USER STORY 2: Dealership Localization
 // ============================================
 // GET /api/dealership/location
-// This endpoint returns dealership information formatted for Google Maps
 app.get('/api/dealership/location', (req, res) => {
     try {
-        // Dealership information for Panda Motors in Banda, Kampala
         const dealershipInfo = {
             success: true,
             dealership: {
-                // Basic info
                 name: 'Panda Motors Ltd',
                 description: 'Uganda\'s trusted luxury vehicle importer',
                 
-                // Address - structured for easy display
                 address: {
                     street: 'Banda, Jinja Road',
                     city: 'Kampala',
@@ -202,15 +1583,12 @@ app.get('/api/dealership/location', (req, res) => {
                     fullAddress: 'Banda, Jinja Road, Kampala, Uganda'
                 },
                 
-                // LOCATION COORDINATES - For Google Maps integration
-                // These coordinates point to Banda, Kampala, Uganda
                 location: {
-                    latitude: 0.3488,    // Decimal degrees
-                    longitude: 32.6160,   // Decimal degrees
-                    zoom: 15              // Recommended zoom level for map
+                    latitude: 0.3488,
+                    longitude: 32.6160,
+                    zoom: 15
                 },
                 
-                // Operating hours for each day
                 operatingHours: {
                     monday: { open: '08:00', close: '18:00', isOpen: true },
                     tuesday: { open: '08:00', close: '18:00', isOpen: true },
@@ -221,14 +1599,12 @@ app.get('/api/dealership/location', (req, res) => {
                     sunday: { open: '00:00', close: '00:00', isOpen: false, note: 'Closed' }
                 },
                 
-                // Contact information
                 contact: {
                     phone: ['+256 770 826 951', '+256 756 053 475'],
                     whatsapp: '+256 770 826 951',
                     email: 'sales@pandamotors.co.ug'
                 },
                 
-                // Services offered
                 services: [
                     'URA Duty Clearance',
                     'Import Documentation',
@@ -236,15 +1612,12 @@ app.get('/api/dealership/location', (req, res) => {
                     'Flexible Financing'
                 ],
                 
-                // GOOGLE MAPS INTEGRATION URLs
-                // These URLs can be used directly in frontend map components
                 googleMapsUrl: 'https://maps.google.com/?q=Banda,+Jinja+Road,+Kampala,+Uganda',
                 directionsUrl: 'https://maps.google.com/dir//Banda,+Jinja+Road,+Kampala,+Uganda',
                 embedMapUrl: 'https://maps.google.com/maps?q=Banda+Kampala+Uganda&z=15&output=embed'
             }
         };
 
-        // Send the response
         res.json(dealershipInfo);
 
     } catch (error) {
@@ -260,20 +1633,17 @@ app.get('/api/dealership/location', (req, res) => {
 // BONUS: Dealership Open Status Endpoint
 // ============================================
 // GET /api/dealership/status
-// Returns whether the dealership is currently open
 app.get('/api/dealership/status', (req, res) => {
     const now = new Date();
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const currentDay = dayNames[now.getDay()];
     
-    // Format current time as HH:MM
     const currentTime = now.toLocaleTimeString('en-US', { 
         hour12: false, 
         hour: '2-digit', 
         minute: '2-digit' 
     });
     
-    // Operating hours (same as above)
     const hours = {
         monday: { open: '08:00', close: '18:00' },
         tuesday: { open: '08:00', close: '18:00' },
@@ -304,31 +1674,257 @@ app.get('/api/dealership/status', (req, res) => {
 // ============================================
 // GET /api/health
 // Simple endpoint to verify the API is running
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    message: "Panda Motors API is running!",
+    version: "3.0.0",
+    endpoints: [
+      // Financial
+      "POST /api/finance/calculate - Calculate loan payments",
+
+      // Dealership
+      "GET /api/dealership/location - Get dealership location",
+      "GET /api/dealership/status - Check if open",
+
+      // Bookings
+      "POST /api/bookings/create - Book test drive",
+      "GET /api/bookings/check-availability - Check availability",
+      "GET /api/bookings/user/:user_id - Get user bookings",
+      "PUT /api/bookings/:id/cancel - Cancel booking",
+
+      // Admin Analytics
+      "GET /api/admin/stats - Full admin statistics",
+      "GET /api/admin/stats/summary - Quick summary",
+
+      // Performance & Optimized Queries
+      "GET /api/optimized/search - Optimized inventory search",
+      "GET /api/optimized/availability - Quick availability check",
+      "GET /api/optimized/stats - Inventory statistics",
+      "GET /api/optimized/most-searched - Most searched makes",
+      "GET /api/optimized/performance - Query performance report",
+
+      // Admin Metrics Dashboard
+      "GET /api/admin/metrics - Full admin dashboard metrics",
+      "GET /api/admin/metrics/inventory - Inventory metrics only",
+      "GET /api/admin/metrics/bookings - Booking metrics only",
+
+      // Reports (NEW)
+      "GET /api/admin/reports/inventory - Download PDF inventory report",
+      "GET /api/admin/reports/inventory/json - Get inventory as JSON",
+      "GET /api/admin/reports/inventory/summary - Get inventory summary",
+
+      // High-Value Spotlight System (NEW)
+      "GET /api/admin/spotlight/alerts - View spotlight alerts",
+      "GET /api/admin/spotlight/featured - Get featured vehicles",
+      "GET /api/admin/spotlight/stats - High-value statistics",
+      "POST /api/admin/spotlight/process-all - Process all vehicles",
+      "POST /api/admin/spotlight/process/:vehicleId - Process specific vehicle",
+
+      // Health
+      "GET /api/health - Health check",
+    ],
+  });
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
         message: 'Panda Motors API is running!',
+        version: '4.0.0',
         endpoints: [
+            // Authentication (NEW)
+            'POST /api/auth/register - Register new user',
+            'POST /api/auth/login - Login user',
+            'POST /api/auth/logout - Logout user',
+            'GET /api/auth/me - Get current user',
+            'POST /api/auth/refresh - Refresh token',
+            'PUT /api/auth/change-password - Change password',
+            'GET /api/auth/users - Get all users (Admin)',
+            'DELETE /api/auth/users/:id - Delete user (Admin)',
+            
+            // Financial
             'POST /api/finance/calculate - Calculate loan payments',
+            
+            // Dealership
             'GET /api/dealership/location - Get dealership location',
-            'GET /api/dealership/status - Check if open'
+            'GET /api/dealership/status - Check if open',
+            
+            // Bookings
+            'POST /api/bookings/create - Book test drive',
+            'GET /api/bookings/check-availability - Check availability',
+            'GET /api/bookings/user/:user_id - Get user bookings',
+            'PUT /api/bookings/:id/cancel - Cancel booking',
+            
+            // Admin Analytics
+            'GET /api/admin/stats - Full admin statistics',
+            'GET /api/admin/stats/summary - Quick summary',
+            
+            // Performance & Optimized Queries
+            'GET /api/optimized/search - Optimized inventory search',
+            'GET /api/optimized/availability - Quick availability check',
+            'GET /api/optimized/stats - Inventory statistics',
+            'GET /api/optimized/most-searched - Most searched makes',
+            'GET /api/optimized/performance - Query performance report',
+            
+            // Admin Metrics Dashboard
+            'GET /api/admin/metrics - Full admin dashboard metrics',
+            'GET /api/admin/metrics/inventory - Inventory metrics only',
+            'GET /api/admin/metrics/bookings - Booking metrics only',
+            
+            // Reports
+            'GET /api/admin/reports/inventory - Download PDF inventory report',
+            'GET /api/admin/reports/inventory/json - Get inventory as JSON',
+            'GET /api/admin/reports/inventory/summary - Get inventory summary',
+            
+            // High-Value Spotlight System
+            'GET /api/admin/spotlight/alerts - View spotlight alerts',
+            'GET /api/admin/spotlight/featured - Get featured vehicles',
+            'GET /api/admin/spotlight/stats - High-value statistics',
+            'POST /api/admin/spotlight/process-all - Process all vehicles',
+            'POST /api/admin/spotlight/process/:vehicleId - Process specific vehicle',
+            
+            // Health
+            'GET /api/health - Health check'
         ]
     });
 });
 
 // ============================================
+// 404 HANDLER
+// ============================================
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        error: 'Route not found',
+        path: req.path,
+        method: req.method
+    });
+});
+
+// ============================================
+// GLOBAL ERROR HANDLER
+// ============================================
+app.use((err, req, res, next) => {
+    console.error('Global Error:', err);
+    res.status(err.status || 500).json({
+        success: false,
+        error: err.message || 'Internal server error',
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+});
+
+// ============================================
+// Database Initialization
+// ============================================
+async function initializeDatabase() {
+    try {
+        console.log('?? Initializing database...');
+        await createIndexes();
+        await verifyIndexes();
+        console.log('? Database initialization complete!');
+    } catch (error) {
+        console.error('? Database initialization error:', error.message);
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| UNHANDLED ERROR LOGGING
+|--------------------------------------------------------------------------
+*/
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled Promise Rejection", {
+    reason: reason instanceof Error ? reason.message : reason,
+
+    stack: reason instanceof Error ? reason.stack : null,
+  });
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught Exception", {
+    message: error.message,
+
+    stack: error.stack,
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| START SERVER
+|--------------------------------------------------------------------------
+*/
+
+// ============================================
 // Start the Server
 // ============================================
 const server = app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log('\n========================================');
     console.log('?? Panda Motors API Server');
     console.log('========================================');
     console.log(`?? Server running on: http://localhost:${PORT}`);
+    console.log(`?? Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`?? Version: 4.0.0`);
+    
+    // Initialize database
+    await initializeDatabase();
+    
     console.log('\n?? Available Endpoints:');
+    
+    console.log('   --- Authentication (NEW) ---');
+    console.log(`   POST   /api/auth/register       - Register new user`);
+    console.log(`   POST   /api/auth/login          - Login user`);
+    console.log(`   POST   /api/auth/logout         - Logout user`);
+    console.log(`   GET    /api/auth/me             - Get current user`);
+    console.log(`   POST   /api/auth/refresh        - Refresh token`);
+    console.log(`   PUT    /api/auth/change-password - Change password`);
+    console.log(`   GET    /api/auth/users          - Get all users (Admin)`);
+    console.log(`   DELETE /api/auth/users/:id      - Delete user (Admin)`);
+    
+    console.log('   --- Financial ---');
     console.log(`   POST /api/finance/calculate  - Loan calculator`);
+    
+    console.log('   --- Dealership ---');
     console.log(`   GET  /api/dealership/location - Store location`);
     console.log(`   GET  /api/dealership/status   - Open status`);
+    
+    console.log('   --- Test Drive Booking ---');
+    console.log(`   POST /api/bookings/create     - Book test drive`);
+    console.log(`   GET  /api/bookings/check-availability - Check availability`);
+    console.log(`   GET  /api/bookings/user/:user_id - Get user bookings`);
+    console.log(`   PUT  /api/bookings/:id/cancel - Cancel booking`);
+    
+    console.log('   --- Admin Analytics ---');
+    console.log(`   GET  /api/admin/stats         - Full admin statistics`);
+    console.log(`   GET  /api/admin/stats/summary - Quick summary`);
+    
+    console.log('   --- Performance & Optimized Queries ---');
+    console.log(`   GET  /api/optimized/search    - Optimized inventory search`);
+    console.log(`   GET  /api/optimized/availability - Quick availability check`);
+    console.log(`   GET  /api/optimized/stats     - Inventory statistics`);
+    console.log(`   GET  /api/optimized/most-searched - Most searched makes`);
+    console.log(`   GET  /api/optimized/performance - Query performance report`);
+    
+    console.log('   --- Admin Metrics Dashboard ---');
+    console.log(`   GET  /api/admin/metrics       - Full dashboard metrics`);
+    console.log(`   GET  /api/admin/metrics/inventory - Inventory metrics only`);
+    console.log(`   GET  /api/admin/metrics/bookings - Booking metrics only`);
+    
+    console.log('   --- Reports (PDF) ---');
+    console.log(`   GET  /api/admin/reports/inventory     - Download PDF report`);
+    console.log(`   GET  /api/admin/reports/inventory/json - Get inventory as JSON`);
+    console.log(`   GET  /api/admin/reports/inventory/summary - Get summary`);
+    
+    console.log('   --- High-Value Spotlight System ---');
+    console.log(`   GET  /api/admin/spotlight/alerts      - View alerts`);
+    console.log(`   GET  /api/admin/spotlight/featured    - Featured vehicles`);
+    console.log(`   GET  /api/admin/spotlight/stats       - High-value stats`);
+    console.log(`   POST /api/admin/spotlight/process-all - Process all`);
+    console.log(`   POST /api/admin/spotlight/process/:id - Process specific`);
+    
+    console.log('   --- Health ---');
     console.log(`   GET  /api/health              - Health check`);
     console.log('========================================\n');
 });
@@ -344,3 +1940,4 @@ const shutdownExchangeRateWorker = (signal) => {
 
 process.once("SIGINT", () => shutdownExchangeRateWorker("SIGINT"));
 process.once("SIGTERM", () => shutdownExchangeRateWorker("SIGTERM"));
+});

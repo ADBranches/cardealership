@@ -1,0 +1,196 @@
+--- Folder Layout ---
+[.git] (...)
+.gitignore
+ATTRIBUTIONS.md
+[backend]
+    ├── .env
+    ├── .gitignore
+    ├── [config]
+        └── db.js
+    ├── [controllers]
+        ├── authController.js
+        └── carsController.js
+    ├── [middleware]
+        └── authMiddleware.js
+    ├── [models]
+        ├── carsModel.js
+        ├── User.js
+        └── userModel.js
+    ├── package.json
+    ├── [routes] (...)
+    ├── server.js
+    ├── test-db.js
+    └── [utils]
+        └── jwt.js
+default_shadcn_theme.css
+[dist] (...)
+[guidelines]
+    └── Guidelines.md
+index.html
+new-file-1.tsx
+new-file.tsx
+[node_modules] (...)
+package-lock.json
+package.json
+pnpm-workspace.yaml
+postcss.config.mjs
+README.md
+[src]
+    ├── [app]
+        ├── App.tsx
+        ├── [components]
+        ├── [layouts] (...)
+        ├── [lib]
+            └── api.ts
+        ├── [providers]
+            ├── AppProviders.tsx
+            └── HashScrollHandler.tsx
+        └── routes.tsx
+    ├── [components]
+        ├── [common]
+            ├── [FloatingActions]
+                └── FloatingActions.tsx
+            ├── [Footer]
+                └── Footer.tsx
+            ├── [Header]
+                └── Header.tsx
+            ├── [ImageWithFallback]
+                └── ImageWithFallback.tsx
+            ├── [LoadingSpinner]
+                └── LoadingSpinner.tsx
+            └── [Navbar]
+                └── Navbar.tsx
+        └── [ui]
+            ├── accordion.tsx
+            ├── alert-dialog.tsx
+            ├── alert.tsx
+            ├── aspect-ratio.tsx
+            ├── avatar.tsx
+            ├── badge.tsx
+            ├── breadcrumb.tsx
+            ├── button.tsx
+            ├── calendar.tsx
+            ├── card.tsx
+            ├── carousel.tsx
+            ├── chart.tsx
+            ├── checkbox.tsx
+            ├── collapsible.tsx
+            ├── command.tsx
+            ├── context-menu.tsx
+            ├── dialog.tsx
+            ├── drawer.tsx
+            ├── dropdown-menu.tsx
+            ├── form.tsx
+            ├── hover-card.tsx
+            ├── input-otp.tsx
+            ├── input.tsx
+            ├── label.tsx
+            ├── menubar.tsx
+            ├── navigation-menu.tsx
+            ├── pagination.tsx
+            ├── popover.tsx
+            ├── progress.tsx
+            ├── radio-group.tsx
+            ├── resizable.tsx
+            ├── scroll-area.tsx
+            ├── select.tsx
+            ├── separator.tsx
+            ├── sheet.tsx
+            ├── sidebar.tsx
+            ├── skeleton.tsx
+            ├── slider.tsx
+            ├── sonner.tsx
+            ├── switch.tsx
+            ├── table.tsx
+            ├── tabs.tsx
+            ├── textarea.tsx
+            ├── toggle-group.tsx
+            ├── toggle.tsx
+            ├── tooltip.tsx
+            ├── use-mobile.ts
+            └── utils.ts
+    ├── [docs]
+        └── swagger.js
+    ├── [features]
+        ├── [auth]
+            ├── [components]
+                ├── LoginForm.tsx
+                └── RegisterForm.tsx
+            ├── [hooks]
+                ├── index.ts
+                └── useAuth.ts
+            ├── [services]
+                ├── authService.ts
+                └── index.ts
+            └── [types]
+                ├── auth.types.ts
+                └── index.ts
+        ├── [cars]
+            ├── [components]
+                ├── index.ts
+                ├── VehicleCard.tsx
+                ├── VehicleInventorySection.tsx
+                └── VehicleSearchSection.tsx
+            ├── [data]
+                └── mockVehicles.ts
+            ├── [hooks]
+                ├── index.ts
+                ├── useCars.ts
+                └── useVehicleFilters.ts
+            ├── [services]
+                ├── carsService.ts
+                └── index.ts
+            ├── [types]
+                ├── car.types.ts
+                └── index.ts
+            └── [utils]
+                └── formatUGX.ts
+        └── [test-drive]
+            ├── [components]
+                ├── index.ts
+                └── TestDriveScheduler.tsx
+            ├── [hooks]
+                ├── index.ts
+                └── useTestDrive.ts
+            ├── [services]
+                ├── index.ts
+                └── testDriveService.ts
+            └── [types]
+                ├── index.ts
+                └── test-drive.types.ts
+    ├── [hooks]
+        ├── useScrollToSection.ts
+        └── useScrollVisibility.ts
+    ├── main.tsx
+    ├── [pages]
+        ├── [About] (...)
+        ├── [Auctions]
+        ├── [Cars]
+            └── CarsPage.tsx
+        ├── [Contact]
+            └── ContactPage.tsx
+        ├── [Home]
+            ├── [components]
+                ├── AboutSection.tsx
+                ├── ContactSection.tsx
+                ├── HeroSection.tsx
+                └── ServicesSection.tsx
+            └── HomePage.tsx
+        ├── [Login]
+            └── LoginPage.tsx
+        ├── [Register]
+            └── RegisterPage.tsx
+        └── [VehicleDetails]
+    ├── [services]
+        └── index.ts
+    ├── [styles]
+        ├── fonts.css
+        ├── globals.css
+        ├── index.css
+        ├── tailwind.css
+        └── theme.css
+    ├── [tests]
+        └── cars.http
+    └── [types]
+        └── index.ts
+vite.config.ts

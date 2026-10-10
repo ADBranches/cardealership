@@ -1,0 +1,5 @@
+.profile-settings-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 1.5rem; }
+.profile-settings-wide { grid-column: 1 / -1; }
+.profile-state { display: flex; min-height: 16rem; align-items: center; justify-content: center; gap: 0.75rem; border: 1px solid var(--border); border-radius: 0.75rem; padding: 2rem; background: var(--card); text-align: center; }
+.profile-state-error { border-color: rgb(252 165 165); background: rgb(254 242 242); color: rgb(185 28 28); }
+@media (max-width: 768px) { .profile-settings-grid { grid-template-columns: 1fr; } }

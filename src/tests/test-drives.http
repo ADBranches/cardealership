@@ -1,0 +1,65 @@
+### Sprint 3 Edwin - Valid test-drive booking notification trigger
+POST http://localhost:5500/api/test-drives
+Content-Type: application/json
+
+{
+  "customerName": "Customer Name",
+  "customerEmail": "customer@example.com",
+  "vehicleName": "Toyota Land Cruiser",
+  "appointmentDate": "2026-07-15",
+  "appointmentTime": "10:00",
+  "phone": "+256 770 826 951",
+  "notes": "Customer prefers morning appointment."
+}
+
+### Expected response
+# 201 Created
+# Test-drive appointment confirmed.
+# notification.attempted should be true.
+# notification.sent may be false while provider transport is not connected.
+# Provider secrets must not appear in the response.
+
+### Sprint 3 Edwin - Missing recipient email
+POST http://localhost:5500/api/test-drives
+Content-Type: application/json
+
+{
+  "customerName": "Customer Name",
+  "vehicleName": "Toyota Land Cruiser",
+  "appointmentDate": "2026-07-15",
+  "appointmentTime": "10:00"
+}
+
+### Expected response
+# 400 Bad Request
+# Customer email is required.
+
+### Sprint 3 Edwin - Missing vehicle information
+POST http://localhost:5500/api/test-drives
+Content-Type: application/json
+
+{
+  "customerName": "Customer Name",
+  "customerEmail": "customer@example.com",
+  "appointmentDate": "2026-07-15",
+  "appointmentTime": "10:00"
+}
+
+### Expected response
+# 400 Bad Request
+# Vehicle name or vehicle ID is required.
+
+### Sprint 3 Edwin - Missing booking time
+POST http://localhost:5500/api/test-drives
+Content-Type: application/json
+
+{
+  "customerName": "Customer Name",
+  "customerEmail": "customer@example.com",
+  "vehicleName": "Toyota Land Cruiser",
+  "appointmentDate": "2026-07-15"
+}
+
+### Expected response
+# 400 Bad Request
+# Appointment time is required.

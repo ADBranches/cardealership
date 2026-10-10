@@ -1,0 +1,18 @@
+.profile-form-message {
+  border: 1px solid;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.profile-form-success {
+  border-color: rgb(134 239 172);
+  background: rgb(240 253 244);
+  color: rgb(22 101 52);
+}
+
+.profile-form-error {
+  border-color: rgb(252 165 165);
+  background: rgb(254 242 242);
+  color: rgb(185 28 28);
+}
