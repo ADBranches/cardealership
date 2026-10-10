@@ -32,8 +32,8 @@ export function CarsPage() {
         </div>
       </section>
       <VehicleSearchSection
-        searchBrand={filters.searchBrand}
-        setSearchBrand={filters.setSearchBrand}
+        searchMake={filters.searchMake}
+        setSearchMake={filters.setSearchMake}
         searchYear={filters.searchYear}
         setSearchYear={filters.setSearchYear}
         priceRange={filters.priceRange}
@@ -51,3 +51,4 @@ export function CarsPage() {
     </div>
   );
 }
+

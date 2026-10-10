@@ -1,4 +1,10 @@
-import { getAllCars, getCarById, createCar } from "../models/carsModel.js";
+import {
+  getAllCars,
+  getCarById,
+  createCar,
+  updateCar,
+  deleteCar,
+} from "../models/carsModel.js";
 
 function sendError(res, status, code, message, details = null) {
   return res.status(status).json({
@@ -12,14 +18,17 @@ function sendError(res, status, code, message, details = null) {
   });
 }
 
-/*
-|--------------------------------------------------------------------------
-| GET ALL CARS
-|--------------------------------------------------------------------------
-|
-| GET /api/cars
-|
-*/
+function parseCarId(value) {
+  const carId = Number(value);
+
+  if (!Number.isInteger(carId) || carId <= 0) {
+    return null;
+  }
+
+  return carId;
+}
+
+// GET ALL CARS
 
 export async function fetchCars(req, res) {
   try {
@@ -45,20 +54,13 @@ export async function fetchCars(req, res) {
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| GET SINGLE CAR
-|--------------------------------------------------------------------------
-|
-| GET /api/cars/:id
-|
-*/
+// GET SINGLE CAR
 
 export async function fetchCarById(req, res) {
   try {
-    const carId = Number(req.params.id);
+    const carId = parseCarId(req.params.id);
 
-    if (!Number.isInteger(carId) || carId <= 0) {
+    if (!carId) {
       return sendError(
         res,
         400,
@@ -100,72 +102,11 @@ export async function fetchCarById(req, res) {
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| CREATE CAR
-|--------------------------------------------------------------------------
-|
-| POST /api/cars
-|
-*/
+// CREATE CAR
 
 export async function addCar(req, res) {
   try {
-    const {
-      name,
-      brand,
-      type,
-      category,
-      year,
-      price,
-      power,
-      engine,
-      drive,
-      images = [],
-    } = req.body;
-
-    const parsedYear = Number(year);
-    const parsedPrice = Number(price);
-
-    if (!name || !brand) {
-      return sendError(
-        res,
-        400,
-        "CAR_DETAILS_REQUIRED",
-        "Vehicle name and brand are required.",
-      );
-    }
-
-    if (!Number.isInteger(parsedYear) || parsedYear < 1900) {
-      return sendError(
-        res,
-        400,
-        "INVALID_YEAR",
-        "A valid vehicle year is required.",
-      );
-    }
-
-    if (Number.isNaN(parsedPrice) || parsedPrice <= 0) {
-      return sendError(
-        res,
-        400,
-        "INVALID_PRICE",
-        "A valid vehicle price is required.",
-      );
-    }
-
-    const carId = await createCar({
-      name,
-      brand,
-      type,
-      category,
-      year: parsedYear,
-      price: parsedPrice,
-      power,
-      engine,
-      drive,
-      images,
-    });
+    const carId = await createCar(req.body);
 
     return res.status(201).json({
       success: true,
@@ -182,6 +123,110 @@ export async function addCar(req, res) {
       500,
       "CREATE_CAR_FAILED",
       "Unable to create the vehicle.",
+      {
+        reason: error.message,
+      },
+    );
+  }
+}
+
+// UPDATE CAR
+
+export async function editCar(req, res) {
+  try {
+    const carId = parseCarId(req.params.id);
+
+    if (!carId) {
+      return sendError(
+        res,
+        400,
+        "INVALID_CAR_ID",
+        "A valid car ID is required.",
+      );
+    }
+
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return sendError(
+        res,
+        400,
+        "EMPTY_UPDATE",
+        "At least one vehicle field must be provided.",
+      );
+    }
+
+    const result = await updateCar(carId, req.body);
+
+    if (!result) {
+      return sendError(
+        res,
+        404,
+        "CAR_NOT_FOUND",
+        "The vehicle to update was not found.",
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Vehicle updated successfully.",
+      car: {
+        ...result.car,
+        images: result.images,
+      },
+    });
+  } catch (error) {
+    console.error("Update car failed:", error);
+
+    return sendError(
+      res,
+      500,
+      "UPDATE_CAR_FAILED",
+      "Unable to update the vehicle.",
+      {
+        reason: error.message,
+      },
+    );
+  }
+}
+
+// DELETE CAR
+
+export async function removeCar(req, res) {
+  try {
+    const carId = parseCarId(req.params.id);
+
+    if (!carId) {
+      return sendError(
+        res,
+        400,
+        "INVALID_CAR_ID",
+        "A valid car ID is required.",
+      );
+    }
+
+    const deletedCar = await deleteCar(carId);
+
+    if (!deletedCar) {
+      return sendError(
+        res,
+        404,
+        "CAR_NOT_FOUND",
+        "The vehicle to delete was not found.",
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Vehicle deleted successfully.",
+      car: deletedCar,
+    });
+  } catch (error) {
+    console.error("Delete car failed:", error);
+
+    return sendError(
+      res,
+      500,
+      "DELETE_CAR_FAILED",
+      "Unable to delete the vehicle.",
       {
         reason: error.message,
       },
