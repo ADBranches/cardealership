@@ -1,122 +1,143 @@
 // backend/controllers/adminController.js
 import pool from '../config/db.js';
 
-// Get admin dashboard statistics
 export const getAdminStats = async (req, res) => {
-    try {
-        const carsResult = await pool.query('SELECT COUNT(*) FROM cars');
-        const usersResult = await pool.query('SELECT COUNT(*) FROM users');
-        const bookingsResult = await pool.query('SELECT COUNT(*) FROM bookings');
-        const pendingResult = await pool.query(
-            "SELECT COUNT(*) FROM bookings WHERE status = 'pending'"
-        );
+  try {
+    const [carsResult, usersResult, bookingsResult, pendingResult, popularCarsResult, monthlyTrendResult] = await Promise.all([
+      pool.query(`SELECT COUNT(*) total, COUNT(CASE WHEN status='available' THEN 1 END) available, COUNT(CASE WHEN status='sold' THEN 1 END) sold FROM cars`),
+      pool.query(`SELECT COUNT(*) total FROM users`),
+      pool.query(`SELECT COUNT(*) total, COUNT(CASE WHEN status='pending' THEN 1 END) pending, COUNT(CASE WHEN status='confirmed' THEN 1 END) confirmed, COUNT(CASE WHEN status='completed' THEN 1 END) completed, COUNT(CASE WHEN status='cancelled' THEN 1 END) cancelled FROM bookings`),
+      pool.query(`SELECT COUNT(*) as pending_bookings FROM bookings WHERE status='pending'`),
+      pool.query(`SELECT c.id, c.name, c.brand, c.price, COUNT(b.id) booking_count FROM cars c LEFT JOIN bookings b ON c.id = b.car_id GROUP BY c.id ORDER BY booking_count DESC LIMIT 5`),
+      pool.query(`SELECT TO_CHAR(DATE_TRUNC('month', booking_date),'YYYY-MM') month, COUNT(*) bookings FROM bookings WHERE booking_date >= CURRENT_DATE - INTERVAL '6 months' GROUP BY DATE_TRUNC('month', booking_date) ORDER BY month`)
+    ]);
 
-        res.json({
-            totalCars: parseInt(carsResult.rows[0].count),
-            totalUsers: parseInt(usersResult.rows[0].count),
-            totalBookings: parseInt(bookingsResult.rows[0].count),
-            pendingBookings: parseInt(pendingResult.rows[0].count)
-        });
-    } catch (error) {
-        console.error('Error getting admin stats:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+    res.json({
+      success: true,
+      stats: {
+        cars: { total: +carsResult.rows[0].total, available: +carsResult.rows[0].available, sold: +carsResult.rows[0].sold },
+        users: { total: +usersResult.rows[0].total },
+        bookings: {
+          total: +bookingsResult.rows[0].total,
+          pending: +bookingsResult.rows[0].pending,
+          confirmed: +bookingsResult.rows[0].confirmed,
+          completed: +bookingsResult.rows[0].completed,
+          cancelled: +bookingsResult.rows[0].cancelled
+        },
+        pendingApprovals: { bookings: +pendingResult.rows[0].pending_bookings },
+        popularCars: popularCarsResult.rows,
+        monthlyTrend: monthlyTrendResult.rows,
+        generatedAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Error getting admin stats:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
 };
 
-// Get all bookings (admin view)
+export const getPendingApprovals = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT b.*, u.name user_name, u.email user_email, c.name car_name, c.brand car_brand
+       FROM bookings b JOIN users u ON b.user_id=u.id JOIN cars c ON b.car_id=c.id
+       WHERE b.status='pending' ORDER BY b.created_at ASC`
+    );
+    res.json({ success: true, pendingBookings: result.rows, pendingCars: [], totalPending: result.rows.length });
+  } catch (error) {
+    console.error('Error getting pending approvals:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 export const getAllBookings = async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT b.*, 
-                   u.name as user_name, 
-                   u.email as user_email,
-                   c.make, c.model, c.year
-            FROM bookings b
-            JOIN users u ON b.user_id = u.id
-            JOIN cars c ON b.car_id = c.id
-            ORDER BY b.created_at DESC
-        `);
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error getting all bookings:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+  try {
+    const result = await pool.query(
+      `SELECT b.*, u.name user_name, u.email user_email, c.name car_name, c.brand car_brand
+       FROM bookings b JOIN users u ON b.user_id=u.id JOIN cars c ON b.car_id=c.id
+       ORDER BY b.created_at DESC LIMIT 100`
+    );
+    res.json({ success: true, count: result.rows.length, bookings: result.rows });
+  } catch (error) {
+    console.error('Error getting all bookings:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
-// Update booking status
 export const updateBookingStatus = async (req, res) => {
+  try {
     const { id } = req.params;
     const { status } = req.body;
-    
-    try {
-        const result = await pool.query(
-            'UPDATE bookings SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-            [status, id]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Booking not found' });
-        }
-        
-        res.json(result.rows[0]);
-    } catch (error) {
-        console.error('Error updating booking status:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+    const result = await pool.query(
+      `UPDATE bookings SET status=$1, updated_at=CURRENT_TIMESTAMP WHERE id=$2 RETURNING *`,
+      [status, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Booking not found' });
+    res.json({ success: true, booking: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating booking status:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
-// Get pending vehicle approvals
-export const getPendingApprovals = async (req, res) => {
-    try {
-        const result = await pool.query(
-            "SELECT * FROM cars WHERE status = 'pending' ORDER BY created_at DESC"
-        );
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error getting pending vehicles:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+export const bulkUpdateBookings = async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    const result = await pool.query(
+      `UPDATE bookings SET status=$1, updated_at=CURRENT_TIMESTAMP WHERE id = ANY($2::int[]) RETURNING id`,
+      [status, ids]
+    );
+    res.json({ success: true, updatedIds: result.rows.map(r => r.id) });
+  } catch (error) {
+    console.error('Error bulk updating:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
-// Approve a vehicle listing
-export const approveVehicle = async (req, res) => {
+export const approveCar = async (req, res) => {
+  try {
     const { id } = req.params;
-    
-    try {
-        const result = await pool.query(
-            'UPDATE cars SET status = $1, approved_at = NOW() WHERE id = $2 RETURNING *',
-            ['approved', id]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Vehicle not found' });
-        }
-        
-        res.json(result.rows[0]);
-    } catch (error) {
-        console.error('Error approving vehicle:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+    const result = await pool.query(`UPDATE cars SET status='available' WHERE id=$1 RETURNING *`, [id]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Car not found' });
+    res.json({ success: true, car: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
-// Reject a vehicle listing
-export const rejectVehicle = async (req, res) => {
+export const rejectCar = async (req, res) => {
+  try {
     const { id } = req.params;
-    const { reason } = req.body;
-    
-    try {
-        const result = await pool.query(
-            'UPDATE cars SET status = $1, rejection_reason = $2 WHERE id = $3 RETURNING *',
-            ['rejected', reason, id]
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Vehicle not found' });
-        }
-        
-        res.json(result.rows[0]);
-    } catch (error) {
-        console.error('Error rejecting vehicle:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+    const result = await pool.query(`UPDATE cars SET status='rejected' WHERE id=$1 RETURNING *`, [id]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Car not found' });
+    res.json({ success: true, car: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const updateCar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, brand, price, year, status } = req.body;
+    const result = await pool.query(
+      `UPDATE cars SET name=COALESCE($1,name), brand=COALESCE($2,brand), price=COALESCE($3,price), year=COALESCE($4,year), status=COALESCE($5,status) WHERE id=$6 RETURNING *`,
+      [name, brand, price, year, status, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Car not found' });
+    res.json({ success: true, car: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const deleteCar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM cars WHERE id=$1 RETURNING *', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Car not found' });
+    res.json({ success: true, car: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
