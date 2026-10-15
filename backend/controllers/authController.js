@@ -1,357 +1,153 @@
+// backend/controllers/authController.js
 import bcrypt from 'bcryptjs';
-import db from '../config/database.js';
-import { generateToken } from '../middleware/authMiddleware.js';
+import db from '../config/db.js';
+import { signToken } from '../utils/jwt.js';
 
-export const authController = {
-    // ============================================
-    // REGISTER NEW USER
-    // POST /api/auth/register
-    // ============================================
-    async register(req, res) {
-        try {
-            const { name, email, password, phone, role = 'user' } = req.body;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-            // Validate required fields
-            if (!name || !email || !password) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Missing required fields',
-                    required: ['name', 'email', 'password']
-                });
-            }
-
-            // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Invalid email format'
-                });
-            }
-
-export const register = async (req, res) => {
+// ------- REGISTER -------
+export async function register(req, res) {
   try {
-    const { name, email, password } = req.body;
-            // Validate password strength
-            if (password.length < 6) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Password must be at least 6 characters long'
-                });
-            }
+    const { name, email, password } = req.body || {};
 
-            // Check if user already exists
-            const existingUser = await db.collection('users').findOne({ email: email.toLowerCase() });
-            if (existingUser) {
-                return res.status(409).json({
-                    success: false,
-                    error: 'User with this email already exists'
-                });
-            }
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'name, email and password are required' });
+    }
+    if (!EMAIL_RE.test(email)) {
+      return res.status(400).json({ success: false, message: 'Invalid email format' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
 
-            // Hash password
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
+    const normalizedEmail = email.toLowerCase().trim();
 
-            // Create user
-            const newUser = {
-                name,
-                email: email.toLowerCase(),
-                password: hashedPassword,
-                phone: phone || '',
-                role: role === 'admin' ? 'admin' : 'user', // Only allow admin if specified
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            };
+    const existing = await db.query('SELECT id FROM users WHERE email = ?', [normalizedEmail]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ success: false, message: 'Email already registered' });
+    }
 
-            const result = await db.collection('users').insertOne(newUser);
-            const userId = result.insertedId;
+    const passwordHash = await bcrypt.hash(password, 10);
 
-    // Public registration always creates a customer account. Administrator
-    // accounts must be provisioned through an authorized internal process.
-    const normalizedRole = "user";
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await createUser(
-      name.trim(),
-      normalizedEmail,
-      hashedPassword,
-      normalizedRole,
+    const result = await db.query(
+      `INSERT INTO users (name, email, password, role)
+       VALUES (?, ?, ?, 'user')
+       RETURNING id, name, email, role, created_at`,
+      [name.trim(), normalizedEmail, passwordHash]
     );
 
-    const token = generateToken(user);
+    const user = result.rows[0];
+    const token = signToken({ id: user.id, role: user.role });
 
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully.",
-      token,
-
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error("Registration failed:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Registration failed.",
-      error: error.message,
-    });
+    res.status(201).json({ success: true, message: 'Registered successfully', user, token });
+  } catch (err) {
+    console.error('register error:', err.message);
+    res.status(500).json({ success: false, message: 'Registration failed' });
   }
-};
-            // Generate token
-            const token = generateToken({
-                id: userId,
-                email: newUser.email,
-                role: newUser.role,
-                name: newUser.name
-            });
+}
 
-            // Return success (don't include password)
-            const { password: _, ...userWithoutPassword } = newUser;
+// ------- LOGIN -------
+export async function login(req, res) {
+  try {
+    const { email, password } = req.body || {};
 
-            res.status(201).json({
-                success: true,
-                message: 'User registered successfully',
-                data: {
-                    user: { id: userId, ...userWithoutPassword },
-                    token
-                }
-            });
-
-        } catch (error) {
-            console.error('Registration error:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Registration failed',
-                message: error.message
-            });
-        }
-    },
-
-    // ============================================
-    // LOGIN USER
-    // POST /api/auth/login
-    // ============================================
-    async login(req, res) {
-        try {
-            const { email, password } = req.body;
-
-            // Validate required fields
-            if (!email || !password) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Email and password are required'
-                });
-            }
-
-            // Find user
-            const user = await db.collection('users').findOne({ 
-                email: email.toLowerCase() 
-            });
-
-            if (!user) {
-                return res.status(401).json({
-                    success: false,
-                    error: 'Invalid email or password'
-                });
-            }
-
-            // Check password
-            const isValidPassword = await bcrypt.compare(password, user.password);
-            if (!isValidPassword) {
-                return res.status(401).json({
-                    success: false,
-                    error: 'Invalid email or password'
-                });
-            }
-
-            // Generate token
-            const token = generateToken({
-                id: user.id || user._id,
-                email: user.email,
-                role: user.role || 'user',
-                name: user.name
-            });
-
-            // Return success (don't include password)
-            const { password: _, ...userWithoutPassword } = user;
-
-            res.json({
-                success: true,
-                message: 'Login successful',
-                data: {
-                    user: userWithoutPassword,
-                    token
-                }
-            });
-
-        } catch (error) {
-            console.error('Login error:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Login failed',
-                message: error.message
-            });
-        }
-    },
-
-    // ============================================
-    // GET CURRENT USER
-    // GET /api/auth/me
-    // ============================================
-    async getCurrentUser(req, res) {
-        try {
-            const userId = req.user.id;
-            const user = await db.collection('users').findOne({ 
-                $or: [{ id: userId }, { _id: userId }]
-            });
-
-            if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'User not found'
-                });
-            }
-
-            const { password: _, ...userWithoutPassword } = user;
-
-            res.json({
-                success: true,
-                data: userWithoutPassword
-            });
-
-        } catch (error) {
-            console.error('Get user error:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    },
-
-    // ============================================
-    // LOGOUT (Client-side token removal)
-    // POST /api/auth/logout
-    // ============================================
-    async logout(req, res) {
-        // JWT is stateless, so we just tell the client to remove the token
-        res.json({
-            success: true,
-            message: 'Logged out successfully'
-        });
-    },
-
-    // ============================================
-    // REFRESH TOKEN
-    // POST /api/auth/refresh
-    // ============================================
-    async refreshToken(req, res) {
-        try {
-            const userId = req.user.id;
-            const user = await db.collection('users').findOne({ 
-                $or: [{ id: userId }, { _id: userId }]
-            });
-
-            if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'User not found'
-                });
-            }
-
-            const token = generateToken({
-                id: user.id || user._id,
-                email: user.email,
-                role: user.role || 'user',
-                name: user.name
-            });
-
-            res.json({
-                success: true,
-                data: { token }
-            });
-
-        } catch (error) {
-            console.error('Refresh token error:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    },
-
-    // ============================================
-    // CHANGE PASSWORD
-    // PUT /api/auth/change-password
-    // ============================================
-    async changePassword(req, res) {
-        try {
-            const { currentPassword, newPassword } = req.body;
-            const userId = req.user.id;
-
-            if (!currentPassword || !newPassword) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Current password and new password are required'
-                });
-            }
-
-            if (newPassword.length < 6) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'New password must be at least 6 characters'
-                });
-            }
-
-            const user = await db.collection('users').findOne({ 
-                $or: [{ id: userId }, { _id: userId }]
-            });
-
-            if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'User not found'
-                });
-            }
-
-            // Verify current password
-            const isValid = await bcrypt.compare(currentPassword, user.password);
-            if (!isValid) {
-                return res.status(401).json({
-                    success: false,
-                    error: 'Current password is incorrect'
-                });
-            }
-
-            // Hash new password
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-            // Update password
-            await db.collection('users').updateOne(
-                { $or: [{ id: userId }, { _id: userId }] },
-                { $set: { password: hashedPassword, updatedAt: new Date().toISOString() } }
-            );
-
-            res.json({
-                success: true,
-                message: 'Password changed successfully'
-            });
-
-        } catch (error) {
-            console.error('Change password error:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'email and password are required' });
     }
-};
 
-export default authController;
+    const result = await db.query(
+      'SELECT id, name, email, password, role FROM users WHERE email = ?',
+      [email.toLowerCase().trim()]
+    );
+
+    const user = result.rows[0];
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const safeUser = { id: user.id, name: user.name, email: user.email, role: user.role };
+    const token = signToken({ id: user.id, role: user.role });
+
+    res.json({ success: true, message: 'Login successful', user: safeUser, token });
+  } catch (err) {
+    console.error('login error:', err.message);
+    res.status(500).json({ success: false, message: 'Login failed' });
+  }
+}
+
+// ------- ME -------
+export async function me(req, res) {
+  res.json({ success: true, user: req.user });
+}
+
+// ------- LOGOUT -------
+export async function logout(req, res) {
+  res.json({ success: true, message: 'Logged out successfully' });
+}
+
+// ------- REFRESH TOKEN -------
+export async function refreshToken(req, res) {
+  const token = signToken({ id: req.user.id, role: req.user.role });
+  res.json({ success: true, token });
+}
+
+// ------- CHANGE PASSWORD -------
+export async function changePassword(req, res) {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'currentPassword and newPassword are required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+    }
+
+    const result = await db.query('SELECT password FROM users WHERE id = ?', [req.user.id]);
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password = ? WHERE id = ?', [hash, req.user.id]);
+
+    res.json({ success: true, message: 'Password changed successfully' });
+  } catch (err) {
+    console.error('changePassword error:', err.message);
+    res.status(500).json({ success: false, message: 'Change password failed' });
+  }
+}
+
+// ------- ADMIN: GET ALL USERS -------
+export async function getAllUsers(req, res) {
+  try {
+    const result = await db.query(
+      'SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC'
+    );
+    res.json({ success: true, count: result.rows.length, users: result.rows });
+  } catch (err) {
+    console.error('getAllUsers error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to fetch users' });
+  }
+}
+
+// ------- ADMIN: DELETE USER -------
+export async function deleteUser(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await db.query('DELETE FROM users WHERE id = ? RETURNING id', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, message: 'User deleted' });
+  } catch (err) {
+    console.error('deleteUser error:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to delete user' });
+  }
+}

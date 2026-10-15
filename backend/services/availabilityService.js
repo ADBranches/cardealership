@@ -1,11 +1,11 @@
-// backend/services/availabilityService.js
-import pool from '../config/db.js';
+import db from '../config/db.js';
 import { VALID_TIME_SLOTS, BUSINESS_HOURS } from '../utils/validators.js';
 
 export async function getAvailableSlots(carId, date) {
-  const result = await pool.query(
-    `SELECT time_slot FROM bookings WHERE car_id=$1 AND booking_date=$2
-     AND status NOT IN ('cancelled','completed')`,
+  const result = await db.query(
+    `SELECT time_slot FROM bookings
+     WHERE car_id = ? AND booking_date = ?
+       AND status NOT IN ('cancelled','completed')`,
     [carId, date]
   );
   const bookedSlots = result.rows.map(r => r.time_slot);
@@ -14,9 +14,11 @@ export async function getAvailableSlots(carId, date) {
 }
 
 export async function checkSlotAvailability(client, carId, date, timeSlot) {
-  const result = await client.query(
-    `SELECT id, user_id, status FROM bookings WHERE car_id=$1 AND booking_date=$2 AND time_slot=$3
-     AND status NOT IN ('cancelled','completed') FOR UPDATE`,
+  // client is unused with sqlite; use db directly
+  const result = await db.query(
+    `SELECT id, user_id, status FROM bookings
+     WHERE car_id = ? AND booking_date = ? AND time_slot = ?
+       AND status NOT IN ('cancelled','completed')`,
     [carId, date, timeSlot]
   );
   return { available: result.rows.length === 0, conflict: result.rows[0] || null };
@@ -26,7 +28,8 @@ export async function getWeeklyAvailability(carId, startDate) {
   const days = [];
   const start = new Date(startDate);
   for (let i = 0; i < 7; i++) {
-    const d = new Date(start); d.setDate(start.getDate() + i);
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
     const dateStr = d.toISOString().split('T')[0];
     if (BUSINESS_HOURS.days.includes(d.getDay())) {
       const a = await getAvailableSlots(carId, dateStr);
@@ -39,16 +42,18 @@ export async function getWeeklyAvailability(carId, startDate) {
 }
 
 export async function checkUserBookingLimits(userId) {
-  const result = await pool.query(
-    `SELECT COUNT(*) count FROM bookings WHERE user_id=$1 AND status IN ('pending','confirmed') AND booking_date >= CURRENT_DATE`,
+  const result = await db.query(
+    `SELECT COUNT(*) as count FROM bookings
+     WHERE user_id = ? AND status IN ('pending','confirmed')
+       AND booking_date >= date('now')`,
     [userId]
   );
-  const activeBookings = parseInt(result.rows[0].count);
+  const active = +result.rows[0].count;
   const MAX = 3;
   return {
-    allowed: activeBookings < MAX,
-    currentCount: activeBookings,
+    allowed: active < MAX,
+    currentCount: active,
     maxAllowed: MAX,
-    message: activeBookings >= MAX ? `You already have ${activeBookings} active bookings. Max is ${MAX}.` : 'OK'
+    message: active >= MAX ? `You already have ${active} active bookings. Max is ${MAX}.` : 'OK'
   };
 }

@@ -1,68 +1,89 @@
-import pg from "pg";
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+// backend/config/db.js
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const { Pool } = pg;
+const dbPath = path.join(__dirname, '..', 'data.sqlite');
+const sqlite = new Database(dbPath);
+sqlite.pragma('journal_mode = WAL');
+sqlite.pragma('foreign_keys = ON');
 
-const envFile = process.env.NODE_ENV === "production" ? ".env.production" : ".env.development";
+// Create tables on first run
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT DEFAULT 'user',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 
-dotenv.config({ path: envFile, quiet: true });
-dotenv.config({ path: `backend/${envFile}`, quiet: true });
+  CREATE TABLE IF NOT EXISTS cars (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    brand TEXT,
+    price REAL,
+    year INTEGER,
+    status TEXT DEFAULT 'available',
+    image_url TEXT,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 
-function useDatabaseSsl() {
-  if (process.env.DATABASE_SSL !== undefined) {
-    return process.env.DATABASE_SSL === "true";
-  }
+  CREATE TABLE IF NOT EXISTS bookings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    car_id INTEGER NOT NULL,
+    booking_date TEXT NOT NULL,
+    time_slot TEXT NOT NULL,
+    notes TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+  );
 
-  return process.env.NODE_ENV === "production";
-}
+  CREATE UNIQUE INDEX IF NOT EXISTS uniq_booking
+    ON bookings(car_id, booking_date, time_slot)
+    WHERE status NOT IN ('cancelled','completed');
+`);
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: useDatabaseSsl() ? { rejectUnauthorized: false } : false,
-});
-
-pool.on("error", (error) => {
-  console.error("Database pool error", {
-    code: error.code || "DATABASE_POOL_ERROR",
-    message: "An unexpected database connection error occurred.",
-  });
-});
-
-export async function verifyDatabaseConnection() {
-  try {
-    const client = await pool.connect();
-    client.release();
-    return { connected: true };
-  } catch (error) {
-    return {
-      connected: false,
-      error: {
-        code: error.code || "DATABASE_CONNECTION_FAILED",
-        message: "Database connection could not be established.",
-      },
-    };
-  }
-}
-
+// Postgres-style adapter so existing code keeps working
 const db = {
   async query(text, params = []) {
+    // Translate $1, $2 ... to ? placeholders
+    const sql = text.replace(/\$\d+/g, '?');
+    const trimmed = sql.trim().toUpperCase();
+
     try {
-      return await pool.query(text, params);
-    } catch (error) {
-      console.error("Database query failed", {
-        code: error.code || "DATABASE_QUERY_FAILED",
-        message: "A database query could not be completed.",
-      });
-      throw error;
+      if (trimmed.startsWith('SELECT') || trimmed.startsWith('WITH')) {
+        const rows = sqlite.prepare(sql).all(...params);
+        return { rows, rowCount: rows.length };
+      }
+
+      if (trimmed.startsWith('INSERT') || trimmed.startsWith('UPDATE') || trimmed.startsWith('DELETE')) {
+        const hasReturning = /RETURNING/i.test(sql);
+        if (hasReturning) {
+          const rows = sqlite.prepare(sql).all(...params);
+          return { rows, rowCount: rows.length };
+        }
+        const info = sqlite.prepare(sql).run(...params);
+        return { rows: [], rowCount: info.changes, lastInsertRowid: info.lastInsertRowid };
+      }
+
+      sqlite.prepare(sql).run(...params);
+      return { rows: [], rowCount: 0 };
+    } catch (err) {
+      console.error('SQL error:', err.message, '\nSQL:', sql);
+      throw err;
     }
   },
-
-  pool,
+  raw: sqlite
 };
 
 export default db;

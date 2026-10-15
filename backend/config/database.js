@@ -335,7 +335,7 @@ class InMemoryDatabase {
         console.log(`   - Bookings: ${this.collections.bookings.length}`);
         console.log(`   - Sales: ${this.collections.sales.length}`);
         console.log(`   - Search Logs: ${this.collections.search_logs.length}`);
-        console.log('?? Default password for all users: password123');
+        
     }
 
     // ============================================

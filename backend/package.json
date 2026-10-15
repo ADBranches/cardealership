@@ -1,62 +1,33 @@
 {
-  "name": "@figma/my-make-file",
-  "private": true,
-  "version": "0.0.1",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "build": "vite build",
-    "dev": "vite",
-    "test:sprint9": "node --test \"tests/**/*.test.js\"",
-    "test:sprint9:unit": "node --test \"tests/unit/**/*.test.js\"",
-    "test:sprint9:integration": "node --test \"tests/integration/**/*.test.js\""
   "name": "panda-motors-backend",
-  "version": "4.0.0",
-  "description": "Panda Motors Car Dealership API with Authentication, RBAC, PDF Reports, and Analytics",
+  "version": "4.1.0",
+  "description": "Panda Motors Car Dealership API",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^13.0.3",
     "cloudinary": "^2.10.0",
     "compression": "^1.8.1",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
     "forwarded": "^0.2.0",
-    "ipaddr.js": "^2.5.0",
-    "jsonwebtoken": "^9.0.3",
-    "lucide-react": "0.487.0",
-    "motion": "12.23.24",
-    "multer": "^2.2.0",
-    "next-themes": "0.4.6",
-    "multer": "^2.0.2",
-    "pdfkit": "^0.20.2",
-    "pdfmake": "^0.3.11",
-    "pg": "^8.21.0",
-    "sharp": "^0.35.3",
-    "winston": "^3.19.0"
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.6",
-    "dotenv": "^16.6.1",
-    "express": "^4.22.3",
-    "jsonwebtoken": "^9.0.3",
-    "pdfkit": "^0.14.0",
-    "pg": "^8.23.1"
+    "ipaddr.js": "^2.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pdfkit": "^0.15.0",
+    "pg": "^8.13.1",
+    "sharp": "^0.33.5",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.9"
   },
-  "keywords": [
-    "car-dealership",
-    "api",
-    "express",
-    "authentication",
-    "jwt",
-    "rbac"
-  ],
   "author": "Max Tinka",
   "license": "ISC"
 }

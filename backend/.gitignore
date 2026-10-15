@@ -14,3 +14,10 @@ yarn-error.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+generate-token.js
+create-admin.js
+data.sqlite
+data.sqlite-shm
+data.sqlite-wal
+*.sqlite
