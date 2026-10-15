@@ -29,6 +29,9 @@ export const authController = {
                 });
             }
 
+export const register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
             // Validate password strength
             if (password.length < 6) {
                 return res.status(400).json({
@@ -64,6 +67,43 @@ export const authController = {
             const result = await db.collection('users').insertOne(newUser);
             const userId = result.insertedId;
 
+    // Public registration always creates a customer account. Administrator
+    // accounts must be provisioned through an authorized internal process.
+    const normalizedRole = "user";
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await createUser(
+      name.trim(),
+      normalizedEmail,
+      hashedPassword,
+      normalizedRole,
+    );
+
+    const token = generateToken(user);
+
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully.",
+      token,
+
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Registration failed:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Registration failed.",
+      error: error.message,
+    });
+  }
+};
             // Generate token
             const token = generateToken({
                 id: userId,

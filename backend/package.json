@@ -1,4 +1,15 @@
 {
+  "name": "@figma/my-make-file",
+  "private": true,
+  "version": "0.0.1",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "vite build",
+    "dev": "vite",
+    "test:sprint9": "node --test \"tests/**/*.test.js\"",
+    "test:sprint9:unit": "node --test \"tests/unit/**/*.test.js\"",
+    "test:sprint9:integration": "node --test \"tests/integration/**/*.test.js\""
   "name": "panda-motors-backend",
   "version": "4.0.0",
   "description": "Panda Motors Car Dealership API with Authentication, RBAC, PDF Reports, and Analytics",
@@ -8,6 +19,25 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
+    "compression": "^1.8.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "forwarded": "^0.2.0",
+    "ipaddr.js": "^2.5.0",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "0.487.0",
+    "motion": "12.23.24",
+    "multer": "^2.2.0",
+    "next-themes": "0.4.6",
+    "multer": "^2.0.2",
+    "pdfkit": "^0.20.2",
+    "pdfmake": "^0.3.11",
+    "pg": "^8.21.0",
+    "sharp": "^0.35.3",
+    "winston": "^3.19.0"
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",

@@ -1,26 +1,53 @@
 import { MAX_PRICE_RANGE } from "./formatUGX";
 
 export type VehicleFilterQuery = {
-  brand: string;
+  make: string;
   year: string;
   maxPrice: number;
 };
 
 export function parseVehicleFilterQuery(search: string): VehicleFilterQuery {
   const params = new URLSearchParams(search);
-  const rawPrice = Number(params.get("maxPrice"));
+
+  const maxPriceParam = params.get("maxPrice");
+
+  let maxPrice = MAX_PRICE_RANGE;
+
+  if (maxPriceParam !== null && maxPriceParam.trim() !== "") {
+    const parsedPrice = Number(maxPriceParam);
+
+    if (
+      Number.isFinite(parsedPrice) &&
+      parsedPrice >= 0 &&
+      parsedPrice <= MAX_PRICE_RANGE
+    ) {
+      maxPrice = parsedPrice;
+    }
+  }
+
   return {
-    brand: params.get("brand")?.trim() ?? "",
+    make: params.get("make")?.trim() ?? "",
     year: params.get("year")?.trim() ?? "",
-    maxPrice: Number.isFinite(rawPrice) && rawPrice >= 0 && rawPrice <= MAX_PRICE_RANGE
-      ? rawPrice
-      : MAX_PRICE_RANGE,
+    maxPrice,
   };
 }
 
-export function buildVehicleFilterQuery(filters: VehicleFilterQuery): URLSearchParams {
+export function buildVehicleFilterQuery(
+  filters: VehicleFilterQuery,
+): URLSearchParams {
   const params = new URLSearchParams();
-  if (filters.brand.trim()) params.set("brand", filters.brand.trim());
-  if (filters.year.trim()) params.set("year", filters.year.trim());
-  if (filters.maxPrice < MAX_PRICE_RANGE) params.set("maxPrice", String(filters.maxPrice));
-  return params;}
+
+  if (filters.make.trim()) {
+    params.set("make", filters.make.trim());
+  }
+
+  if (filters.year.trim()) {
+    params.set("year", filters.year.trim());
+  }
+
+  if (filters.maxPrice < MAX_PRICE_RANGE) {
+    params.set("maxPrice", String(filters.maxPrice));
+  }
+
+  return params;
+}

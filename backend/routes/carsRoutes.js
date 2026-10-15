@@ -1,19 +1,22 @@
-import { bulkCarImageController } from "../controllers/bulkCarImageController.js";
-import { bulkImageUpload } from "../middleware/bulkImageUpload.js";
 import express from "express";
 
-import { validateCarPayload } from "../middleware/validateCarPayload.js";
+import { bulkCarImageController } from "../controllers/bulkCarImageController.js";
+import { bulkImageUpload } from "../middleware/bulkImageUpload.js";
+import {
+  validateCarPayload,
+  validateCarUpdatePayload,
+} from "../middleware/validateCarPayload.js";
 
 import {
   fetchCars,
   fetchCarById,
   addCar,
+  editCar,
+  removeCar,
 } from "../controllers/carsController.js";
 
 import { uploadCarImage } from "../controllers/carImageController.js";
-
 import { uploadSingleCarImage } from "../middleware/uploadMiddleware.js";
-
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -32,11 +35,6 @@ router.get("/", fetchCars);
 |--------------------------------------------------------------------------
 |
 | POST /api/cars/upload
-|
-| multipart/form-data:
-| image      = image file
-| carId      = existing car ID
-| imageType  = primary or general
 |
 */
 
@@ -58,15 +56,9 @@ router.post("/", protect, adminOnly, validateCarPayload, addCar);
 
 /*
 |--------------------------------------------------------------------------
-| GET SINGLE CAR
+| BULK CAR IMAGE UPLOAD
 |--------------------------------------------------------------------------
-|
-| Keep this dynamic route after specific routes such as /upload.
-|
 */
-
-router.get("/:id", fetchCarById);
-
 
 router.post(
   "/:id/images/bulk",
@@ -75,5 +67,33 @@ router.post(
   bulkImageUpload,
   bulkCarImageController.uploadBulkImages,
 );
+
+/*
+|--------------------------------------------------------------------------
+| UPDATE CAR
+|--------------------------------------------------------------------------
+|
+| Partial updates are supported.
+| Only supplied inventory fields are validated and updated.
+|
+*/
+
+router.patch("/:id", protect, adminOnly, validateCarUpdatePayload, editCar);
+
+/*
+|--------------------------------------------------------------------------
+| DELETE CAR
+|--------------------------------------------------------------------------
+*/
+
+router.delete("/:id", protect, adminOnly, removeCar);
+
+/*
+|--------------------------------------------------------------------------
+| GET SINGLE CAR
+|--------------------------------------------------------------------------
+*/
+
+router.get("/:id", fetchCarById);
 
 export default router;

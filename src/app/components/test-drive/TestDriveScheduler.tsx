@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { Calendar, CheckCircle2, Clock, LogIn } from "lucide-react";
 import { Button } from "../ui/button";
-import { submitTestDriveBookingDraft, type TestDriveBookingPayload } from "../../../services";
+import {
+  submitTestDriveBookingDraft,
+  type TestDriveBookingPayload,
+} from "../../../services";
 import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -17,7 +20,15 @@ type TestDriveSchedulerProps = {
   vehicles: VehicleOption[];
 };
 
-const availableTimes = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"];
+const availableTimes = [
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "14:00",
+  "15:00",
+  "16:00",
+];
 const LOGIN_REDIRECT_PATH = "/login?redirect=/test-drive";
 
 function getTodayDateInputValue() {
@@ -29,15 +40,17 @@ function isAuthenticated() {
   // once the final JWT authentication flow is confirmed.
   return Boolean(
     localStorage.getItem("token") ||
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("jwt")
+    localStorage.getItem("authToken") ||
+    localStorage.getItem("jwt"),
   );
 }
 
 export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
   const today = useMemo(() => getTodayDateInputValue(), []);
 
-  const [selectedVehicleId, setSelectedVehicleId] = useState(vehicles[0]?.id?.toString() ?? "");
+  const [selectedVehicleId, setSelectedVehicleId] = useState(
+    vehicles[0]?.id?.toString() ?? "",
+  );
   const [date, setDate] = useState(today);
   const [time, setTime] = useState("");
   const [phone, setPhone] = useState("");
@@ -47,7 +60,7 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
   const [success, setSuccess] = useState(false);
 
   const selectedVehicle = vehicles.find(
-    (vehicle) => vehicle.id.toString() === selectedVehicleId
+    (vehicle) => vehicle.id.toString() === selectedVehicleId,
   );
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -58,7 +71,9 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
     setSuccess(false);
 
     if (!isAuthenticated()) {
-      setAuthMessage("Please sign in first so we can reserve your test drive securely.");
+      setAuthMessage(
+        "Please sign in first so we can reserve your test drive securely.",
+      );
 
       // TODO: Replace this URL-only redirect with real navigation once the login route exists.
       // Using history.pushState avoids a confusing full-page reload while the app has no /login route.
@@ -115,7 +130,8 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
             SCHEDULE A TEST DRIVE
           </h3>
           <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-            Pick your preferred vehicle, choose a valid date and time, and our team will help reserve your showroom test drive.
+            Pick your preferred vehicle, choose a valid date and time, and our
+            team will help reserve your showroom test drive.
           </p>
         </div>
 
@@ -123,10 +139,16 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
           <CardContent className="p-6 md:p-8">
             {success ? (
               <div className="text-center py-10">
-                <CheckCircle2 className="mx-auto mb-5 text-green-600" size={64} />
-                <h4 className="text-3xl font-bold mb-3">Test Drive Request Sent</h4>
+                <CheckCircle2
+                  className="mx-auto mb-5 text-green-600"
+                  size={64}
+                />
+                <h4 className="text-3xl font-bold mb-3">
+                  Test Drive Request Sent
+                </h4>
                 <p className="text-muted-foreground mb-6">
-                  Your request for {selectedVehicle?.brand} {selectedVehicle?.name} on {date} at {time} has been captured.
+                  Your request for {selectedVehicle?.brand}{" "}
+                  {selectedVehicle?.name} on {date} at {time} has been captured.
                 </p>
                 <Button
                   type="button"
@@ -157,7 +179,9 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
                     <select
                       id="vehicle"
                       value={selectedVehicleId}
-                      onChange={(event) => setSelectedVehicleId(event.target.value)}
+                      onChange={(event) =>
+                        setSelectedVehicleId(event.target.value)
+                      }
                       className="h-12 w-full rounded-lg border border-border bg-background px-4 text-sm"
                     >
                       {vehicles.map((vehicle) => (
@@ -228,7 +252,10 @@ export function TestDriveScheduler({ vehicles }: TestDriveSchedulerProps) {
                   />
                 </div>
 
-                <Button type="submit" className="w-full h-12 bg-primary text-white hover:bg-primary/90">
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-primary text-white hover:bg-primary/90"
+                >
                   Submit Test Drive Request
                 </Button>
               </form>

@@ -32,3 +32,8 @@ pnpm-debug.log*
 # Temporary files
 *.tmp
 *.temp
+
+# Local runtime environment files
+/backend/.env
+/src/backend/.env.development
+!/backend/.env.example
