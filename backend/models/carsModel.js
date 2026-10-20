@@ -2,69 +2,71 @@ import db from "../config/db.js";
 
 // GET ALL CARS
 
+const parseImages = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string" || value.trim() === "") return [];
+  try {
+    return JSON.parse(value);
+  } catch {
+    return [];
+  }
+};
+
 export const getAllCars = async () => {
-  const carsQuery = `
+  const result = await db.query(`
     SELECT
       c.*,
       cs.power,
       cs.engine,
       cs.drive,
-      COALESCE(
-        json_agg(
-          json_build_object(
-            'id', ci.id,
-            'url', ci.image_url,
-            'type', ci.image_type
-          )
-        ) FILTER (WHERE ci.id IS NOT NULL),
-        '[]'
-      ) AS images,
-
+      COALESCE((
+        SELECT json_group_array(json_object(
+          'id', ci.id,
+          'url', ci.image_url,
+          'type', ci.image_type
+        ))
+        FROM car_images ci
+        WHERE ci.car_id = c.id
+      ), '[]') AS images,
       (
         SELECT ci.image_url
         FROM car_images ci
         WHERE ci.car_id = c.id AND ci.image_type = 'primary'
+        ORDER BY ci.id ASC
         LIMIT 1
       ) AS primary_image
-
     FROM cars c
     LEFT JOIN car_specs cs ON cs.car_id = c.id
-    LEFT JOIN car_images ci ON ci.car_id = c.id
-    GROUP BY c.id, cs.power, cs.engine, cs.drive
     ORDER BY c.created_at DESC
     LIMIT 20;
-  `;
+  `);
 
-  const result = await db.query(carsQuery);
-  return result.rows;
+  return result.rows.map((car) => ({
+    ...car,
+    images: parseImages(car.images),
+  }));
 };
 
 // GET SINGLE CAR
 
 export const getCarById = async (id) => {
-  const carQuery = `
+  const car = await db.query(`
     SELECT
       c.*,
-      cs.power,
-      cs.engine,
-      cs.drive,
       cs.power,
       cs.engine,
       cs.drive
     FROM cars c
     LEFT JOIN car_specs cs ON c.id = cs.car_id
     WHERE c.id = $1;
-  `;
+  `, [id]);
 
-  const imagesQuery = `
-    SELECT image_url, image_type
+  const images = await db.query(`
+    SELECT id, image_url, image_type
     FROM car_images
     WHERE car_id = $1
     ORDER BY id ASC;
-  `;
-
-  const car = await db.query(carQuery, [id]);
-  const images = await db.query(imagesQuery, [id]);
+  `, [id]);
 
   return {
     car: car.rows[0],
