@@ -5,7 +5,7 @@ import * as availabilityService from '../services/availabilityService.js';
 export async function createBooking(req, res) {
   try {
     const { car_id, booking_date, time_slot, notes } = req.body;
-    const user_id = req.user?.id || 1;
+    const user_id = req.user.id;
 
     const validation = validateBookingRequest({ car_id, booking_date, time_slot, notes });
     if (!validation.valid) {
@@ -99,7 +99,7 @@ export async function checkAvailability(req, res) {
 export async function cancelBooking(req, res) {
   try {
     const { id } = req.params;
-    const user_id = req.user?.id || 1;
+    const user_id = req.user.id;
     const result = await db.query(
       `UPDATE bookings SET status='cancelled', updated_at=CURRENT_TIMESTAMP
        WHERE id = ? AND user_id = ? AND status IN ('pending','confirmed')
@@ -118,7 +118,7 @@ export async function cancelBooking(req, res) {
 
 export async function getUserBookings(req, res) {
   try {
-    const user_id = req.user?.id || 1;
+    const user_id = req.user.id;
     const result = await db.query(
       `SELECT b.*, c.name as car_name, c.brand
        FROM bookings b
