@@ -20,6 +20,7 @@ const __dirname = dirname(__filename);
 // IMPORT ROUTES
 // ============================================
 import authRoutes from './routes/authRoutes.js';
+import carsRoutes from './routes/carsRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
@@ -40,6 +41,7 @@ app.use(express.urlencoded({ extended: true }));
 // REGISTER ROUTES
 // ============================================
 app.use('/api/auth', authRoutes);
+app.use('/api/cars', carsRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 
@@ -109,6 +111,7 @@ app.listen(PORT, () => {
   console.log('========================================');
   console.log('\n?? Routes loaded:');
   console.log('   /api/auth');
+  console.log('   /api/cars');
   console.log('   /api/bookings');
   console.log('   /api/admin');
   console.log('========================================\n');
