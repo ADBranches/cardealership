@@ -67,3 +67,8 @@ export function isAdmin(req, res, next) {
 }
 
 export const requireAdmin = isAdmin;
+
+// Compatibility aliases used by the modular route packages.
+// Both aliases preserve the canonical authentication and administrator checks.
+export const protect = authenticateToken;
+export const adminOnly = isAdmin;
