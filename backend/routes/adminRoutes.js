@@ -1,8 +1,11 @@
 // backend/routes/adminRoutes.js
 import express from 'express';
+import { protect, adminOnly } from '../middleware/authMiddleware.js';
 import * as adminController from '../controllers/adminController.js';
 
 const router = express.Router();
+
+router.use(protect, adminOnly);
 
 // Analytics
 router.get('/stats', adminController.getAdminStats);
