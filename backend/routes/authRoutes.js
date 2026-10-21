@@ -12,6 +12,7 @@ router.post('/logout', authController.logout);
 
 // Protected
 router.get('/me', authenticateToken, authController.me);
+router.get('/session', authenticateToken, authController.me);
 router.post('/refresh', authenticateToken, authController.refreshToken);
 router.put('/change-password', authenticateToken, authController.changePassword);
 
