@@ -8,7 +8,6 @@ import 'dotenv/config';
 
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -23,15 +22,17 @@ import authRoutes from './routes/authRoutes.js';
 import carsRoutes from './routes/carsRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import { resolveRuntimeSecurity } from './config/security.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const security = resolveRuntimeSecurity();
 
 // ============================================
 // MIDDLEWARE
 // ============================================
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173'],
+  origin: security.origins,
   credentials: true
 }));
 app.use(express.json());

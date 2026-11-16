@@ -5,12 +5,14 @@
 // For development and testing without MongoDB
 
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'node:crypto';
 
 // ============================================
 // IN-MEMORY DATABASE CLASS
 // ============================================
 class InMemoryDatabase {
     constructor() {
+        if (process.env.NODE_ENV === 'production') throw new Error('The legacy sample database is not supported in production.');
         this.collections = {
             cars: [],
             bookings: [],
@@ -155,8 +157,7 @@ class InMemoryDatabase {
         // ----------------------------------------
         // SAMPLE USERS (passwords hashed with bcrypt)
         // ----------------------------------------
-        // All passwords are: "password123"
-        const defaultPasswordHash = bcrypt.hashSync('password123', 10);
+        const defaultPasswordHash = bcrypt.hashSync(randomBytes(32).toString('hex'), 10);
         
         this.collections.users = [
             { 

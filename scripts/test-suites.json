@@ -1,0 +1,222 @@
+{
+  "auth-storage": [
+    "src/tests/authStorage.manual.ts"
+  ],
+  "auth-service": [
+    "src/tests/authService.manual.ts"
+  ],
+  "auth": [
+    "auth-storage",
+    "auth-service",
+    "auth-bootstrap"
+  ],
+  "auth-bootstrap": [
+    "src/tests/authBootstrap.manual.ts"
+  ],
+  "protected-route": [
+    "src/tests/protectedRoute.manual.ts"
+  ],
+  "auth-persistence": [
+    "src/tests/authPersistence.manual.ts"
+  ],
+  "api-config": [
+    "src/tests/apiConfig.manual.ts"
+  ],
+  "vehicle-filters": [
+    "src/tests/vehicleFilterQuery.manual.ts"
+  ],
+  "profile-validation": [
+    "src/tests/profileValidation.manual.ts"
+  ],
+  "profile-service": [
+    "src/tests/profileService.manual.ts"
+  ],
+  "profile": [
+    "profile-validation",
+    "profile-service"
+  ],
+  "password-validation": [
+    "src/tests/passwordValidation.manual.ts"
+  ],
+  "password-change": [
+    "src/tests/passwordChange.manual.ts"
+  ],
+  "password": [
+    "password-validation",
+    "password-change"
+  ],
+  "booking-history": [
+    "src/tests/bookingHistory.manual.ts"
+  ],
+  "booking-availability": [
+    "src/tests/bookingAvailability.manual.ts"
+  ],
+  "availability-selection": [
+    "src/tests/availabilitySelection.manual.ts"
+  ],
+  "admin-chat-state": [
+    "src/tests/adminChatState.manual.ts"
+  ],
+  "unread-chat-badge": [
+    "src/tests/unreadChatBadge.manual.ts"
+  ],
+  "admin-chat": [
+    "admin-chat-state",
+    "admin-chat-socket",
+    "admin-chat-api",
+    "admin-chat-badge",
+    "admin-chat-security",
+    "admin-chat-accessibility",
+    "chat-interaction",
+    "chat-persistence"
+  ],
+  "chat-socket": [
+    "src/tests/chatSocketAdapter.manual.ts"
+  ],
+  "chat-api": [
+    "src/tests/chatApi.manual.ts"
+  ],
+  "chat-history-merge": [
+    "src/tests/chatHistoryMerge.manual.ts"
+  ],
+  "chat-persistence": [
+    "chat-api",
+    "chat-history-merge"
+  ],
+  "admin-reply-workflow": [
+    "src/tests/adminReplyWorkflow.manual.ts"
+  ],
+  "typing-indicator": [
+    "src/tests/typingIndicator.manual.ts"
+  ],
+  "chat-interaction": [
+    "admin-reply-workflow",
+    "typing-indicator"
+  ],
+  "chat-security": [
+    "src/tests/chatSecurity.manual.ts"
+  ],
+  "admin-chat-socket": [
+    "chat-socket"
+  ],
+  "admin-chat-api": [
+    "chat-api"
+  ],
+  "admin-chat-badge": [
+    "unread-chat-badge"
+  ],
+  "admin-chat-security": [
+    "chat-security"
+  ],
+  "admin-chat-accessibility": [
+    "src/tests/adminChatAccessibility.manual.ts"
+  ],
+  "regression": [
+    "auth",
+    "protected-route",
+    "auth-persistence",
+    "profile",
+    "password",
+    "booking-history",
+    "booking-availability",
+    "availability-selection",
+    "vehicle-filters",
+    "api-config"
+  ],
+  "sprint7": [
+    "admin-chat",
+    "regression"
+  ],
+  "sprint7-release": [
+    "sprint7",
+    "@build"
+  ],
+  "listing-wizard-state": [
+    "src/tests/listingWizardState.manual.ts"
+  ],
+  "listing-wizard-validation": [
+    "src/tests/listingWizardValidation.manual.ts"
+  ],
+  "listing-wizard": [
+    "listing-wizard-state",
+    "listing-wizard-validation"
+  ],
+  "listing-image-selection": [
+    "src/tests/listingImageSelection.manual.ts"
+  ],
+  "listing-upload-adapter": [
+    "src/tests/listingUploadAdapter.manual.ts"
+  ],
+  "listing-submission": [
+    "src/tests/listingSubmission.manual.ts"
+  ],
+  "dispatch-state": [
+    "src/tests/dispatchState.manual.ts"
+  ],
+  "booking-transitions": [
+    "src/tests/bookingTransitions.manual.ts"
+  ],
+  "dispatch-domain": [
+    "booking-transitions",
+    "dispatch-state"
+  ],
+  "dispatch-interface": [
+    "src/tests/dispatchInterface.manual.ts"
+  ],
+  "dispatch-api": [
+    "src/tests/dispatchApi.manual.ts"
+  ],
+  "dispatch-synchronization": [
+    "src/tests/dispatchSynchronization.manual.ts"
+  ],
+  "dispatch-live": [
+    "dispatch-api",
+    "dispatch-synchronization",
+    "dispatch-domain",
+    "dispatch-interface"
+  ],
+  "listing-accessibility": [
+    "src/tests/listingWizardAccessibility.manual.ts"
+  ],
+  "dispatch-accessibility": [
+    "src/tests/dispatchAccessibility.manual.ts"
+  ],
+  "sprint8-security": [
+    "src/tests/sprint8Security.manual.ts"
+  ],
+  "sprint8-validation": [
+    "listing-accessibility",
+    "dispatch-accessibility",
+    "sprint8-security"
+  ],
+  "sprint8-targeted": [
+    "listing-wizard-state",
+    "listing-wizard-validation",
+    "listing-image-selection",
+    "listing-upload-adapter",
+    "listing-submission",
+    "dispatch-state",
+    "booking-transitions",
+    "dispatch-api",
+    "dispatch-synchronization",
+    "listing-accessibility",
+    "dispatch-accessibility",
+    "sprint8-security"
+  ],
+  "sprint8-regression": [
+    "regression",
+    "backend/tests/carPayloadValidation.manual.js",
+    "image-optimization-contract",
+    "backend/tests/carImageCleanup.manual.js"
+  ],
+  "sprint8-full": [
+    "sprint8-targeted",
+    "sprint8-regression"
+  ],
+  "image-optimization-contract": [
+    "backend/tests/imageOptimizationContract.manual.js"
+  ],
+  "login-interface": [
+    "src/tests/loginInterface.manual.ts"
+  ]
+}
