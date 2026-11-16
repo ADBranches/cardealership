@@ -174,6 +174,9 @@ export async function editCar(req, res) {
       },
     });
   } catch (error) {
+    if (error.code === 'INVALID_STATUS_TRANSITION') {
+      return sendError(res, 409, error.code, error.message);
+    }
     console.error("Update car failed:", error);
 
     return sendError(

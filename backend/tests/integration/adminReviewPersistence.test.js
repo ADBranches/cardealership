@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import Database from 'better-sqlite3';
+import db from '../../config/db.js';
+import { updateBookingStatus, bulkUpdateBookings, approveCar, rejectCar, updateCar } from '../../controllers/adminController.js';
+
+const response = () => ({ statusCode: 200, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } });
+
+test('review controllers enforce transitions atomically in an isolated SQLite database', async t => {
+  const sqlite = new Database(':memory:');
+  t.after(() => sqlite.close());
+  sqlite.exec(`CREATE TABLE bookings (id INTEGER PRIMARY KEY, status TEXT, updated_at TEXT);
+    INSERT INTO bookings VALUES (1,'pending',NULL),(2,'completed',NULL),(3,'confirmed',NULL);
+    CREATE TABLE cars (id INTEGER PRIMARY KEY, status TEXT, name TEXT, brand TEXT, price REAL, year INTEGER, description TEXT, image_url TEXT);
+    INSERT INTO cars (id,status) VALUES (1,'pending'),(2,'sold'),(3,'pending');`);
+  t.mock.method(db, 'query', async (sql, params = []) => ({ rows: sqlite.prepare(sql).all(...params) }));
+  let res = response();
+  await bulkUpdateBookings({ body: { ids: [1, 2], status: 'confirmed' } }, res);
+  assert.equal(res.statusCode, 409);
+  assert.equal(sqlite.prepare('SELECT status FROM bookings WHERE id=1').get().status, 'pending');
+  res = response();
+  await bulkUpdateBookings({ body: { ids: [1, 3], status: 'confirmed' } }, res);
+  assert.deepEqual(res.body.updatedIds.sort(), [1,3]);
+  res = response();
+  await updateBookingStatus({ params: { id: 2 }, body: { status: 'pending' } }, res);
+  assert.equal(res.statusCode, 409);
+  res = response();
+  await approveCar({ params: { id: 2 } }, res);
+  assert.equal(res.statusCode, 409);
+  res = response();
+  await approveCar({ params: { id: 1 } }, res);
+  assert.equal(res.body.car.status, 'available');
+  res = response();
+  await rejectCar({ params: { id: 3 } }, res);
+  assert.equal(res.body.car.status, 'rejected');
+  res = response();
+  await updateCar({ params: { id: 1 }, body: { price: -30 } }, res);
+  assert.equal(res.statusCode, 400);
+  res = response();
+  await updateCar({ params: { id: 2 }, body: { status: 'available' } }, res);
+  assert.equal(res.statusCode, 409);
+});

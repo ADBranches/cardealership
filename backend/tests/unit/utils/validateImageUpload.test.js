@@ -1,11 +1,9 @@
-"use strict";
+import test from "node:test";
+import assert from "node:assert/strict";
+import configuration from "../../../config/bulkImageUpload.js";
+import { createImageUploadValidator, sanitizeImageFilename } from "../../../utils/validateImageUpload.js";
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const configuration = require("../../../config");
-const { createImageUploadValidator, sanitizeImageFilename } = require("../../../utils/validateImageUpload");
-
-const validateImageUpload = createImageUploadValidator(configuration.bulkImageUpload);
+const validateImageUpload = createImageUploadValidator(configuration);
 
 test("allowed image passes validation", () => {
   const result = validateImageUpload({ originalname: "front-view.jpg", mimetype: "image/jpeg", size: 1024 });
@@ -22,7 +20,7 @@ test("unsupported extension fails predictably", () => {
 });
 
 test("oversized image fails predictably", () => {
-  assert.throws(() => validateImageUpload({ originalname: "vehicle.jpg", mimetype: "image/jpeg", size: configuration.bulkImageUpload.maxFileSizeBytes + 1 }), (error) => error.code === "FILE_TOO_LARGE");
+  assert.throws(() => validateImageUpload({ originalname: "vehicle.jpg", mimetype: "image/jpeg", size: configuration.maxFileSizeBytes + 1 }), (error) => error.code === "FILE_TOO_LARGE");
 });
 
 test("filename sanitization removes unsafe path input", () => {

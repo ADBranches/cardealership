@@ -1,66 +1,46 @@
-"use strict";
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import db from '../../../config/db.js';
+import { signToken } from '../../../utils/jwt.js';
+import { authenticateToken, isAdmin, protect, adminOnly } from '../../../middleware/authMiddleware.js';
 
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { createAuthenticationMiddleware } = require("../../../middleware/authenticate");
-const { authorizeAdministrator } = require("../../../middleware/authorizeAdministrator");
-const { USER_ROLES } = require("../../../models/User");
+const response = () => ({
+  statusCode: 200,
+  status(code) { this.statusCode = code; return this; },
+  json(body) { this.body = body; return this; },
+});
 
-const createResponse = () => {
-  const activity = {};
-  return {
-    activity,
-    status(statusCode) {
-      activity.statusCode = statusCode;
-      return this;
-    },
-    json(body) {
-      activity.body = body;
-      return this;
-    }
-  };
-};
+test('canonical middleware aliases share one implementation', () => {
+  assert.equal(protect, authenticateToken);
+  assert.equal(adminOnly, isAdmin);
+});
 
-test("missing bearer token returns HTTP 401", () => {
-  const middleware = createAuthenticationMiddleware({
-    secret: "test-secret",
-    verifyToken: () => ({})
+test('missing bearer token is rejected', async () => {
+  const res = response();
+  await authenticateToken({ headers: {} }, res, () => assert.fail('unexpected next'));
+  assert.equal(res.statusCode, 401);
+});
+
+test('database role overrides stale admin token claims', async (t) => {
+  const oldSecret = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = 'integration-review-test-secret';
+  t.after(() => {
+    if (oldSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = oldSecret;
   });
-  const response = createResponse();
-  middleware({ headers: {} }, response, () => assert.fail("next must not execute"));
-  assert.equal(response.activity.statusCode, 401);
-  assert.equal(response.activity.body.error.code, "AUTH_TOKEN_REQUIRED");
-});
-
-test("valid token exposes immutable authenticated user", () => {
-  const middleware = createAuthenticationMiddleware({
-    secret: "test-secret",
-    verifyToken: () => ({ id: "user-1", email: "admin@example.com", role: USER_ROLES.ADMINISTRATOR })
-  });
-  const request = { headers: { authorization: "Bearer valid-token" } };
-  const response = createResponse();
+  t.mock.method(db, 'query', async () => ({ rows: [{ id: 7, role: 'user' }] }));
+  const req = { headers: { authorization: `Bearer ${signToken({ id: 7, role: 'admin' })}` } };
+  const res = response();
   let nextCalls = 0;
-  middleware(request, response, () => { nextCalls += 1; });
+  await authenticateToken(req, res, () => { nextCalls++; });
   assert.equal(nextCalls, 1);
-  assert.equal(request.user.role, USER_ROLES.ADMINISTRATOR);
-  assert.equal(Object.isFrozen(request.user), true);
+  assert.equal(req.user.role, 'user');
+  isAdmin(req, res, () => assert.fail('stale admin claim authorized'));
+  assert.equal(res.statusCode, 403);
 });
 
-test("customer role is denied administrator access", () => {
-  const response = createResponse();
-  authorizeAdministrator({ user: { role: USER_ROLES.CUSTOMER } }, response, () => assert.fail("next must not execute"));
-  assert.equal(response.activity.statusCode, 403);
-  assert.equal(response.activity.body.error.code, "ADMINISTRATOR_REQUIRED");
-});
-
-test("administrator role is authorized", () => {
-  let nextCalls = 0;
-  authorizeAdministrator({ user: { role: USER_ROLES.ADMINISTRATOR } }, createResponse(), () => { nextCalls += 1; });
-  assert.equal(nextCalls, 1);
-});
-
-test("new users default to the customer role", () => {
-  const User = require("../../../models/User");
-  const user = new User({ name: "Test User", email: "test@example.com", password: "hash" });
-  assert.equal(user.role, USER_ROLES.CUSTOMER);
+test('canonical admin role is authorized', () => {
+  let calls = 0;
+  isAdmin({ user: { role: 'admin' } }, response(), () => { calls++; });
+  assert.equal(calls, 1);
 });

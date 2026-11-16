@@ -1,8 +1,6 @@
-"use strict";
-
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { mapMulterError, multipartParser } = require("../../../middleware/bulkImageUpload");
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mapMulterError, multipartParser } from "../../../middleware/bulkImageUpload.js";
 
 test("file-size parser error maps predictably", () => {
   assert.deepEqual(mapMulterError({ code: "LIMIT_FILE_SIZE" }), { code: "FILE_TOO_LARGE", message: "An image exceeds the permitted size limit." });

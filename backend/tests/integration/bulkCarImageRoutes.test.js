@@ -1,9 +1,9 @@
-"use strict";
-
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { createBulkCarImageController, selectBulkUploadStatus } = require("../../controllers/bulkCarImageController");
-const { createCarRouter } = require("../../routes/carRoutes");
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createBulkCarImageController, selectBulkUploadStatus, bulkCarImageController } from "../../controllers/bulkCarImageController.js";
+import router from "../../routes/carsRoutes.js";
+import { protect, adminOnly } from "../../middleware/authMiddleware.js";
+import { bulkImageUpload } from "../../middleware/bulkImageUpload.js";
 
 const createResponse = () => {
   const activity = { statusCode: null, body: null };
@@ -30,28 +30,20 @@ const createRequest = () => ({
 });
 
 test("route middleware order is authentication authorization upload controller", () => {
-  const authenticate = (request, response, next) => next();
-  const authorize = (request, response, next) => next();
-  const upload = (request, response, next) => next();
-  const router = createCarRouter({
-    authenticate,
-    authorize,
-    upload,
-    bulkUploadService: { processBulkUpload: async () => ({}) }
-  });
-  const layer = router.stack.find((entry) => entry.route);
+  const layer = router.stack.find((entry) => entry.route?.path === "/:id/images/bulk");
   assert.equal(layer.route.path, "/:id/images/bulk");
   assert.equal(layer.route.methods.post, true);
   assert.equal(layer.route.stack.length, 4);
-  assert.equal(layer.route.stack[0].handle, authenticate);
-  assert.equal(layer.route.stack[1].handle, authorize);
-  assert.equal(layer.route.stack[2].handle, upload);
+  assert.equal(layer.route.stack[0].handle, protect);
+  assert.equal(layer.route.stack[1].handle, adminOnly);
+  assert.equal(layer.route.stack[2].handle, bulkImageUpload);
+  assert.equal(layer.route.stack[3].handle, bulkCarImageController.uploadBulkImages);
 });
 
 test("complete success returns HTTP 201 with deterministic correlation", async () => {
   let receivedFiles;
   const controller = createBulkCarImageController({
-    processBulkUpload: async ({ files }) => {
+    uploadFiles: async ({ files }) => {
       receivedFiles = files;
       return {
         carId: "car-123",
@@ -72,7 +64,7 @@ test("complete success returns HTTP 201 with deterministic correlation", async (
 
 test("partial success returns HTTP 207", async () => {
   const controller = createBulkCarImageController({
-    processBulkUpload: async () => ({
+    uploadFiles: async () => ({
       carId: "car-123",
       summary: { received: 2, uploaded: 1, rejected: 1, failed: 0 },
       files: [
@@ -88,7 +80,7 @@ test("partial success returns HTTP 207", async () => {
 
 test("complete rejection returns HTTP 422", async () => {
   const controller = createBulkCarImageController({
-    processBulkUpload: async () => ({
+    uploadFiles: async () => ({
       carId: "car-123",
       summary: { received: 2, uploaded: 0, rejected: 2, failed: 0 },
       files: [
@@ -106,7 +98,7 @@ test("vehicle-not-found returns HTTP 404", async () => {
   const notFoundError = new Error("Missing vehicle");
   notFoundError.code = "CAR_NOT_FOUND";
   const controller = createBulkCarImageController({
-    processBulkUpload: async () => { throw notFoundError; }
+    uploadFiles: async () => { throw notFoundError; }
   });
   const response = createResponse();
   await controller.uploadBulkImages(createRequest(), response);
@@ -116,7 +108,7 @@ test("vehicle-not-found returns HTTP 404", async () => {
 
 test("malformed clientFileId correlation returns HTTP 400", async () => {
   const controller = createBulkCarImageController({
-    processBulkUpload: async () => assert.fail("service must not execute")
+    uploadFiles: async () => assert.fail("service must not execute")
   });
   const request = createRequest();
   request.body.clientFileIds = "[\"file-001\"]";
@@ -127,7 +119,7 @@ test("malformed clientFileId correlation returns HTTP 400", async () => {
 
 test("unexpected service exception returns controlled HTTP 500", async () => {
   const controller = createBulkCarImageController({
-    processBulkUpload: async () => { throw new Error("Unexpected failure"); }
+    uploadFiles: async () => { throw new Error("Unexpected failure"); }
   });
   const response = createResponse();
   await controller.uploadBulkImages(createRequest(), response);

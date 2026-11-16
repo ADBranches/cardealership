@@ -1,5 +1,6 @@
 // backend/controllers/adminController.js
 import db from '../config/db.js';
+import { allowedBookingSources, validRecordId, validateAdminCarUpdate, canEditInventoryStatus } from '../utils/adminReviewPolicy.js';
 
 // ============================================
 // GET ADMIN STATS
@@ -261,18 +262,19 @@ export const getPendingApprovals = async (req, res) => {
 export const updateBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
-    const allowed = ['pending', 'confirmed', 'completed', 'cancelled'];
-    if (!allowed.includes(status)) {
+    const { status } = req.body || {};
+    const sources = allowedBookingSources(status);
+    if (!validRecordId(id) || !sources) {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
     const result = await db.query(
       `UPDATE bookings SET status = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ? RETURNING *`,
-      [status, id]
+       WHERE id = ? AND status IN (${sources.map(() => '?').join(',')}) RETURNING *`,
+      [status, id, ...sources]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Booking not found' });
+      const existing = await db.query('SELECT id FROM bookings WHERE id = ?', [id]);
+      return res.status(existing.rows.length ? 409 : 404).json({ success: false, message: existing.rows.length ? 'Invalid booking status transition' : 'Booking not found' });
     }
     res.json({ success: true, booking: result.rows[0] });
   } catch (error) {
@@ -286,20 +288,24 @@ export const updateBookingStatus = async (req, res) => {
 // ============================================
 export const bulkUpdateBookings = async (req, res) => {
   try {
-    const { ids, status } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0) {
+    const { ids, status } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0 || ids.length > 200 || ids.some(id => !validRecordId(id)) || new Set(ids.map(Number)).size !== ids.length) {
       return res.status(400).json({ success: false, message: 'ids array required' });
     }
-    const allowed = ['pending', 'confirmed', 'completed', 'cancelled'];
-    if (!allowed.includes(status)) {
+    const sources = allowedBookingSources(status);
+    if (!sources) {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
     const placeholders = ids.map(() => '?').join(',');
     const result = await db.query(
       `UPDATE bookings SET status = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id IN (${placeholders}) RETURNING id`,
-      [status, ...ids]
+       WHERE id IN (${placeholders}) AND (
+         SELECT COUNT(*) FROM bookings WHERE id IN (${placeholders})
+         AND status IN (${sources.map(() => '?').join(',')})
+       ) = ? RETURNING id`,
+      [status, ...ids, ...ids, ...sources, ids.length]
     );
+    if (result.rows.length !== ids.length) return res.status(409).json({ success: false, message: 'One or more bookings are missing or cannot transition; no bookings updated' });
     res.json({ success: true, updatedIds: result.rows.map(r => r.id) });
   } catch (error) {
     console.error('bulkUpdateBookings error:', error.message);
@@ -314,11 +320,12 @@ export const approveCar = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await db.query(
-      `UPDATE cars SET status = 'available' WHERE id = ? RETURNING *`,
+      `UPDATE cars SET status = 'available' WHERE id = ? AND status = 'pending' RETURNING *`,
       [id]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Car not found' });
+      const existing = await db.query('SELECT id FROM cars WHERE id = ?', [id]);
+      return res.status(existing.rows.length ? 409 : 404).json({ success: false, message: existing.rows.length ? 'Only pending cars can be approved' : 'Car not found' });
     }
     res.json({ success: true, car: result.rows[0] });
   } catch (error) {
@@ -334,11 +341,12 @@ export const rejectCar = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await db.query(
-      `UPDATE cars SET status = 'rejected' WHERE id = ? RETURNING *`,
+      `UPDATE cars SET status = 'rejected' WHERE id = ? AND status = 'pending' RETURNING *`,
       [id]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Car not found' });
+      const existing = await db.query('SELECT id FROM cars WHERE id = ?', [id]);
+      return res.status(existing.rows.length ? 409 : 404).json({ success: false, message: existing.rows.length ? 'Only pending cars can be rejected' : 'Car not found' });
     }
     res.json({ success: true, car: result.rows[0] });
   } catch (error) {
@@ -353,6 +361,8 @@ export const rejectCar = async (req, res) => {
 export const updateCar = async (req, res) => {
   try {
     const { id } = req.params;
+    const errors = validateAdminCarUpdate(req.body);
+    if (!validRecordId(id) || errors.length) return res.status(400).json({ success: false, message: 'Invalid vehicle update', errors });
     const { name, brand, price, year, status, description, image_url } = req.body;
 
     const current = await db.query('SELECT * FROM cars WHERE id = ?', [id]);
@@ -360,11 +370,12 @@ export const updateCar = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Car not found' });
     }
     const c = current.rows[0];
+    if (status !== undefined && !canEditInventoryStatus(c.status, status)) return res.status(409).json({ success: false, message: 'Invalid vehicle status transition' });
 
     const result = await db.query(
       `UPDATE cars
        SET name = ?, brand = ?, price = ?, year = ?, status = ?, description = ?, image_url = ?
-       WHERE id = ?
+       WHERE id = ? AND status IS ?
        RETURNING *`,
       [
         name ?? c.name,
@@ -374,9 +385,10 @@ export const updateCar = async (req, res) => {
         status ?? c.status,
         description ?? c.description,
         image_url ?? c.image_url,
-        id
+        id, c.status
       ]
     );
+    if (!result.rows.length) return res.status(409).json({ success: false, message: 'Vehicle status changed; retry the update' });
     res.json({ success: true, car: result.rows[0] });
   } catch (error) {
     console.error('updateCar error:', error.message);

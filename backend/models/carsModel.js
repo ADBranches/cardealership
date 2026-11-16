@@ -1,4 +1,5 @@
 import db from "../config/db.js";
+import { canEditInventoryStatus } from "../utils/adminReviewPolicy.js";
 
 // GET ALL CARS
 
@@ -216,11 +217,15 @@ export const updateCar = async (id, data) => {
   await db.query("BEGIN");
 
   try {
-    const existing = await db.query(`SELECT id FROM cars WHERE id = $1;`, [id]);
+    const existing = await db.query(`SELECT id, status FROM cars WHERE id = $1;`, [id]);
 
     if (existing.rowCount === 0) {
       await db.query("ROLLBACK");
       return null;
+    }
+
+    if (data.status !== undefined && !canEditInventoryStatus(existing.rows[0].status, data.status)) {
+      throw Object.assign(new Error('Invalid vehicle status transition'), { code: 'INVALID_STATUS_TRANSITION' });
     }
 
     if (carEntries.length > 0) {
@@ -232,16 +237,17 @@ export const updateCar = async (id, data) => {
 
       values.push(id);
 
-      await db.query(
+      const updated = await db.query(
         `
           UPDATE cars
           SET
             ${assignments.join(", ")},
-            updated_at = NOW()
-          WHERE id = $${values.length};
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $${values.length} AND status IS $${values.length + 1};
         `,
-        values,
+        [...values, existing.rows[0].status],
       );
+      if (!updated.rowCount) throw Object.assign(new Error('Vehicle status changed; retry the update'), { code: 'INVALID_STATUS_TRANSITION' });
     }
 
     if (specEntries.length > 0) {

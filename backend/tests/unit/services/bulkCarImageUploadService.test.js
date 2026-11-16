@@ -1,8 +1,6 @@
-"use strict";
-
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { createBulkCarImageUploadService } = require("../../../services/bulkCarImageUploadService");
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createBulkCarImageUploadService } from "../../../services/bulkCarImageUploadService.js";
 
 const createFile = (clientFileId, fileName = "vehicle.jpg") => ({
   clientFileId,
@@ -21,29 +19,29 @@ const createDependencies = (overrides = {}) => {
   };
 
   const dependencies = {
-    vehicleRepository: {
-      findById: async (vehicleId) => {
-        activity.vehicleLookups.push(vehicleId);
-        return { id: vehicleId };
+    carRepository: {
+      findById: async (carId) => {
+        activity.vehicleLookups.push(carId);
+        return { id: carId };
       }
     },
-    imageStorage: {
-      store: async (file) => {
+    storage: {
+      upload: async ({ carId, file }) => {
         activity.stored.push(file.clientFileId);
         return {
-          storageKey: `cars/${file.vehicleId}/${file.clientFileId}`,
-          url: `/uploads/cars/${file.vehicleId}/${file.fileName}`
+          publicId: `cars/${carId}/${file.clientFileId}`,
+          url: `/uploads/cars/${carId}/${file.originalname}`
         };
       },
-      remove: async (storageKey) => {
-        activity.removed.push(storageKey);
+      remove: async (publicId) => {
+        activity.removed.push(publicId);
       }
     },
     imageRepository: {
-      save: async (metadata) => {
-        activity.persisted.push(metadata.clientFileId);
+      create: async (metadata) => {
+        activity.persisted.push(metadata.fileName);
         return {
-          id: `image-${metadata.clientFileId}`,
+          id: `image-${metadata.fileName}`,
           url: metadata.url
         };
       }
@@ -53,8 +51,8 @@ const createDependencies = (overrides = {}) => {
   return {
     activity,
     dependencies: {
-      vehicleRepository: overrides.vehicleRepository || dependencies.vehicleRepository,
-      imageStorage: overrides.imageStorage || dependencies.imageStorage,
+      carRepository: overrides.carRepository || dependencies.carRepository,
+      storage: overrides.storage || dependencies.storage,
       imageRepository: overrides.imageRepository || dependencies.imageRepository
     }
   };
@@ -63,8 +61,8 @@ const createDependencies = (overrides = {}) => {
 test("each accepted file receives a stable uploaded result", async () => {
   const { dependencies } = createDependencies();
   const service = createBulkCarImageUploadService(dependencies);
-  const response = await service.processBulkUpload({
-    vehicleId: "car-123",
+  const response = await service.uploadFiles({
+    carId: "car-123",
     files: [createFile("file-001"), createFile("file-002", "rear.jpg")]
   });
 
@@ -82,14 +80,11 @@ test("one rejected file does not erase successful results", async () => {
   const service = createBulkCarImageUploadService(dependencies);
   const rejectedFile = {
     ...createFile("file-002", "document.pdf"),
-    validationError: {
-      code: "UNSUPPORTED_MIME_TYPE",
-      message: "The image MIME type is not supported."
-    }
+    mimetype: "application/pdf"
   };
 
-  const response = await service.processBulkUpload({
-    vehicleId: "car-123",
+  const response = await service.uploadFiles({
+    carId: "car-123",
     files: [createFile("file-001"), rejectedFile, createFile("file-003")]
   });
 
@@ -103,9 +98,9 @@ test("one rejected file does not erase successful results", async () => {
 test("vehicle-not-found is handled before permanent storage", async () => {
   let storageCalls = 0;
   const { dependencies } = createDependencies({
-    vehicleRepository: { findById: async () => null },
-    imageStorage: {
-      store: async () => {
+    carRepository: { findById: async () => null },
+    storage: {
+      upload: async () => {
         storageCalls += 1;
       },
       remove: async () => undefined
@@ -114,7 +109,7 @@ test("vehicle-not-found is handled before permanent storage", async () => {
   const service = createBulkCarImageUploadService(dependencies);
 
   await assert.rejects(
-    service.processBulkUpload({ vehicleId: "missing-car", files: [createFile("file-001")] }),
+    service.uploadFiles({ carId: "missing-car", files: [createFile("file-001")] }),
     (error) => error.code === "CAR_NOT_FOUND"
   );
   assert.equal(storageCalls, 0);
@@ -122,16 +117,16 @@ test("vehicle-not-found is handled before permanent storage", async () => {
 
 test("storage failure produces a controlled file result", async () => {
   const { dependencies } = createDependencies({
-    imageStorage: {
-      store: async () => {
+    storage: {
+      upload: async () => {
         throw new Error("Storage unavailable");
       },
       remove: async () => undefined
     }
   });
   const service = createBulkCarImageUploadService(dependencies);
-  const response = await service.processBulkUpload({
-    vehicleId: "car-123",
+  const response = await service.uploadFiles({
+    carId: "car-123",
     files: [createFile("file-001")]
   });
 
@@ -143,24 +138,24 @@ test("storage failure produces a controlled file result", async () => {
 test("database failure removes the orphaned storage object", async () => {
   const removedStorageKeys = [];
   const { dependencies } = createDependencies({
-    imageStorage: {
-      store: async (file) => ({
-        storageKey: `cars/${file.vehicleId}/${file.clientFileId}`,
-        url: `/uploads/${file.fileName}`
+    storage: {
+      upload: async ({ carId, file }) => ({
+        publicId: `cars/${carId}/${file.clientFileId}`,
+        url: `/uploads/${file.originalname}`
       }),
-      remove: async (storageKey) => {
-        removedStorageKeys.push(storageKey);
+      remove: async (publicId) => {
+        removedStorageKeys.push(publicId);
       }
     },
     imageRepository: {
-      save: async () => {
+      create: async () => {
         throw new Error("Database unavailable");
       }
     }
   });
   const service = createBulkCarImageUploadService(dependencies);
-  const response = await service.processBulkUpload({
-    vehicleId: "car-123",
+  const response = await service.uploadFiles({
+    carId: "car-123",
     files: [createFile("file-001")]
   });
 
@@ -172,23 +167,23 @@ test("database failure removes the orphaned storage object", async () => {
 test("cleanup failure remains controlled and processing continues", async () => {
   let saveCalls = 0;
   const { dependencies } = createDependencies({
-    imageStorage: {
-      store: async (file) => ({ storageKey: file.clientFileId, url: `/uploads/${file.originalname}` }),
+    storage: {
+      upload: async ({ carId, file }) => ({ publicId: file.clientFileId, url: `/uploads/${file.originalname}` }),
       remove: async () => {
         throw new Error("Cleanup failed");
       }
     },
     imageRepository: {
-      save: async (metadata) => {
+      create: async (metadata) => {
         saveCalls += 1;
-        if (metadata.clientFileId === "file-001") throw new Error("Persistence failed");
-        return { id: `image-${metadata.clientFileId}`, url: metadata.url };
+        if (saveCalls === 1) throw new Error("Persistence failed");
+        return { id: `image-${metadata.fileName}`, url: metadata.url };
       }
     }
   });
   const service = createBulkCarImageUploadService(dependencies);
-  const response = await service.processBulkUpload({
-    vehicleId: "car-123",
+  const response = await service.uploadFiles({
+    carId: "car-123",
     files: [createFile("file-001"), createFile("file-002")]
   });
 
@@ -201,7 +196,7 @@ test("empty file collection is rejected before processing", async () => {
   const service = createBulkCarImageUploadService(dependencies);
 
   await assert.rejects(
-    service.processBulkUpload({ vehicleId: "car-123", files: [] }),
+    service.uploadFiles({ carId: "car-123", files: [] }),
     (error) => error.code === "FILE_REQUIRED"
   );
 });

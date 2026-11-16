@@ -4,6 +4,10 @@ import {
   createBulkImageFileResult,
   createBulkImageUploadResponse,
 } from "../contracts/bulkImageUpload.contract.js";
+import config from '../config/bulkImageUpload.js';
+import { createImageUploadValidator } from '../utils/validateImageUpload.js';
+
+const validateFile = createImageUploadValidator(config);
 
 const requiredMethod = (value, methodName, label) => {
   if (!value || typeof value[methodName] !== "function") {
@@ -42,6 +46,9 @@ export const createBulkCarImageUploadService = (
   requiredMethod(storage, "remove", "Image storage");
 
   const uploadFiles = async ({ carId, files }) => {
+    if (!Array.isArray(files) || !files.length) {
+      throw Object.assign(new Error('At least one image file is required.'), { code: BULK_IMAGE_UPLOAD_ERROR_CODES.FILE_REQUIRED });
+    }
     const car = await carRepository.findById(carId);
 
     if (!car) {
@@ -61,6 +68,13 @@ export const createBulkCarImageUploadService = (
         index,
       );
       let storedImage = null;
+
+      try {
+        validateFile(file);
+      } catch (error) {
+        fileResults.push(createBulkImageFileResult({ clientFileId, fileName: file.originalname, status: BULK_IMAGE_UPLOAD_FILE_STATUSES.REJECTED, mimeType: file.mimetype, size: file.size, error: { code: error.code, message: error.message } }));
+        continue;
+      }
 
       try {
         storedImage = await storage.upload({
@@ -109,8 +123,7 @@ export const createBulkCarImageUploadService = (
             size: file.size,
             error: {
               code:
-                error.code ||
-                BULK_IMAGE_UPLOAD_ERROR_CODES.STORAGE_FAILED,
+                storedImage ? BULK_IMAGE_UPLOAD_ERROR_CODES.PERSISTENCE_FAILED : (error.code || BULK_IMAGE_UPLOAD_ERROR_CODES.STORAGE_FAILED),
               message:
                 error.message ||
                 "The image could not be uploaded.",
