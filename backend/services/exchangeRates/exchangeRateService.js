@@ -1,165 +1,103 @@
-"use strict";
+import configuration from '../../config/exchangeRates.js';
+import { EXCHANGE_RATE_ERROR_CODES as codes, EXCHANGE_RATE_REFRESH_STATES as states, EXCHANGE_RATE_SOURCES as sources, assertExchangeRateProvider } from '../../contracts/exchangeRate.contract.js';
+import { exchangeRateRepository } from '../../repositories/exchangeRateRepository.js';
+import { createMockExchangeRateProvider } from './mockExchangeRateProvider.js';
+import { createFrankfurterProvider } from './frankfurterProvider.js';
+import { normalizeExchangeRates, normalizeCurrency, normalizeRates, parseExchangeRateTimestamp } from './normalizeExchangeRates.js';
 
-const configuration = require("../../config/exchangeRates");
-const defaultRepository = require("../../repositories/exchangeRateRepository");
-const { createMockExchangeRateProvider } = require("./mockExchangeRateProvider");
-const { normalizeExchangeRates } = require("./normalizeExchangeRates");
-const { EXCHANGE_RATE_REFRESH_STATES, EXCHANGE_RATE_SOURCES, EXCHANGE_RATE_ERROR_CODES } = require("../../contracts/exchangeRate.contract");
+const errorWithCode = (code, message) => Object.assign(new Error(message), { code });
+const disabledProvider = Object.freeze({ async fetchRates() { throw errorWithCode(codes.PROVIDER_UNAVAILABLE, 'Exchange-rate provider is disabled.'); } });
 
-const createExchangeRateService = (options = {}) => {
-  const provider = options.provider || createMockExchangeRateProvider();
-  const repository = options.repository || defaultRepository;
-  const now = typeof options.now === "function" ? options.now : () => new Date();
-  const cacheTtlMs = options.cacheTtlMs || configuration.cacheTtlMs;
-
-  const getRates = async (baseCurrency = configuration.baseCurrency, forceRefresh = false) => {
-    const currentTime = now();
-
-    if (!forceRefresh) {
-      const freshSnapshot = await repository.findLatestUsableSnapshot(baseCurrency, currentTime);
-
-      if (freshSnapshot) {
-        return Object.freeze({
-          state: EXCHANGE_RATE_REFRESH_STATES.FRESH,
-          source: EXCHANGE_RATE_SOURCES.DATABASE_CACHE,
-          snapshot: freshSnapshot
-        });
-      }
-    }
-
+export function createExchangeRateService(options = {}) {
+  const config = { ...configuration, ...options.config };
+  const repository = options.repository ?? exchangeRateRepository;
+  const now = options.now ?? (() => new Date());
+  const cacheTtlMs = options.cacheTtlMs ?? config.cacheTtlMs;
+  if (process.env.NODE_ENV === 'production' && config.provider === 'mock') throw new Error('Synthetic exchange rates are prohibited in production.');
+  const provider = assertExchangeRateProvider(options.provider ?? (config.provider === 'mock' ? createMockExchangeRateProvider({ now, scenario: config.mockScenario, rates: config.mockRates }) : config.provider === 'frankfurter' ? createFrankfurterProvider({ ...config, now }) : disabledProvider));
+  const inFlight = new Map();
+  const failures = new Map();
+  let rateLimitedUntil = 0;
+  if (typeof now !== 'function' || !Number.isSafeInteger(cacheTtlMs) || cacheTtlMs <= 0) throw new TypeError('Invalid exchange-rate service configuration.');
+  for (const method of ['findLatestUsableSnapshot', 'findLatestSnapshot', 'saveFreshSnapshot']) {
+    if (typeof repository[method] !== 'function') throw new TypeError(`Repository must implement ${method}.`);
+  }
+  function checkedCurrency(value) {
+    let currency;
+    try { currency = normalizeCurrency(value); } catch { throw errorWithCode(codes.INVALID_BASE_CURRENCY, 'Unsupported base currency.'); }
+    if (!config.supportedCurrencies.includes(currency)) throw errorWithCode(codes.INVALID_BASE_CURRENCY, 'Unsupported base currency.');
+    return currency;
+  }
+  function allowedSnapshot(snapshot, baseCurrency, currentTime, allowStale = false) {
     try {
-      const providerResponse = await provider.fetchRates(baseCurrency);
-      const normalizedSnapshot = normalizeExchangeRates(providerResponse, { cacheTtlMs });
-      const savedSnapshot = await repository.saveFreshSnapshot(normalizedSnapshot);
+      if (!snapshot || snapshot.provider !== config.provider || snapshot.baseCurrency !== baseCurrency || (process.env.NODE_ENV === 'production' && snapshot.provider === 'mock')) return false;
+      const rates = normalizeRates(snapshot.rates);
+      if (rates[baseCurrency] !== 1 || (config.provider === 'frankfurter' && (Object.keys(rates).length !== config.supportedCurrencies.length || !config.supportedCurrencies.every(currency => Object.hasOwn(rates, currency))))) return false;
+      const retrieved = parseExchangeRateTimestamp(snapshot.retrievedAt).getTime();
+      if (config.provider === 'frankfurter' && snapshot.observedAt == null) return false;
+      const observed = parseExchangeRateTimestamp(snapshot.observedAt ?? snapshot.retrievedAt).getTime();
+      const expires = parseExchangeRateTimestamp(snapshot.expiresAt).getTime();
+      const current = parseExchangeRateTimestamp(currentTime).getTime();
+      return observed <= retrieved && retrieved <= current && expires > retrieved && current < observed + config.maxObservationAgeMs && current < expires + (allowStale ? config.maxStaleMs : 0);
+    } catch { return false; }
+  }
+  const disabled = () => config.provider === 'disabled';
+  function result(state, source, snapshot, providerErrorCode) {
+    const observed = parseExchangeRateTimestamp(snapshot.observedAt ?? snapshot.retrievedAt).getTime();
+    const expires = parseExchangeRateTimestamp(snapshot.expiresAt).getTime();
+    const usableUntil = new Date(Math.min(observed + config.maxObservationAgeMs, expires + (state === states.FALLBACK ? config.maxStaleMs : 0)));
+    return Object.freeze({ state, source, snapshot, usableUntil, ...(providerErrorCode ? { providerErrorCode } : {}) });
+  }
 
-      return Object.freeze({
-        state: EXCHANGE_RATE_REFRESH_STATES.FRESH,
-        source: EXCHANGE_RATE_SOURCES.MOCK_PROVIDER,
-        snapshot: savedSnapshot
-      });
-    } catch (providerError) {
-      const fallbackSnapshot = await repository.findLatestSnapshot(baseCurrency);
-import configuration from "../../config/exchangeRates.js";
-import {
-  EXCHANGE_RATE_ERROR_CODES,
-  EXCHANGE_RATE_REFRESH_STATES,
-  EXCHANGE_RATE_SOURCES,
-} from "../../contracts/exchangeRate.contract.js";
-import {
-  exchangeRateRepository,
-} from "../../repositories/exchangeRateRepository.js";
-import {
-  createMockExchangeRateProvider,
-} from "./mockExchangeRateProvider.js";
-import {
-  normalizeExchangeRates,
-} from "./normalizeExchangeRates.js";
+  async function fallback(baseCurrency, code) {
+    let snapshot;
+    try { snapshot = await repository.findLatestSnapshot(baseCurrency); } catch { /* Unavailable cache is handled below. */ }
+    if (allowedSnapshot(snapshot, baseCurrency, now(), true)) return result(states.FALLBACK, sources.DATABASE_CACHE, snapshot, code);
+    throw errorWithCode(codes.CACHE_UNAVAILABLE, 'Exchange rates are unavailable.');
+  }
 
-export const createExchangeRateService = (
-  options = {},
-) => {
-  const repository =
-    options.repository || exchangeRateRepository;
-  const provider =
-    options.provider || createMockExchangeRateProvider();
-  const config = options.config || configuration;
-  const now = options.now || (() => new Date());
-
-  const refreshRates = async (
-    baseCurrency = config.baseCurrency,
-  ) => {
-    const providerResponse =
-      await provider.fetchRates(baseCurrency);
-
-    const normalized = normalizeExchangeRates(
-      providerResponse,
-      {
-        cacheTtlMs: config.cacheTtlMs,
-      },
-    );
-
-    const snapshot =
-      await repository.saveFreshSnapshot(normalized);
-
-    return Object.freeze({
-      state: EXCHANGE_RATE_REFRESH_STATES.FRESH,
-      source: EXCHANGE_RATE_SOURCES.MOCK_PROVIDER,
-      snapshot,
-    });
-  };
-
-  const getRates = async (
-    baseCurrency = config.baseCurrency,
-  ) => {
-    const cachedSnapshot =
-      await repository.findLatestUsableSnapshot(
-        baseCurrency,
-        now(),
-      );
-
-    if (cachedSnapshot) {
-      return Object.freeze({
-        state: EXCHANGE_RATE_REFRESH_STATES.FRESH,
-        source: EXCHANGE_RATE_SOURCES.DATABASE_CACHE,
-        snapshot: cachedSnapshot,
-      });
-    }
-
+  async function performRefresh(baseCurrency) {
+    if (now().getTime() < rateLimitedUntil) return fallback(baseCurrency, codes.PROVIDER_RATE_LIMITED);
+    const previous = failures.get(baseCurrency);
+    if (previous && now().getTime() < previous.retryAt) return fallback(baseCurrency, previous.code);
     try {
-      return await refreshRates(baseCurrency);
-    } catch (providerError) {
-      const fallbackSnapshot =
-        await repository.findLatestSnapshot(baseCurrency);
-
-      if (fallbackSnapshot) {
-        return Object.freeze({
-          state: EXCHANGE_RATE_REFRESH_STATES.FALLBACK,
-          source: EXCHANGE_RATE_SOURCES.DATABASE_CACHE,
-          snapshot: fallbackSnapshot,
-          providerErrorCode: providerError.code || EXCHANGE_RATE_ERROR_CODES.PROVIDER_UNAVAILABLE
-        });
-      }
-
-      const unavailableError = new Error("Exchange rates are unavailable from both provider and cache.");
-      unavailableError.code = EXCHANGE_RATE_ERROR_CODES.CACHE_UNAVAILABLE;
-      unavailableError.cause = providerError;
-      throw unavailableError;
+      const response = await provider.fetchRates(baseCurrency);
+      const normalized = normalizeExchangeRates(response, { cacheTtlMs, expectedBaseCurrency: baseCurrency });
+      if (!allowedSnapshot(normalized, baseCurrency, now())) throw errorWithCode(codes.MALFORMED_RESPONSE, 'Provider returned invalid or expired rates.');
+      const snapshot = await repository.saveFreshSnapshot(normalized);
+      if (!allowedSnapshot(snapshot, baseCurrency, now())) throw errorWithCode(codes.MALFORMED_RESPONSE, 'Invalid persisted snapshot.');
+      failures.delete(baseCurrency);
+      return result(states.FRESH, config.provider === 'frankfurter' ? sources.REFERENCE_PROVIDER : sources.MOCK_PROVIDER, snapshot);
+    } catch (error) {
+      const code = Object.values(codes).includes(error?.code) ? error.code : codes.PROVIDER_UNAVAILABLE;
+      const retryAt = now().getTime() + Math.max(config.retryBackoffMs, code === codes.PROVIDER_RATE_LIMITED ? 300_000 : 0);
+      if (code === codes.PROVIDER_RATE_LIMITED) rateLimitedUntil = Math.max(rateLimitedUntil, retryAt);
+      failures.set(baseCurrency, { code, retryAt });
+      return fallback(baseCurrency, code);
     }
-  };
+  }
 
-  const refreshRates = async (baseCurrency = configuration.baseCurrency) => getRates(baseCurrency, true);
+  function refresh(baseCurrency) {
+    if (!inFlight.has(baseCurrency)) inFlight.set(baseCurrency, performRefresh(baseCurrency).finally(() => inFlight.delete(baseCurrency)));
+    return inFlight.get(baseCurrency);
+  }
 
-  return Object.freeze({
-    getRates,
-    refreshRates
-  });
-};
+  async function getRates(baseCurrency = config.baseCurrency) {
+    const currency = checkedCurrency(baseCurrency);
+    if (disabled()) throw errorWithCode(codes.CACHE_UNAVAILABLE, 'Exchange rates are disabled.');
+    let cached;
+    try { cached = await repository.findLatestUsableSnapshot(currency, now()); } catch { /* Attempt a controlled refresh. */ }
+    if (allowedSnapshot(cached, currency, now())) return result(states.FRESH, sources.DATABASE_CACHE, cached);
+    return refresh(currency);
+  }
 
-module.exports = Object.freeze({
-  createExchangeRateService
-});
-          providerErrorCode:
-            providerError.code ||
-            EXCHANGE_RATE_ERROR_CODES.PROVIDER_UNAVAILABLE,
-        });
-      }
+  async function refreshRates(baseCurrency = config.baseCurrency) {
+    const currency = checkedCurrency(baseCurrency);
+    if (disabled()) throw errorWithCode(codes.CACHE_UNAVAILABLE, 'Exchange rates are disabled.');
+    return refresh(currency);
+  }
 
-      throw Object.assign(
-        new Error("Exchange rates are unavailable."),
-        {
-          code:
-            EXCHANGE_RATE_ERROR_CODES.CACHE_UNAVAILABLE,
-          cause: providerError,
-        },
-      );
-    }
-  };
+  return Object.freeze({ getRates, refreshRates });
+}
 
-  return Object.freeze({
-    getRates,
-    refreshRates,
-  });
-};
-
-export const exchangeRateService =
-  createExchangeRateService();
+export const exchangeRateService = createExchangeRateService();

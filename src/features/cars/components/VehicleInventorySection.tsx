@@ -8,6 +8,7 @@ import {
 
 import { VehicleCard } from "./VehicleCard";
 import { VehicleInventorySkeleton } from "./VehicleInventorySkeleton";
+import { CurrencySelector } from "../../currency/CurrencySelector";
 
 import type {
   InventoryTab,
@@ -156,6 +157,7 @@ export function VehicleInventorySection({
           </div>
         )}
 
+        <CurrencySelector />
         <Tabs
           value={currentTab}
           onValueChange={(value) =>

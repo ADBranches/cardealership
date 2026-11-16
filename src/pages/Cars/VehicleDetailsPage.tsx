@@ -6,6 +6,8 @@ import { Navbar } from "../../app/components/Navbar/Navbar";
 import { FinancingQuoteFlow } from "../../features/financing/components/FinancingQuoteFlow";
 import { getCarById } from "../../features/cars/services/carsService";
 import type { Vehicle } from "../../features/cars/types";
+import { CurrencySelector } from "../../features/currency/CurrencySelector";
+import { CurrencyPrice } from "../../features/currency/CurrencyPrice";
 
 function LoadingDetails() {
   return (
@@ -106,6 +108,7 @@ export function VehicleDetailsPage() {
         <Button variant="outline" onClick={() => navigate("/")}>
           Back to inventory
         </Button>
+        <CurrencySelector />
         <section className="grid gap-8 rounded-2xl border border-border bg-card p-5 shadow-sm md:grid-cols-2 md:p-8">
           <img
             src={car.image}
@@ -120,9 +123,7 @@ export function VehicleDetailsPage() {
             <p className="mt-3 text-lg text-muted-foreground">
               {car.make} {car.model || ""} · {car.year} · {car.condition}
             </p>
-            <p className="my-6 text-3xl font-bold">
-              UGX {Number(car.price).toLocaleString()}
-            </p>
+            <CurrencyPrice className="my-6" amountUGX={car.price} />
             <p className="leading-7 text-muted-foreground">
               {car.description ||
                 "Contact Panda Motors for the complete vehicle specification."}

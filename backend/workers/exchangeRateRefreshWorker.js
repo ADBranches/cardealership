@@ -1,115 +1,36 @@
-"use strict";
+import configuration from '../config/exchangeRates.js';
+import { exchangeRateService } from '../services/exchangeRates/exchangeRateService.js';
 
-const configuration = require("../config/exchangeRates");
-
-const createExchangeRateRefreshWorker = (options = {}) => {
-  const service = options.service;
-  const intervalMs = options.intervalMs || configuration.refreshIntervalMs;
-  const baseCurrency = options.baseCurrency || configuration.baseCurrency;
-  const timers = options.timers || Object.freeze({ setInterval, clearInterval });
-
-  if (!service || typeof service.refreshRates !== "function") {
-    throw new TypeError("Worker service must implement refreshRates.");
-  }
-
+export function createExchangeRateRefreshWorker(options = {}) {
+  const service = options.service ?? exchangeRateService;
+  const intervalMs = options.intervalMs ?? configuration.refreshIntervalMs;
+  const baseCurrency = options.baseCurrency ?? configuration.baseCurrency;
+  const timers = options.timers ?? { setInterval, clearInterval };
+  const onError = options.onError ?? (() => console.warn('Scheduled exchange-rate refresh unavailable.'));
+  if (typeof service.refreshRates !== 'function' || !Number.isSafeInteger(intervalMs) || intervalMs <= 0 || intervalMs > 2_147_483_647) throw new TypeError('Invalid exchange-rate worker configuration.');
+  if (typeof timers.setInterval !== 'function' || typeof timers.clearInterval !== 'function' || typeof onError !== 'function') throw new TypeError('Invalid worker timers or error handler.');
   let timerHandle = null;
-  let refreshPromise = null;
-
-  const tick = () => {
-    if (refreshPromise) return refreshPromise;
-
-    refreshPromise = Promise.resolve()
-      .then(() => service.refreshRates(baseCurrency))
-      .finally(() => {
-        refreshPromise = null;
-      });
-
-    return refreshPromise;
-import configuration from "../config/exchangeRates.js";
-import {
-  exchangeRateService,
-} from "../services/exchangeRates/exchangeRateService.js";
-
-export const createExchangeRateRefreshWorker = (
-  options = {},
-) => {
-  const service = options.service || exchangeRateService;
-  const intervalMs =
-    options.intervalMs || configuration.refreshIntervalMs;
-  const timers = options.timers || {
-    setInterval,
-    clearInterval,
-  };
-
-  if (
-    !service ||
-    typeof service.refreshRates !== "function"
-  ) {
-    throw new TypeError(
-      "Exchange-rate service must implement refreshRates.",
-    );
+  let pending = null;
+  function tick() {
+    if (pending) return pending;
+    let result;
+    try { result = service.refreshRates(baseCurrency); } catch (error) { result = Promise.reject(error); }
+    pending = Promise.resolve(result).finally(() => { pending = null; });
+    return pending;
   }
-
-  let timerHandle = null;
-  let refreshInFlight = null;
-
-  const tick = () => {
-    if (refreshInFlight) return refreshInFlight;
-
-    refreshInFlight = Promise.resolve(
-      service.refreshRates(),
-    ).finally(() => {
-      refreshInFlight = null;
-    });
-
-    return refreshInFlight;
-  };
-
-  const start = () => {
-    if (timerHandle) return false;
-
-    timerHandle = timers.setInterval(() => {
-      tick().catch(() => undefined);
-    }, intervalMs);
-
-    if (timerHandle && typeof timerHandle.unref === "function") {
-      void tick();
-    }, intervalMs);
-
-    if (typeof timerHandle.unref === "function") {
-      timerHandle.unref();
-    }
-
+  function start() {
+    if (timerHandle !== null) return false;
+    timerHandle = timers.setInterval(() => { tick().catch(() => { try { onError(); } catch { /* Logging cannot break refresh scheduling. */ } }); }, intervalMs);
+    timerHandle?.unref?.();
     return true;
-  };
-
-  const stop = () => {
-    if (!timerHandle) return false;
-
+  }
+  function stop() {
+    if (timerHandle === null) return false;
     timers.clearInterval(timerHandle);
     timerHandle = null;
     return true;
-  };
+  }
+  return Object.freeze({ tick, start, stop, isRunning: () => timerHandle !== null, isRefreshInFlight: () => pending !== null });
+}
 
-  return Object.freeze({
-    start,
-    stop,
-    tick,
-    isRunning: () => timerHandle !== null,
-    isRefreshInFlight: () => refreshPromise !== null
-  });
-};
-
-module.exports = Object.freeze({
-  createExchangeRateRefreshWorker
-});
-    tick,
-    start,
-    stop,
-    isRunning: () => Boolean(timerHandle),
-    isRefreshInFlight: () => Boolean(refreshInFlight),
-  });
-};
-
-export const exchangeRateRefreshWorker =
-  createExchangeRateRefreshWorker();
+export const exchangeRateRefreshWorker = createExchangeRateRefreshWorker();

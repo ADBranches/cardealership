@@ -1,8 +1,6 @@
-"use strict";
-
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { normalizeExchangeRates } = require("../../../services/exchangeRates/normalizeExchangeRates");
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { normalizeExchangeRates } from '../../../services/exchangeRates/normalizeExchangeRates.js';
 
 test("normalizes valid provider output", () => {
   const normalized = normalizeExchangeRates({ provider: "mock", baseCurrency: "ugx", rates: { ugx: 1, usd: 0.00027 }, retrievedAt: "2026-09-18T10:00:00.000Z" }, { cacheTtlMs: 7200000 });

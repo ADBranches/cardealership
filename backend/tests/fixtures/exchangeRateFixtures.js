@@ -1,8 +1,8 @@
 "use strict";
 
-const FIXED_TIME = new Date("2026-09-18T10:00:00.000Z");
+export const FIXED_TIME = new Date("2026-09-18T10:00:00.000Z");
 
-const createSnapshot = (overrides = {}) => Object.freeze({
+export const createSnapshot = (overrides = {}) => Object.freeze({
   baseCurrency: "UGX",
   rates: Object.freeze({
     UGX: 1,
@@ -17,7 +17,7 @@ const createSnapshot = (overrides = {}) => Object.freeze({
   ...overrides
 });
 
-const providerCacheMatrix = Object.freeze([
+export const providerCacheMatrix = Object.freeze([
   Object.freeze({
     name: "fresh cache suppresses provider",
     freshCache: createSnapshot(),
@@ -54,9 +54,3 @@ const providerCacheMatrix = Object.freeze([
     expectedProviderCalls: 1
   })
 ]);
-
-module.exports = Object.freeze({
-  FIXED_TIME,
-  createSnapshot,
-  providerCacheMatrix
-});

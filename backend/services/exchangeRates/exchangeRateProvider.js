@@ -1,9 +1,3 @@
-"use strict";
+import { assertExchangeRateProvider } from '../../contracts/exchangeRate.contract.js';
 
-const { assertExchangeRateProvider } = require("../../contracts/exchangeRate.contract");
-
-const createExchangeRateProvider = (provider) => assertExchangeRateProvider(provider);
-
-module.exports = Object.freeze({
-  createExchangeRateProvider
-});
+export const createExchangeRateProvider = provider => assertExchangeRateProvider(provider);

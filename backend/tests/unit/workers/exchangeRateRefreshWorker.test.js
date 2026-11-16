@@ -1,8 +1,6 @@
-"use strict";
-
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { createExchangeRateRefreshWorker } = require("../../../workers/exchangeRateRefreshWorker");
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createExchangeRateRefreshWorker } from '../../../workers/exchangeRateRefreshWorker.js';
 
 test("worker starts and stops without leaving an active timer", () => {
   const activity = { cleared: false, unreferenced: false };
@@ -54,4 +52,12 @@ test("concurrent ticks share one refresh execution", async () => {
   releaseRefresh();
   await firstTick;
   assert.equal(worker.isRefreshInFlight(), false);
+});
+
+test('worker catches synchronous and asynchronous refresh failures and can retry', async () => {
+  let count = 0;
+  const worker = createExchangeRateRefreshWorker({ service: { refreshRates() { if (++count === 1) throw new Error('temporary failure'); return Promise.resolve('recovered'); } } });
+  await assert.rejects(worker.tick(), /temporary failure/);
+  assert.equal(worker.isRefreshInFlight(), false);
+  assert.equal(await worker.tick(), 'recovered');
 });

@@ -1,10 +1,8 @@
-"use strict";
-
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const configuration = require("../../../config/exchangeRates");
-const { EXCHANGE_RATE_ERROR_CODES } = require("../../../contracts/exchangeRate.contract");
-const { createMockExchangeRateProvider } = require("../../../services/exchangeRates/mockExchangeRateProvider");
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import configuration from '../../../config/exchangeRates.js';
+import { EXCHANGE_RATE_ERROR_CODES } from '../../../contracts/exchangeRate.contract.js';
+import { createMockExchangeRateProvider } from '../../../services/exchangeRates/mockExchangeRateProvider.js';
 
 test("success scenario returns deterministic rates", async () => {
   const provider = createMockExchangeRateProvider({ scenario: "success", now: () => new Date("2026-09-18T10:00:00.000Z") });

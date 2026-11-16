@@ -1,7 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
-import { formatUGX } from "../utils/formatUGX";
+import { CurrencyPrice } from "../../currency/CurrencyPrice";
 import type { Vehicle } from "../types";
 import { useNavigate } from "react-router-dom";
 
@@ -61,9 +61,7 @@ export function VehicleCard({ vehicle }: VehicleCardProps) {
             </p>
           )}
 
-          <p className="text-3xl font-bold text-primary">
-            {formatUGX(vehicle.price)}
-          </p>
+          <CurrencyPrice amountUGX={vehicle.price} />
         </div>
 
         <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border">

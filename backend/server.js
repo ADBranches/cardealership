@@ -19,6 +19,8 @@ const __dirname = dirname(__filename);
 // ============================================
 // IMPORT ROUTES
 // ============================================
+import exchangeRateRoutes from './routes/exchangeRateRoutes.js';
+import { attachExchangeRateWorker } from './workers/exchangeRateWorkerLifecycle.js';
 import authRoutes from './routes/authRoutes.js';
 import carsRoutes from './routes/carsRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
@@ -53,6 +55,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/cars', carsRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/exchange-rates', exchangeRateRoutes);
 
 // ============================================
 // HEALTH CHECK
@@ -67,6 +70,7 @@ app.get('/api/health', (req, res) => {
     endpoints: [
       'POST /api/auth/register',
       'POST /api/auth/login',
+      'GET  /api/exchange-rates',
       'POST /api/bookings/create',
       'GET  /api/bookings/check-availability',
       'GET  /api/bookings/available-slots/:carId/:date',
@@ -135,7 +139,7 @@ app.use((err, req, res, next) => {
 // ============================================
 // START SERVER
 // ============================================
-app.listen(PORT, () => {
+const server = app.listen(PORT, process.env.HOST || undefined, () => {
   console.log('========================================');
   console.log(`?? Panda Motors API running on http://localhost:${PORT}`);
   console.log(`?? Health check: http://localhost:${PORT}/api/health`);
@@ -145,5 +149,8 @@ app.listen(PORT, () => {
   console.log('   /api/cars');
   console.log('   /api/bookings');
   console.log('   /api/admin');
+  console.log('   /api/exchange-rates');
   console.log('========================================\n');
 });
+attachExchangeRateWorker(server);
+export { server };

@@ -1,9 +1,7 @@
-"use strict";
-
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { createExchangeRateController } = require("../../controllers/exchangeRateController");
-const { createExchangeRateRouter } = require("../../routes/exchangeRateRoutes");
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createExchangeRateController } from '../../controllers/exchangeRateController.js';
+import { createExchangeRateRouter } from '../../routes/exchangeRateRoutes.js';
 
 const createResponse = () => {
   const activity = { statusCode: null, body: null };
@@ -94,4 +92,12 @@ test("router registers one GET endpoint", () => {
   assert.equal(routeLayers.length, 1);
   assert.equal(routeLayers[0].route.path, "/");
   assert.equal(routeLayers[0].route.methods.get, true);
+});
+
+test('malformed query input is rejected before service invocation', async () => {
+  const controller = createExchangeRateController({ getRates: async () => assert.fail('invalid query reached service') });
+  const response = createResponse();
+  await controller.getExchangeRates({ query: { baseCurrency: ['UGX', 'USD'] } }, response);
+  assert.equal(response.activity.statusCode, 400);
+  assert.equal(response.activity.body.error.code, 'EXCHANGE_RATE_INVALID_BASE_CURRENCY');
 });
